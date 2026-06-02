@@ -1,0 +1,8 @@
+
+provider: openai
+openai_api_key: ""
+openai_api_url: "https://api.openai.com/v1"
+ollama_url: "http://localhost:11434"
+model: "gpt-4o-mini"
+memory_path: ".zerocoding/memory.db"
+skills_path: "skills"
