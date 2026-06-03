@@ -1,67 +1,62 @@
 """
-ZeroCoding TUI — Claude Code-style terminal interface.
-UI compacta e responsiva adaptativa.
+ZeroCoding TUI.
+
+Interface principal em Rich + prompt_toolkit, com visual de transcript de
+terminal: texto contínuo, pouco cromo e acento roxo discreto.
 """
-import sys
-import threading
-import time
-import itertools
+from __future__ import annotations
+
 import shutil
-import os
-from typing import Optional, List, Dict, Any
+import time
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from rich.console import Console, Group
-    from rich.panel import Panel
-    from rich.syntax import Syntax
-    from rich.markdown import Markdown
-    from rich.text import Text
     from rich.live import Live
-    from rich.rule import Rule
+    from rich.markdown import Markdown
     from rich.padding import Padding
-    from rich.table import Table
-    from rich.box import SIMPLE, MINIMAL
+    from rich.syntax import Syntax
+    from rich.text import Text
+
     HAS_RICH = True
 except ImportError:
     HAS_RICH = False
+
+from zerocoding import __version__
+
+from .theme import (
+    BG as ZERO_BG,
+    COMMANDS,
+    DARK as ZERO_DARK,
+    GHOST_FULL,
+    GHOST_SMALL,
+    GHOST_TINY,
+    GRAY as ZERO_GRAY,
+    GREEN as ZERO_GREEN,
+    LIGHT as ZERO_LIGHT,
+    PURPLE as ZERO_PURPLE,
+    PURPLE_LIGHT as ZERO_PURPLE_LIGHT,
+    RED as ZERO_RED,
+    USER_BG as ZERO_USER_BG,
+    YELLOW as ZERO_YELLOW,
+)
 
 try:
     from prompt_toolkit import PromptSession
     from prompt_toolkit.completion import Completer, Completion
     from prompt_toolkit.formatted_text import HTML
     from prompt_toolkit.history import InMemoryHistory
-    from prompt_toolkit.styles import Style as PTStyle
     from prompt_toolkit.key_binding import KeyBindings
-    from prompt_toolkit.filters import Condition
+    from prompt_toolkit.styles import Style as PTStyle
+
     HAS_PROMPT_TOOLKIT = True
 except ImportError:
     HAS_PROMPT_TOOLKIT = False
 
 
-# ── Cores Roxo Pastel ────────────────────────────────────────────────────────
-CLAUDE_PURPLE = "#B8A9C9"
-CLAUDE_PURPLE_LIGHT = "#D4C4E0"
-CLAUDE_PURPLE_DARK = "#9B8AA8"
-CLAUDE_AMBER = "#C9B8D4"
-CLAUDE_BG = "#1A1A1A"
-CLAUDE_DARK = "#0D0D0D"
-CLAUDE_GRAY = "#6B7280"
-CLAUDE_LIGHT = "#F5F5F5"
-CLAUDE_GREEN = "#A8D4C4"
-CLAUDE_BLUE = "#B8C9D4"
-CLAUDE_RED = "#D4B8B8"
-CLAUDE_YELLOW = "#D4C9B8"
-CLAUDE_USER_BG = "#1E1B2E"
-CLAUDE_BORDER = "#3D3652"
-
-COMMANDS = [
-    ("/exit", "Sair"), ("/clear", "Limpar"), ("/skills", "Skills"),
-    ("/help", "Ajuda"), ("/status", "Status"),
-]
-
-
-# ── Slash Command Completer ──────────────────────────────────────────────────
 if HAS_PROMPT_TOOLKIT:
+
     class SlashCommandCompleter(Completer):
         def __init__(self, commands):
             self.commands = commands
@@ -73,176 +68,156 @@ if HAS_PROMPT_TOOLKIT:
             for command, description in self.commands:
                 if command.startswith(text):
                     yield Completion(command, start_position=-len(text), display_meta=description)
+
 else:
+
     class SlashCommandCompleter:
         def __init__(self, commands):
             self.commands = commands
+
         def get_completions(self, document, complete_event):
             return
 
 
-# ── Terminal Size Detector ───────────────────────────────────────────────────
 class TerminalSize:
-    """Detecta tamanho do terminal e adapta layout."""
-    
+    """Detecta tamanho do terminal e adapta pequenos detalhes."""
+
     @staticmethod
-    def get_width():
+    def get_width() -> int:
         try:
             return shutil.get_terminal_size().columns
-        except:
+        except OSError:
             return 80
-    
+
     @staticmethod
-    def get_height():
-        try:
-            return shutil.get_terminal_size().lines
-        except:
-            return 24
-    
+    def is_small() -> bool:
+        return TerminalSize.get_width() < 90
+
     @staticmethod
-    def is_small():
-        return TerminalSize.get_width() < 80
-    
-    @staticmethod
-    def is_tiny():
-        return TerminalSize.get_width() < 60
+    def is_tiny() -> bool:
+        return TerminalSize.get_width() < 62
 
 
-# ── Compact ASCII Art ────────────────────────────────────────────────────────
-GHOST_TINY = "👻"
-GHOST_SMALL = "[▄████▄]"
-GHOST_FULL = """
- ▄████  
-████████ 
-██ ██ ██ 
-████████ 
-████████ 
-██ ██ ██ 
-▀▀ ▀ ▀▀ 
-"""
+def ellipsize(value: str, limit: int) -> str:
+    if limit <= 0:
+        return ""
+    if len(value) <= limit:
+        return value
+    if limit <= 1:
+        return value[:limit]
+    return value[: limit - 1] + "…"
 
 
-# ── Thinking Animation Compacta ─────────────────────────────────────────────
 class ThinkingAnimation:
-    """Animação de thinking compacta."""
+    """Linha transitória para chamadas não-streaming."""
 
-    SPINNER = ["⠋", "⠙", "", "⠸", "", "⠴", "", "⠧", "", "⠏"]
-
-    def __init__(self, console: Console, message: str = "Thinking"):
+    def __init__(self, console: Console, message: str = "Coding"):
         self.console = console
         self.message = message
-        self._stop = False
         self._live: Optional[Live] = None
-        self._thread = None
-        self._frame_idx = 0
-        self._is_small = TerminalSize.is_small()
-
-    def _get_renderable(self):
-        if self._is_small:
-            spinner = self.SPINNER[self._frame_idx % len(self.SPINNER)]
-            msg = self.message[:20] + "..." if len(self.message) > 20 else self.message
-            return Text(f"  {spinner} {msg}...", style=f"bold {CLAUDE_PURPLE}")
-        else:
-            spinner = self.SPINNER[self._frame_idx % len(self.SPINNER)]
-            content = Text()
-            content.append(f"  {GHOST_TINY} ", style=f"bold {CLAUDE_PURPLE}")
-            content.append(f"{spinner} ", style=f"bold {CLAUDE_PURPLE_LIGHT}")
-            content.append(f"{self.message}...", style="dim")
-            return content
 
     def start(self):
-        self._stop = False
         self._live = Live(
-            self._get_renderable(),
+            Text(f"* {self.message}... (esc to interrupt)", style=f"italic {ZERO_PURPLE_LIGHT}"),
             console=self.console,
-            refresh_per_second=12,
+            refresh_per_second=4,
             transient=True,
         )
         self._live.start()
 
-        def animate():
-            while not self._stop:
-                self._frame_idx += 1
-                if self._live:
-                    self._live.update(self._get_renderable())
-                time.sleep(0.08)
-
-        self._thread = threading.Thread(target=animate, daemon=True)
-        self._thread.start()
-
     def stop(self):
-        self._stop = True
-        if self._thread:
-            self._thread.join(timeout=1)
         if self._live:
             self._live.stop()
             self._live = None
 
 
-# ── Streaming Display Compacto ──────────────────────────────────────────────
 class StreamingDisplay:
-    """Display streaming compacto."""
+    """Renderiza resposta em streaming como uma entrada de transcript."""
 
-    def __init__(self, console: Console):
+    def __init__(self, console: Console, on_finish: Optional[Callable[[str], None]] = None):
         self.console = console
+        self._on_finish = on_finish
         self._live: Optional[Live] = None
         self._buffer = ""
+        self._started_at = 0.0
+        self._finished = False
 
     def start(self):
         self._buffer = ""
+        self._finished = False
+        self._started_at = time.time()
         self._live = Live(
-            self._render(),
+            self._render(live=True),
             console=self.console,
             refresh_per_second=15,
             vertical_overflow="visible",
         )
         self._live.start()
 
-    def _render(self):
-        header = Text()
-        header.append(f"  {GHOST_TINY} ", style=f"bold {CLAUDE_PURPLE}")
-        header.append("ZeroCoding", style=f"bold {CLAUDE_PURPLE}")
+    def _render(self, live: bool = False):
+        lines = []
+        if live:
+            lines.append(Text("* Coding... (esc to interrupt)", style=f"italic {ZERO_PURPLE_LIGHT}"))
+
+        body = self._buffer if self._buffer else " "
         content = Text()
-        content.append("\n")
-        content.append(self._buffer, style="white")
-        return Group(header, content)
+        content.append("• ", style=f"bold {ZERO_PURPLE}")
+        content.append(body, style=ZERO_LIGHT)
+        lines.append(content)
+        return Group(*lines)
 
     def add_token(self, token: str):
         self._buffer += token
         if self._live:
-            self._live.update(self._render())
+            self._live.update(self._render(live=True))
 
     def stop(self):
         if self._live:
             self._live.stop()
             self._live = None
+
+        self._print_assistant_response(self._buffer)
+        if self._on_finish and not self._finished:
+            self._on_finish(self._buffer)
+            self._finished = True
         self.console.print()
-        header = Text()
-        header.append(f"  {GHOST_TINY} ", style=f"bold {CLAUDE_PURPLE}")
-        header.append("ZeroCoding", style=f"bold {CLAUDE_PURPLE}")
-        self.console.print(header)
-        self.console.print()
-        
+
+    def _print_assistant_response(self, content: str):
         try:
-            md = Markdown(self._buffer, code_theme="monokai")
-            self.console.print(Padding(md, (0, 0, 0, 2)))
+            rendered = Markdown(content, code_theme="monokai")
         except Exception:
-            self.console.print(Padding(Text(self._buffer, style="white"), (0, 0, 0, 2)))
-        self.console.print(Rule(style=f"dim {CLAUDE_BORDER}"))
+            rendered = Text(content, style=ZERO_LIGHT)
+
+        self.console.print(Text("• ", style=f"bold {ZERO_PURPLE}"), end="")
+        self.console.print(rendered)
 
 
-# ── Main TUI Class ───────────────────────────────────────────────────────────
 class ZerocodingTUI:
-    """Terminal UI compacta e responsiva."""
+    """Terminal UI minimalista e responsiva."""
 
-    def __init__(self, provider_name: str = "openai", model: str = "gpt-4o-mini", theme: str = "dark"):
+    def __init__(
+        self,
+        provider_name: str = "openai",
+        model: str = "gpt-4o-mini",
+        theme: str = "dark",
+        mode: str = "code",
+        skills: Optional[list[str]] = None,
+        session_id: str = "",
+        connection_status: str = "unknown",
+    ):
+        if not HAS_RICH:
+            raise RuntimeError("ZeroCoding TUI requires rich. Install project dependencies before starting the TUI.")
+
         self.provider_name = provider_name
         self.model = model
         self.theme = theme
+        self.mode = mode
+        self.skills = skills or []
+        self.session_id = session_id
+        self.connection_status = connection_status
         self.history: List[Dict[str, Any]] = []
         self.console = Console(force_terminal=True, color_system="truecolor", highlight=False, force_interactive=True)
         self.commands = COMMANDS
-        self._total_tokens = 0
         self._turn_count = 0
         self._start_time = time.time()
         self._is_small = TerminalSize.is_small()
@@ -251,26 +226,28 @@ class ZerocodingTUI:
 
         if HAS_PROMPT_TOOLKIT:
             self._setup_prompt_toolkit()
-        else:
-            self._prompt_session = None
+
+    def _refresh_size(self):
+        self._is_small = TerminalSize.is_small()
+        self._is_tiny = TerminalSize.is_tiny()
+        return TerminalSize.get_width()
 
     def _setup_prompt_toolkit(self):
-        """Configura o Prompt Toolkit separadamente."""
         kb = KeyBindings()
-        @kb.add('c-j')
-        def insert_newline(event):
-            event.current_buffer.insert_text('\n')
-        @kb.add('enter', filter=~Condition(lambda: False))
-        def submit_or_newline(event):
-            event.current_buffer.validate_and_handle()
 
-        pt_style = PTStyle.from_dict({
-            "prompt": f"{CLAUDE_PURPLE} bold",
-            "completion-menu.completion": "bg:#1A1A1A #F5F5F5",
-            "completion-menu.completion.current": f"bg:{CLAUDE_PURPLE} #0D0D0D bold",
-            "bottom-toolbar": "bg:#0D0D0D #6B7280",
-            "bottom-toolbar.text": "#6B7280",
-        })
+        @kb.add("c-j")
+        def insert_newline(event):
+            event.current_buffer.insert_text("\n")
+
+        pt_style = PTStyle.from_dict(
+            {
+                "prompt": f"{ZERO_PURPLE} bold",
+                "completion-menu.completion": f"bg:{ZERO_BG} {ZERO_LIGHT}",
+                "completion-menu.completion.current": f"bg:{ZERO_USER_BG} {ZERO_LIGHT} bold",
+                "completion-menu.meta.completion": f"bg:{ZERO_BG} {ZERO_GRAY}",
+                "bottom-toolbar": f"bg:{ZERO_DARK} {ZERO_GRAY}",
+            }
+        )
 
         self._prompt_session = PromptSession(
             history=InMemoryHistory(),
@@ -281,101 +258,60 @@ class ZerocodingTUI:
             multiline=False,
         )
 
-    # ── Status Bar Responsiva ────────────────────────────────────────────────
-    def _render_status_bar(self) -> Panel:
-        """Status bar adaptativa."""
-        elapsed = int(time.time() - self._start_time)
-        mins, secs = divmod(elapsed, 60)
-
-        if self._is_tiny:
-            bar = Text()
-            bar.append(f"{self.provider_name}/{self.model}", style="bold white")
-            bar.append(" │ ", style="dim")
-            bar.append(f"{self._turn_count}t", style=f"dim {CLAUDE_GRAY}")
-            bar.append(" │ ", style="dim")
-            bar.append(f"{mins}:{secs:02d}", style=f"dim {CLAUDE_GRAY}")
-        elif self._is_small:
-            bar = Text()
-            bar.append(f"{self.provider_name}", style="bold white")
-            bar.append("/", style="dim")
-            bar.append(f"{self.model[:15]}", style=f"dim {CLAUDE_GRAY}")
-            bar.append(" │ ", style="dim")
-            bar.append(f"{self._turn_count} turns", style=f"dim {CLAUDE_GRAY}")
-            bar.append(" │ ", style="dim")
-            bar.append(f"{len(self.history)} msgs", style=f"dim {CLAUDE_GRAY}")
-        else:
-            bar = Text()
-            bar.append(" ● ", style=f"bold {CLAUDE_GREEN}")
-            bar.append(f"{self.provider_name}", style="bold white")
-            bar.append(" / ", style=f"dim {CLAUDE_GRAY}")
-            bar.append(f"{self.model}", style=f"dim {CLAUDE_GRAY}")
-            bar.append("  │  ", style=f"dim {CLAUDE_BORDER}")
-            bar.append(f"{self._turn_count} turns", style=f"dim {CLAUDE_GRAY}")
-            bar.append("  │  ", style=f"dim {CLAUDE_BORDER}")
-            bar.append(f"{mins}:{secs:02d}", style=f"dim {CLAUDE_GRAY}")
-            bar.append("  │  ", style=f"dim {CLAUDE_BORDER}")
-            bar.append(f"{len(self.history)} msgs", style=f"dim {CLAUDE_GRAY}")
-
-        return Panel(bar, border_style=f"bold {CLAUDE_PURPLE}", padding=(0, 1) if not self._is_tiny else (0, 0), style=f"{CLAUDE_DARK}")
-
-    # ── Header Responsivo ────────────────────────────────────────────────────
     def header(self):
-        """Header adaptativo ao tamanho da tela."""
-        # Limpa tela de forma segura
+        """Header inicial simples, sem Header/Footer de framework."""
+        self._refresh_size()
         self.console.clear()
         self.console.print()
-        
-        # Status bar sempre visível
-        self.console.print(self._render_status_bar())
-        self.console.print()
-        
-        if self._is_tiny:
-            header = Text()
-            header.append(f"  {GHOST_TINY} ", style=f"bold {CLAUDE_PURPLE}")
-            header.append("ZeroCoding", style="bold white")
-            self.console.print(header)
-        elif self._is_small:
-            header = Text()
-            header.append(f"  {GHOST_SMALL} ", style=f"bold {CLAUDE_PURPLE}")
-            header.append("ZeroCoding", style="bold white")
-            header.append(" — ", style="dim")
-            header.append("Coding Assistant", style=f"dim {CLAUDE_GRAY}")
-            self.console.print(header)
-        else:
-            self.console.print(Text(GHOST_FULL, style=f"bold {CLAUDE_PURPLE}"))
-            info = Text()
-            info.append("  ZeroCoding", style="bold white")
-            info.append("\n  Personal Coding Assistant", style=f"dim {CLAUDE_GRAY}")
-            self.console.print(info)
-        
-        if not self._is_tiny:
-            self.console.print()
-            self.console.print(Rule(style=f"dim {CLAUDE_BORDER}"))
-            self.console.print()
 
-    # ── Welcome Compacto ─────────────────────────────────────────────────────
-    def show_welcome(self):
-        """Boas-vindas compacta."""
+        ghost = GHOST_TINY if self._is_tiny else GHOST_SMALL if self._is_small else GHOST_FULL.rstrip()
+        if not self._is_tiny:
+            self.console.print(Text(ghost, style=f"bold {ZERO_PURPLE}"))
+
+        title = Text()
         if self._is_tiny:
-            welcome = Text()
-            welcome.append(f"  {GHOST_TINY} ZeroCoding\n", style=f"bold {CLAUDE_PURPLE}")
-            welcome.append("  /help para comandos", style="dim")
-        elif self._is_small:
-            welcome = Text()
-            welcome.append(f"  {GHOST_SMALL} ZeroCoding\n\n", style=f"bold {CLAUDE_PURPLE}")
-            welcome.append("  Digite /help para ver comandos\n", style="dim")
-            welcome.append("  Ctrl+J = nova linha | Enter = enviar", style="dim")
-        else:
-            welcome = Text()
-            welcome.append(f"  {GHOST_TINY} Bem-vindo ao ", style="dim")
-            welcome.append("ZeroCoding", style=f"bold {CLAUDE_PURPLE}")
-            welcome.append("\n  Digite /help para comandos | Ctrl+J = nova linha | Enter = enviar\n", style="dim")
+            title.append(f"{GHOST_TINY} ", style=f"bold {ZERO_PURPLE}")
+        title.append("ZeroCoding", style=f"bold {ZERO_LIGHT}")
+        title.append(f" v{__version__}", style=f"dim {ZERO_GRAY}")
+        self.console.print(title)
+
+        meta = Text()
+        meta.append("provider ", style=f"dim {ZERO_GRAY}")
+        meta.append(self.provider_name, style=ZERO_PURPLE_LIGHT)
+        meta.append("  model ", style=f"dim {ZERO_GRAY}")
+        meta.append(ellipsize(self.model, 36 if self._is_small else 72), style=ZERO_LIGHT)
+        meta.append("  mode ", style=f"dim {ZERO_GRAY}")
+        meta.append(self.mode, style=ZERO_PURPLE_LIGHT)
+        self.console.print(meta)
+
+        state = Text()
+        if self.skills:
+            state.append("skill ", style=f"dim {ZERO_GRAY}")
+            state.append(",".join(self.skills), style=ZERO_LIGHT)
+            state.append("  ", style=f"dim {ZERO_GRAY}")
+        if self.session_id:
+            state.append("session ", style=f"dim {ZERO_GRAY}")
+            state.append(self.session_id, style=ZERO_LIGHT)
+            state.append("  ", style=f"dim {ZERO_GRAY}")
+        state.append(self.connection_status, style=ZERO_GREEN if self.connection_status == "connected" else ZERO_GRAY)
+        self.console.print(state)
+
+        cwd = ellipsize(str(Path.cwd()), max(24, TerminalSize.get_width() - 8))
+        path = Text()
+        path.append("path ", style=f"dim {ZERO_GRAY}")
+        path.append(cwd, style=f"dim {ZERO_LIGHT}")
+        self.console.print(path)
+        self.console.print()
+
+    def show_welcome(self):
+        welcome = Text()
+        welcome.append("type ", style=f"dim {ZERO_GRAY}")
+        welcome.append("/help", style=ZERO_PURPLE_LIGHT)
+        welcome.append(" for commands", style=f"dim {ZERO_GRAY}")
         self.console.print(welcome)
         self.console.print()
 
-    # ── Render Messages Compactas ────────────────────────────────────────────
     def display_message(self, role: str, content: str, is_code: bool = False):
-        """Mensagens compactas."""
         self.history.append({"role": role, "content": content, "is_code": is_code})
 
         if role == "user":
@@ -386,223 +322,130 @@ class ZerocodingTUI:
             self._render_error(content)
 
     def _render_user_message(self, content: str):
-        """Mensagem do usuário compacta."""
         self.console.print()
-        label = Text()
-        label.append("  You", style=f"bold {CLAUDE_BLUE}")
-        self.console.print(label)
-        
-        width = TerminalSize.get_width()
-        if len(content) > width - 4 and not self._is_tiny:
-            content = content[:width-7] + "..."
-        
-        if self._is_tiny:
-            self.console.print(f"  {content}", style="white")
-        else:
-            panel = Panel(Text(content, style="white"), border_style=f"dim {CLAUDE_BORDER}", padding=(0, 1), style=f"{CLAUDE_USER_BG}")
-            self.console.print(Padding(panel, (0, 0, 0, 2)))
+        for idx, line in enumerate(content.splitlines() or [""]):
+            prefix = "> " if idx == 0 else "  "
+            text = Text(prefix + line, style=f"{ZERO_LIGHT} on {ZERO_USER_BG}")
+            self.console.print(Padding(text, (0, 1, 0, 0)))
 
     def _render_assistant_message(self, content: str, is_code: bool = False):
-        """Mensagem do assistente compacta."""
         self.console.print()
-        header = Text()
-        header.append(f"  {GHOST_TINY} ", style=f"bold {CLAUDE_PURPLE}")
-        header.append("ZeroCoding", style=f"bold {CLAUDE_PURPLE}")
-        self.console.print(header)
-        
+        bullet = Text("• ", style=f"bold {ZERO_PURPLE}")
         if is_code:
             try:
-                syntax = Syntax(content, "python", theme="monokai", line_numbers=False, word_wrap=True)
-                self.console.print(Padding(syntax, (0, 0, 0, 2)))
+                rendered = Syntax(content, "python", theme="monokai", line_numbers=False, word_wrap=True)
             except Exception:
-                self.console.print(Padding(Text(content, style="white"), (0, 0, 0, 2)))
+                rendered = Text(content, style=ZERO_LIGHT)
         else:
             try:
-                md = Markdown(content, code_theme="monokai")
-                self.console.print(Padding(md, (0, 0, 0, 2)))
+                rendered = Markdown(content, code_theme="monokai")
             except Exception:
-                self.console.print(Padding(Text(content, style="white"), (0, 0, 0, 2)))
-        
-        if not self._is_tiny:
-            self.console.print(Rule(style=f"dim {CLAUDE_BORDER}"))
+                rendered = Text(content, style=ZERO_LIGHT)
+
+        self.console.print(bullet, end="")
+        self.console.print(rendered)
+        self.console.print()
         self._turn_count += 1
 
     def _render_error(self, message: str):
-        """Erro compacto."""
         self.console.print()
-        error_text = Text()
-        error_text.append("  ⚠ ", style=f"bold {CLAUDE_RED}")
-        error_text.append(message, style=CLAUDE_RED)
-        self.console.print(error_text)
+        self.console.print(Text(f"! {message}", style=f"bold {ZERO_RED}"))
 
-    # ── Streaming Display ────────────────────────────────────────────────────
+    def render_tool_call(self, name: str, target: str = ""):
+        suffix = f"({target})" if target else "()"
+        self.console.print(Text(f"● {name}{suffix}", style=ZERO_PURPLE_LIGHT))
+
+    def render_tool_done(self, files: int = 0, tokens: int = 0, seconds: float = 0.0):
+        self.console.print(Text(f"  └ Done ({files} files · {tokens} tokens · {seconds:.1f}s)", style=f"dim {ZERO_GRAY}"))
+
     def create_streaming_display(self) -> StreamingDisplay:
-        return StreamingDisplay(self.console)
+        return StreamingDisplay(self.console, on_finish=self._record_assistant_turn)
 
-    # ── Thinking ──────────────────────────────────────────────────────────────
-    def show_thinking(self, message: str = "Thinking") -> ThinkingAnimation:
+    def _record_assistant_turn(self, content: str):
+        self.history.append({"role": "assistant", "content": content, "is_code": False})
+        self._turn_count += 1
+
+    def show_thinking(self, message: str = "Coding") -> ThinkingAnimation:
         anim = ThinkingAnimation(self.console, message)
         anim.start()
         return anim
 
-    # ── Input Prompt Compacto ────────────────────────────────────────────────
     def input_prompt(self) -> str:
-        """Prompt compacto."""
+        self._refresh_size()
         if HAS_PROMPT_TOOLKIT and self._prompt_session is not None:
             try:
-                bottom = "Ctrl+J=nova | Enter=enviar | /help" if self._is_small else "Ctrl+J=nova linha | Enter=enviar | /help /clear /exit | ↑↓ histórico"
-                result = self._prompt_session.prompt(
-                    HTML(f'<style color="{CLAUDE_PURPLE}">  ❯ </style>'),
-                    bottom_toolbar=HTML(f'<style color="{CLAUDE_GRAY}">{bottom}</style>'),
-                )
-                return result.strip()
+                bottom = "/help  /provider  /model  /skill  /clear  /exit"
+                return self._prompt_session.prompt(
+                    HTML(f'<style color="{ZERO_PURPLE}">› </style>'),
+                    bottom_toolbar=HTML(f'<style color="{ZERO_GRAY}">{bottom}</style>'),
+                ).strip()
             except KeyboardInterrupt:
                 return ""
             except EOFError:
                 return "/exit"
 
         try:
-            self.console.print(f"  [bold {CLAUDE_PURPLE}]❯ [/bold {CLAUDE_PURPLE}]", end="", highlight=False)
-            result = input()
-            return result.strip()
+            self.console.print(f"[bold {ZERO_PURPLE}]› [/bold {ZERO_PURPLE}]", end="", highlight=False)
+            return input().strip()
         except (KeyboardInterrupt, EOFError):
             return ""
 
-    # ── Skills Compacto ──────────────────────────────────────────────────────
     def show_skills(self, skills: list):
-        """Skills compactas."""
         self.console.print()
-        header = Text()
-        header.append(f"  📚 ", style=f"bold {CLAUDE_PURPLE}")
-        header.append("Skills", style="bold white")
-        self.console.print(header)
-
+        self.console.print(Text("skills", style=f"bold {ZERO_PURPLE_LIGHT}"))
         if not skills:
-            self.console.print("    [dim]Nenhuma skill.[/dim]")
+            self.console.print(Text("  no skills found", style=f"dim {ZERO_GRAY}"))
             return
+        for skill in skills:
+            description = ellipsize(skill.description, max(24, TerminalSize.get_width() - len(skill.name) - 6))
+            self.console.print(Text(f"  • {skill.name}  {description}", style=ZERO_LIGHT))
 
-        if self._is_tiny:
-            for skill in skills:
-                self.console.print(f"  • {skill.name}: {skill.description[:40]}")
-        else:
-            table = Table(box=MINIMAL, border_style=f"dim {CLAUDE_BORDER}", show_header=False, padding=(0, 1))
-            table.add_column("Nome", style=f"bold {CLAUDE_AMBER}")
-            table.add_column("Descrição", style="white")
-            for skill in skills:
-                table.add_row(f"  {skill.name}", skill.description[:60] if self._is_small else skill.description)
-            self.console.print(Padding(table, (0, 0, 0, 2)))
-
-    # ── Help Compacto ────────────────────────────────────────────────────────
     def show_help(self):
-        """Help compacto."""
         self.console.print()
-        header = Text()
-        header.append(f"  📖 ", style=f"bold {CLAUDE_PURPLE}")
-        header.append("Comandos", style="bold white")
-        self.console.print(header)
+        self.console.print(Text("commands", style=f"bold {ZERO_PURPLE_LIGHT}"))
+        for command, description in self.commands:
+            line = Text("  ")
+            line.append(command.ljust(10), style=f"bold {ZERO_PURPLE}")
+            line.append(description, style=ZERO_LIGHT)
+            self.console.print(line)
 
-        if self._is_tiny:
-            for cmd, desc in self.commands:
-                self.console.print(f"  {cmd} - {desc}")
-        else:
-            table = Table(box=MINIMAL, show_header=False, padding=(0, 1))
-            table.add_column("Comando", style=f"bold {CLAUDE_PURPLE}", width=10)
-            table.add_column("Descrição", style="white")
-            for cmd, desc in self.commands:
-                table.add_row(f"  {cmd}", desc)
-            self.console.print(Padding(table, (0, 0, 0, 2)))
-
-    # ── Error / Info / Success / Warning ──────────────────────────────────────
     def show_error(self, message: str):
         self._render_error(message)
 
     def show_info(self, message: str):
-        self.console.print()
-        info = Text()
-        info.append("  ℹ ", style=f"bold {CLAUDE_BLUE}")
-        info.append(message, style="dim")
-        self.console.print(info)
+        self.console.print(Text(f"  {message}", style=f"dim {ZERO_GRAY}"))
 
     def show_success(self, message: str):
-        self.console.print()
-        success = Text()
-        success.append("  ✓ ", style=f"bold {CLAUDE_GREEN}")
-        success.append(message, style=CLAUDE_GREEN)
-        self.console.print(success)
+        self.console.print(Text(f"✓ {message}", style=ZERO_GREEN))
 
     def show_warning(self, message: str):
-        self.console.print()
-        warn = Text()
-        warn.append("  ⚠ ", style=f"bold {CLAUDE_YELLOW}")
-        warn.append(message, style=CLAUDE_YELLOW)
-        self.console.print(warn)
+        self.console.print(Text(f"! {message}", style=ZERO_YELLOW))
 
-    # ── Clear (CORRIGIDO) ─────────────────────────────────────────────────────
     def clear(self):
-        """Limpa tela corretamente."""
         self.history = []
         self._turn_count = 0
         self._start_time = time.time()
-        self._is_small = TerminalSize.is_small()
-        self._is_tiny = TerminalSize.is_tiny()
-        
-        # Limpeza segura do terminal
-        self.console.clear()
-        self.console.print()
-        
-        # Redesenha tudo do zero
         self.header()
         self.show_welcome()
 
-    # ── Status ──────────────────────────────────────────────────────────────
     def show_status(self):
-        """Status compacto."""
         elapsed = int(time.time() - self._start_time)
         mins, secs = divmod(elapsed, 60)
-
-        if self._is_tiny:
-            self.console.print(f"\n  Provider: {self.provider_name}")
-            self.console.print(f"  Model: {self.model}")
-            self.console.print(f"  Turns: {self._turn_count} | Msgs: {len(self.history)}")
-            self.console.print(f"  Uptime: {mins}:{secs:02d}")
-        else:
-            table = Table(box=MINIMAL, show_header=False, padding=(0, 1))
-            table.add_column(style=f"bold {CLAUDE_GRAY}")
-            table.add_column(style="white")
-            table.add_row("  Provider", self.provider_name)
-            table.add_row("  Model", self.model)
-            table.add_row("  Turns", str(self._turn_count))
-            table.add_row("  Messages", str(len(self.history)))
-            table.add_row("  Uptime", f"{mins}:{secs:02d}")
-            self.console.print(Panel(table, border_style=f"dim {CLAUDE_PURPLE}", title=f"[{CLAUDE_PURPLE}]📊 Status[/]", title_align="left"))
-
-    # ── Cost ─────────────────────────────────────────────────────────────────
-    def show_cost(self):
-        """Custo compacto."""
-        if self._is_tiny:
-            self.console.print(f"\n  Turns: {self._turn_count}")
-            self.console.print(f"  Messages: {len(self.history)}")
-            self.console.print(f"  Provider: {self.provider_name}")
-        else:
-            self.console.print(Panel(
-                f"[dim]Turnos:[/dim] [bold]{self._turn_count}[/bold]\n"
-                f"[dim]Mensagens:[/dim] [bold]{len(self.history)}[/bold]\n"
-                f"[dim]Provider:[/dim] [bold]{self.provider_name}[/bold]",
-                border_style=f"dim {CLAUDE_PURPLE}",
-                title=f"[{CLAUDE_PURPLE}]💰 Custo[/]",
-                title_align="left",
-            ))
-
-    # ── Goodbye ───────────────────────────────────────────────────────────────
-    def goodbye(self):
-        """Despedida compacta."""
         self.console.print()
-        if self._is_tiny:
-            bye = Text()
-            bye.append(f"  {GHOST_TINY} Até logo!", style=f"bold {CLAUDE_PURPLE}")
-        else:
-            bye = Text()
-            bye.append(f"  {GHOST_TINY} Até logo!", style=f"bold {CLAUDE_PURPLE}")
-            bye.append(" ▄████", style="dim")
-        self.console.print(bye)
+        self.console.print(Text("status", style=f"bold {ZERO_PURPLE_LIGHT}"))
+        self.console.print(Text(f"  provider  {self.provider_name}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  model     {self.model}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  mode      {self.mode}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  skills    {', '.join(self.skills) if self.skills else 'none'}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  session   {self.session_id or 'none'}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  turns     {self._turn_count}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  messages  {len(self.history)}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  uptime    {mins}:{secs:02d}", style=ZERO_LIGHT))
+
+    def show_cost(self):
+        self.show_status()
+
+    def goodbye(self):
+        self.console.print()
+        self.console.print(Text("ZeroCoding session ended.", style=f"dim {ZERO_GRAY}"))
         self.console.print()

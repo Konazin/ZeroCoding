@@ -5,10 +5,11 @@ from .config import Config
 
 
 def build_provider(config: Config):
-    if config.provider == "ollama":
-        return OllamaProvider(url=config.ollama_url, model=config.model)
+    provider = config.active_provider
+    if provider.type == "ollama":
+        return OllamaProvider(url=provider.base_url, model=provider.model)
     return OpenAICompatibleProvider(
-        api_key=config.openai_api_key,
-        api_url=config.openai_api_url,
-        model=config.model,
+        api_key=provider.resolved_api_key(),
+        api_url=provider.base_url,
+        model=provider.model,
     )

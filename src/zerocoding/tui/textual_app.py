@@ -1,10 +1,11 @@
 """
-ZeroCoding TUI - Versão com Textual Framework
-Interface moderna, responsiva e interativa
+ZeroCoding TUI - prototipo experimental com Textual.
+
+A interface principal do projeto vive em tui/app.py usando Rich + prompt_toolkit.
 """
 from textual.app import App, ComposeResult
-from textual.widgets import Header, Footer, Input, Static, RichLog, Button
-from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
+from textual.widgets import Input, Static, RichLog
+from textual.containers import Container, Vertical
 from textual.binding import Binding
 from textual.screen import Screen
 from textual import work
@@ -49,9 +50,6 @@ class MainScreen(Screen):
 
     def compose(self) -> ComposeResult:
         """Compõe a interface."""
-        # Header com status
-        yield Header(id="main-header")
-        
         # Container principal
         with Container(id="main-container"):
             # Área de chat (scrollável)
@@ -63,15 +61,11 @@ class MainScreen(Screen):
                 yield RichLog(id="chat-log", highlight=True, markup=True)
             
             # Área de input
-            with Horizontal(id="input-area"):
+            with Vertical(id="input-area"):
                 yield Input(
                     placeholder="Digite sua pergunta... (/help para comandos)",
                     id="user-input"
                 )
-                yield Button("Enviar", id="send-btn", variant="primary")
-        
-        # Footer com atalhos
-        yield Footer()
 
     def on_mount(self) -> None:
         """Chamado quando a tela é montada."""
@@ -114,11 +108,6 @@ class MainScreen(Screen):
     def action_focus_input(self) -> None:
         """Foca no input."""
         self.query_one("#user-input", Input).focus()
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button press."""
-        if event.button.id == "send-btn":
-            self.send_message()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle input submission (Enter key)."""
@@ -252,19 +241,6 @@ class ZeroCodingTextualApp(App):
         padding: 1;
     }
     
-    #send-btn {
-        width: 1fr;
-        margin-left: 1;
-    }
-    
-    Header {
-        background: #1E1B2E;
-        color: #B8A9C9;
-    }
-    
-    Footer {
-        background: #1E1B2E;
-    }
     """
 
     def on_mount(self) -> None:

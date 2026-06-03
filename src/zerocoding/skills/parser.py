@@ -10,12 +10,27 @@ class Skill:
 
 
 def parse_skill(name: str, body: str):
-    description = ""
-    for line in body.splitlines():
+    metadata = {}
+    content = body.strip()
+
+    if body.startswith("---"):
+        parts = body.split("---", 2)
+        if len(parts) == 3:
+            _, frontmatter, content = parts
+            for line in frontmatter.splitlines():
+                if ":" not in line:
+                    continue
+                key, value = line.split(":", 1)
+                metadata[key.strip()] = value.strip().strip('"').strip("'")
+
+    skill_name = metadata.get("name", name)
+    description = metadata.get("description", "")
+
+    for line in content.splitlines():
         stripped = line.strip()
-        if stripped.startswith("#"):
+        if description or stripped.startswith("#"):
             continue
         if stripped:
             description = stripped
             break
-    return Skill(name=name, description=description or "No description", content=body)
+    return Skill(name=skill_name, description=description or "No description", content=content.strip())

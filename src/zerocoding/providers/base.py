@@ -4,6 +4,10 @@ from typing import Generator
 
 class BaseProvider(ABC):
     @abstractmethod
+    def generate(self, prompt: str, **kwargs) -> str:
+        raise NotImplementedError
+
+    @abstractmethod
     def chat(self, messages, **kwargs):
         raise NotImplementedError
 
@@ -12,3 +16,9 @@ class BaseProvider(ABC):
         # Fallback: usa chat normal e retorna tudo de uma vez
         result = self.chat(messages, **kwargs)
         yield result
+
+    def healthcheck(self) -> bool:
+        return True
+
+    def list_models(self) -> list[str]:
+        return []
