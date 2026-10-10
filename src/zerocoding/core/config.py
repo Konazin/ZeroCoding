@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from .dotenv import load_env
+from .permissions import normalize_permission_mode
 
 try:
     import yaml
@@ -12,7 +13,15 @@ except ImportError:  # pragma: no cover - fallback for minimal installs
 
 
 DEFAULT_PROVIDER = "ollama_local"
+DEFAULT_MODEL = "qwen2.5-coder:7b"
 DEFAULT_USER_CONFIG = Path("~/.zerocoding/config.yaml").expanduser()
+MODE_BUDGETS = {
+    "fast": (1024, 3, 512),
+    "code": (2048, 6, 512),
+    "reason": (3072, 8, 512),
+    "smart": (3072, 8, 512),
+    "project": (2048, 8, 1024),
+}
 
 
 @dataclass
@@ -20,7 +29,7 @@ class ProviderConfig:
     name: str
     type: str = "ollama"
     base_url: str = "http://localhost:11434"
-    model: str = "deepseek-coder-v2"
+    model: str = DEFAULT_MODEL
     api_key: str = ""
     api_key_env: str = ""
 
@@ -30,7 +39,7 @@ class ProviderConfig:
             name=name,
             type=str(values.get("type", "ollama")),
             base_url=str(values.get("base_url", values.get("url", "http://localhost:11434"))),
-            model=str(values.get("model", "deepseek-coder-v2")),
+            model=str(values.get("model", DEFAULT_MODEL)),
             api_key=str(values.get("api_key", "")),
             api_key_env=str(values.get("api_key_env", "")),
         )
@@ -59,16 +68,23 @@ class ProviderConfig:
 class ModeConfig:
     name: str
     provider: str = DEFAULT_PROVIDER
-    model: str = "deepseek-coder-v2"
+    model: str = DEFAULT_MODEL
     skills: list[str] = field(default_factory=list)
+    input_budget_tokens: int = 2048
+    max_tool_steps: int = 6
+    output_budget_tokens: int = 512
 
     @classmethod
     def from_dict(cls, name: str, values: dict[str, Any]):
+        budget, steps, output_budget = MODE_BUDGETS.get(name, (2048, 6, 512))
         return cls(
             name=name,
             provider=str(values.get("provider", DEFAULT_PROVIDER)),
-            model=str(values.get("model", "deepseek-coder-v2")),
+            model=str(values.get("model", DEFAULT_MODEL)),
             skills=list(values.get("skills") or []),
+            input_budget_tokens=max(128, int(values.get("input_budget_tokens", budget))),
+            max_tool_steps=max(0, int(values.get("max_tool_steps", steps))),
+            output_budget_tokens=max(64, min(4096, int(values.get("output_budget_tokens", output_budget)))),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -76,6 +92,9 @@ class ModeConfig:
             "provider": self.provider,
             "model": self.model,
             "skills": list(self.skills),
+            "input_budget_tokens": self.input_budget_tokens,
+            "max_tool_steps": self.max_tool_steps,
+            "output_budget_tokens": self.output_budget_tokens,
         }
 
 
@@ -89,6 +108,8 @@ class Config:
     skills_path: str = "skills"
     theme: str = "purple"
     auto_save: bool = True
+    mcp_servers: dict[str, dict[str, Any]] = field(default_factory=dict)
+    permission_mode: str = "manual"
 
     @property
     def active_provider(self) -> ProviderConfig:
@@ -130,6 +151,8 @@ class Config:
             "skills_path": self.skills_path,
             "theme": self.theme,
             "auto_save": self.auto_save,
+            "mcp_servers": self.mcp_servers,
+            "permission_mode": self.permission_mode,
         }
 
 
@@ -145,6 +168,10 @@ class ConfigManager:
         self._apply_env(data)
 
         provider_name = override_provider or data.get("provider") or DEFAULT_PROVIDER
+        if override_provider is None and provider_name in {"ollama", "openai"}:
+            provider_name = self._legacy_provider_name(provider_name, data.get("providers") or {})
+        if os.getenv("ZEROCODING_MODEL"):
+            data.setdefault("providers", {}).setdefault(provider_name, {})["model"] = os.getenv("ZEROCODING_MODEL")
         providers = {
             name: ProviderConfig.from_dict(name, values or {})
             for name, values in (data.get("providers") or {}).items()
@@ -157,8 +184,6 @@ class ConfigManager:
             providers[DEFAULT_PROVIDER] = ProviderConfig(name=DEFAULT_PROVIDER)
         if not modes:
             modes = self._default_modes()
-        if override_provider is None and provider_name in {"ollama", "openai"}:
-            provider_name = self._legacy_provider_name(provider_name, providers)
         if provider_name not in providers:
             providers[provider_name] = ProviderConfig(name=provider_name)
 
@@ -171,6 +196,8 @@ class ConfigManager:
             skills_path=str(data.get("skills_path", "skills")),
             theme=str(data.get("theme", "purple")),
             auto_save=self._as_bool(data.get("auto_save", True)),
+            mcp_servers=dict(data.get("mcp_servers") or {}),
+            permission_mode=normalize_permission_mode(str(data.get("permission_mode", "manual"))),
         )
 
     def save(self, config: Config) -> None:
@@ -191,7 +218,7 @@ class ConfigManager:
                 "ollama_local": {
                     "type": "ollama",
                     "base_url": data.get("ollama_url", "http://localhost:11434"),
-                    "model": data.get("model", "deepseek-coder-v2"),
+                    "model": data.get("model", DEFAULT_MODEL),
                 },
                 "openai_default": {
                     "type": legacy_type,
@@ -206,6 +233,7 @@ class ConfigManager:
             "skills_path": data.get("skills_path", "skills"),
             "theme": data.get("theme", "purple"),
             "auto_save": data.get("auto_save", True),
+            "permission_mode": data.get("permission_mode", "manual"),
         }
 
     def _default_modes(self) -> dict[str, ModeConfig]:
@@ -213,10 +241,11 @@ class ConfigManager:
 
     def _default_modes_data(self) -> dict[str, Any]:
         return {
-            "code": {"provider": "ollama_local", "model": "deepseek-coder-v2", "skills": []},
-            "reason": {"provider": "ollama_local", "model": "deepseek-r1:8b", "skills": []},
-            "fast": {"provider": "ollama_local", "model": "qwen2.5-coder:7b", "skills": []},
-            "smart": {"provider": "ollama_local", "model": "qwen2.5-coder:14b", "skills": []},
+            "code": {"provider": "ollama_local", "model": DEFAULT_MODEL, "skills": [], "input_budget_tokens": 2048, "max_tool_steps": 6},
+            "reason": {"provider": "ollama_local", "model": "deepseek-r1:8b", "skills": [], "input_budget_tokens": 3072, "max_tool_steps": 8},
+            "fast": {"provider": "ollama_local", "model": "qwen2.5-coder:7b", "skills": [], "input_budget_tokens": 1024, "max_tool_steps": 3},
+            "smart": {"provider": "ollama_local", "model": "qwen2.5-coder:14b", "skills": [], "input_budget_tokens": 3072, "max_tool_steps": 8},
+            "project": {"provider": "ollama_local", "model": "qwen2.5-coder:7b", "skills": [], "input_budget_tokens": 2048, "max_tool_steps": 8, "output_budget_tokens": 1024},
         }
 
     def _apply_env(self, data: dict[str, Any]) -> None:
@@ -227,9 +256,6 @@ class ConfigManager:
             providers.setdefault("openai_default", {})["base_url"] = os.getenv("OPENAI_API_URL")
         if os.getenv("OPENAI_API_KEY"):
             providers.setdefault("openai_default", {})["api_key"] = os.getenv("OPENAI_API_KEY")
-        if os.getenv("ZEROCODING_MODEL"):
-            active = data.get("provider", DEFAULT_PROVIDER)
-            providers.setdefault(active, {})["model"] = os.getenv("ZEROCODING_MODEL")
         env_map = {
             "ZEROCODING_PROVIDER": "provider",
             "ZEROCODING_MEMORY_PATH": "memory_path",
@@ -303,6 +329,8 @@ class ConfigManager:
     def _coerce(self, value: str) -> Any:
         if value.lower() in {"true", "false"}:
             return value.lower() == "true"
+        if value in {"{}", "[]"}:
+            return {} if value == "{}" else []
         return value
 
     def _as_bool(self, value: Any) -> bool:

@@ -1,16 +1,17 @@
 provider: ollama_local
 mode: code
+permission_mode: manual
 
 providers:
   ollama_local:
     type: ollama
     base_url: "http://localhost:11434"
-    model: "deepseek-coder-v2"
+    model: "qwen2.5-coder:7b"
 
   ollama_lan:
     type: ollama
     base_url: "http://192.168.0.50:11434"
-    model: "deepseek-coder-v2"
+    model: "qwen2.5-coder:7b"
 
   openai_default:
     type: openai_compatible
@@ -21,23 +22,39 @@ providers:
 modes:
   code:
     provider: ollama_local
-    model: "deepseek-coder-v2"
+    model: "qwen2.5-coder:7b"
     skills: []
+    input_budget_tokens: 2048
+    max_tool_steps: 6
 
   reason:
     provider: ollama_local
     model: "deepseek-r1:8b"
     skills: []
+    input_budget_tokens: 3072
+    max_tool_steps: 8
 
   fast:
     provider: ollama_local
     model: "qwen2.5-coder:7b"
     skills: []
+    input_budget_tokens: 1024
+    max_tool_steps: 3
 
   smart:
     provider: ollama_local
     model: "qwen2.5-coder:14b"
     skills: []
+    input_budget_tokens: 3072
+    max_tool_steps: 8
+
+  project:
+    provider: ollama_local
+    model: "qwen2.5-coder:7b"
+    skills: []
+    input_budget_tokens: 2048
+    max_tool_steps: 8
+    output_budget_tokens: 1024
 
 memory_path: ".zerocoding/memory.db"
 skills_path: "skills"

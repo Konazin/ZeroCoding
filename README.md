@@ -2,7 +2,7 @@
 
 ZeroCoding is an open source terminal coding assistant built in Python. It is inspired by the general experience of modern coding agents in the terminal, but uses its own identity, interface text, provider layer and ghost ASCII logo.
 
-The MVP focuses on a clean purple transcript-style TUI where you can choose a provider, configure local Ollama, select a model, keep sessions, add explicit project context, receive streamed responses and activate multiple Markdown skills.
+The TUI uses a persistent full-screen layout, a compact animated ghost, a scrollable transcript and a fixed input area. It keeps the Python installation lightweight and limits prompt context for local models.
 
 ## Install
 
@@ -34,7 +34,7 @@ ollama serve
 Pull a coding model:
 
 ```bash
-ollama pull deepseek-coder-v2
+ollama pull qwen2.5-coder:7b
 ```
 
 ZeroCoding ships with `ollama_local` configured for:
@@ -49,6 +49,8 @@ Inside the TUI you can test it with:
 /provider test
 ```
 
+At startup and before `zc init`, ZeroCoding checks the active provider; for Ollama it also checks that the configured model is installed. If another local model is available, choose it from the list. ZeroCoding does not download models automatically.
+
 Use a main PC as an Ollama server for a notebook on the same LAN:
 
 ```bash
@@ -56,7 +58,7 @@ Use a main PC as an Ollama server for a notebook on the same LAN:
 OLLAMA_HOST=0.0.0.0:11434 ollama serve
 
 # On the notebook, inside ZeroCoding
-/provider add ollama_lan ollama http://192.168.0.50:11434 deepseek-coder-v2
+/provider add ollama_lan ollama http://192.168.0.50:11434 qwen2.5-coder:7b
 /provider use ollama_lan
 /provider test
 ```
@@ -78,7 +80,7 @@ providers:
   ollama_local:
     type: ollama
     base_url: "http://localhost:11434"
-    model: "deepseek-coder-v2"
+    model: "qwen2.5-coder:7b"
 
   qwen_api:
     type: openai_compatible
@@ -91,13 +93,27 @@ mode: code
 modes:
   code:
     provider: ollama_local
-    model: "deepseek-coder-v2"
+    model: "qwen2.5-coder:7b"
+    skills: []
+
+  project:
+    provider: ollama_local
+    model: "qwen2.5-coder:7b"
+    input_budget_tokens: 2048
+    output_budget_tokens: 1024
+    max_tool_steps: 8
     skills: []
 
   reason:
     provider: ollama_local
     model: "deepseek-r1:8b"
     skills: []
+
+mcp_servers:
+  filesystem:
+    transport: stdio
+    command: "uvx"
+    args: ["mcp-server-filesystem", "."]
 ```
 
 You can also use environment variables from [.env.example](/home/kona/programas/zerocoding/.env.example).
@@ -110,19 +126,22 @@ You can also use environment variables from [.env.example](/home/kona/programas/
 - `/resume <id>` resumes a previous session.
 - `/new` starts a clean session.
 - `/mode` lists configured modes.
-- `/mode code`, `/mode reason`, `/mode fast` and `/mode smart` switch mode, provider and model.
+- `/mode code`, `/mode reason`, `/mode fast`, `/mode smart` and `/mode project` switch mode, provider and model.
+- `/permissions` shows the active permission mode; use `/permissions manual`, `/permissions approve-for-me` or `/permissions full-access` to change it.
 - `/provider` lists configured providers.
 - `/provider use ollama_local` switches provider and saves it.
+- `/provider add` opens a guided setup for provider name, type, URL, model and API key environment variable.
 - `/provider add local ollama http://localhost:11434 qwen2.5-coder:7b` adds a provider.
 - `/provider remove local` removes a non-active provider.
 - `/provider test` tests the active provider.
 - `/model` or `/model list` lists models when the provider supports it.
-- `/model use deepseek-coder-v2` switches model and saves it.
+- `/model use qwen2.5-coder:7b` switches model and saves it.
 - `/config` shows the active config.
 - `/config base_url http://localhost:11434` updates the active provider URL.
 - `/config add local ollama http://localhost:11434 qwen2.5-coder:7b` adds a provider.
 - `/health` also tests the active provider.
 - `/skills` lists Markdown skills.
+- `/mcp` lists configured MCP servers and supports explicit tools, resources and prompt commands.
 - `/skill add spring` activates a skill without removing others.
 - `/skill remove spring` deactivates a skill.
 - `/skill active` lists active skills.
@@ -136,7 +155,28 @@ You can also use environment variables from [.env.example](/home/kona/programas/
 - `/tree` lists project files, ignoring generated and dependency folders.
 - `/grep pattern` searches project files.
 - `/clear` clears the screen.
+- `Ctrl-C` cancels the current generation; `Ctrl-D` exits.
 - `/exit` exits.
+
+## Prompt budgets and performance
+
+The permanent system prompt stays below 64 estimated tokens. Project context, active Skills and recent history share a per-mode input budget. `fast`, `code`, `reason` and `smart` reserve 512 output tokens; `project` uses 2,048 input tokens, up to 1,024 output tokens and 8 tool steps. Other defaults are `fast` 1,024 input / 3 tool steps, `code` 2,048 / 6, and `reason` and `smart` 3,072 / 8. Estimates use four characters per token unless the provider reports usage.
+
+`/status` shows the active profile and available timings: prompt assembly, estimated input tokens, first token, total response time, tools and provider-reported usage. Metrics stay in memory and never store prompts or file contents. See [PERFORMANCE.md](/home/kona/programas/zerocoding/PERFORMANCE.md) for comparison guidance and the threshold for considering optional Rust acceleration.
+
+## Permission modes
+
+The default is `manual`. `approve-for-me` sends each local write to the active provider in a separate review call; invalid or unavailable reviews deny the action. Local commands still require your confirmation when a working sandbox is unavailable. `full-access` skips prompts for local project actions and runs commands inside Linux bubblewrap with network disabled. It is unavailable unless the sandbox self-check succeeds. Network use, MCP and dependency installation always require your confirmation.
+
+## Create a project
+
+From the parent directory, run:
+
+```bash
+zc init ./my-project
+```
+
+Choose Python, JavaScript or TypeScript, then `cli` or `api`, and describe the project. Python CLI scaffolds use `argparse` and `unittest`; Python APIs use FastAPI and `pytest`/`httpx`. JavaScript and TypeScript CLIs use Node.js 24+, `node:test` and Node built-ins; APIs use Fastify 5 and `app.inject` tests. The target must be a new or empty child directory of the current directory. ZeroCoding shows the file list and applies the active permission mode to scaffold creation and code edits. Generation cannot run commands. Verification and dependency installation have separate approvals; absent dependencies are reported as unverified, and no server starts automatically.
 
 ## Sessions
 
@@ -146,7 +186,7 @@ Interactive `zc` starts a local session with an ID. Sessions are stored as JSON 
 ~/.zerocoding/sessions
 ```
 
-Each session stores provider, model, mode, active skills, project path, chat history and explicitly added context files.
+Each session stores provider, model, mode, active skills, project path, chat history and explicitly added context files. JSON session history is the only conversation source; old global SQLite transcripts are not loaded into prompts.
 
 ```txt
 /sessions
@@ -156,18 +196,18 @@ Each session stores provider, model, mode, active skills, project path, chat his
 
 ## Project Context
 
-ZeroCoding never reads project files automatically for prompts. Add context explicitly:
+ZeroCoding keeps explicit context small. The agent can read and search project files through tools when useful; direct context can also be added explicitly:
 
 ```txt
 /context add src/zerocoding/cli.py
 /context tree
 ```
 
-`/read <path>` prints the file and also adds it to the temporary context. Context has per-file and total size limits, and ignores `.git`, `node_modules`, `venv`, `.venv`, `__pycache__`, `target`, `dist` and `build`.
+`/read <path>` prints a file and adds it to session context. File tools stay inside the project root. Manual mode confirms writes and commands; automatic modes cover only local project actions, and commands run in the workspace sandbox. Commands use argv arrays without shell expansion. Network, MCP and dependency-install actions still require confirmation.
 
 ## Skills
 
-Skills are Markdown files in [skills/](/home/kona/programas/zerocoding/skills). Frontmatter is supported:
+Skills can be Markdown files in [skills/](/home/kona/programas/zerocoding/skills) or directories containing `SKILL.md`. Metadata is discovered without loading full instructions; `/skill add` loads content into the prompt. Project Skills override user Skills, which override bundled Skills. Frontmatter is supported:
 
 ```md
 ---
@@ -188,6 +228,24 @@ Activate a skill in the TUI:
 /skill active
 ```
 
+Search paths are the configured `skills_path`, `~/.zerocoding/skills`, and `.zerocoding/skills` in the project.
+
+## MCP
+
+MCP is optional and starts with local `stdio` servers. Install it with `pip install 'zerocoding[mcp]'`, then configure servers in `~/.zerocoding/config.yaml`:
+
+```yaml
+mcp_servers:
+  filesystem:
+    transport: stdio
+    command: "uvx"
+    args: ["mcp-server-filesystem", "."]
+```
+
+MCP tools ask for confirmation on each call. `/mcp` lists servers; `/mcp tools`, `/mcp resources NAME`, `/mcp read NAME URI`, `/mcp prompts NAME`, and `/mcp prompt NAME PROMPT` expose other MCP features explicitly.
+
+Set server environment values from the environment with entries such as `API_TOKEN: "${API_TOKEN}"` under that server's `env` map.
+
 ## Architecture
 
 - `core/config.py` loads defaults, user config and environment overrides.
@@ -196,9 +254,11 @@ Activate a skill in the TUI:
 - `providers/base.py` defines `generate`, `chat`, `chat_stream`, `healthcheck` and `list_models`.
 - `providers/ollama.py` supports native Ollama endpoints `/api/generate`, `/api/chat` and `/api/tags`.
 - `providers/openai_compatible.py` supports `/chat/completions` and `/models`.
-- `core/agent.py` builds prompts, calls providers and tracks multiple active skills.
-- `tui/app.py` provides the purple Rich-based terminal interface.
-- `tui/textual_app.py` is a prepared Textual prototype for future expansion.
+- `core/agent.py` builds bounded prompts, runs provider tool calls and tracks active skills.
+- `tools/registry.py` defines the shared interface for built-in and MCP tools.
+- `core/events.py` defines the typed runtime events consumed by the host.
+- `tui/app.py` provides the full-screen prompt_toolkit host and Rich command output.
+- The TUI keeps the original ZeroCoding ghost in its header and updates its expression by agent state.
 
 ## Development
 
@@ -207,13 +267,11 @@ PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
 PYTHONPATH=src python -m py_compile src/zerocoding/**/*.py
 ```
 
-## Roadmap
+## Future work
 
-- Add a richer provider configuration modal.
-- Add optional streaming for OpenAI-compatible APIs.
-- Add file editing tools after the chat MVP is stable.
-- Add shell/git tools behind clear safety prompts.
+- Add Streamable HTTP or SSE MCP transports when a concrete use case requires them.
+- Add MCP Streamable HTTP if a concrete remote-server use case appears.
 
 ## Current TODO
 
-File editing, shell execution and autonomous agent loops are intentionally not implemented in the MVP.
+The agent can read and search automatically; file writes, command execution, and MCP calls require confirmation.

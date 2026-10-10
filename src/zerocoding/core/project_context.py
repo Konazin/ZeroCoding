@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -68,28 +69,42 @@ class ProjectContext:
 
     def list_project_files(self, limit: int = 200) -> list[str]:
         files = []
-        for path in sorted(self.root.rglob("*")):
-            if len(files) >= limit:
-                break
-            if self._is_ignored(path) or not path.is_file():
-                continue
-            files.append(self._relative(path))
+        for directory, names, filenames in os.walk(self.root, followlinks=False):
+            names[:] = sorted(name for name in names if name not in IGNORED_DIRS and not (Path(directory) / name).is_symlink())
+            for filename in sorted(filenames):
+                path = Path(directory) / filename
+                if path.is_symlink():
+                    continue
+                files.append(self._relative(path))
+                if len(files) >= limit:
+                    return files
         return files
 
     def grep(self, pattern: str, limit: int = 50) -> list[tuple[str, int, str]]:
         regex = re.compile(pattern)
         results = []
-        for path in sorted(self.root.rglob("*")):
-            if len(results) >= limit:
-                break
-            if self._is_ignored(path) or not path.is_file():
-                continue
-            text = path.read_text(encoding="utf-8", errors="ignore")
-            for lineno, line in enumerate(text.splitlines(), start=1):
-                if regex.search(line):
-                    results.append((self._relative(path), lineno, line.strip()))
-                    if len(results) >= limit:
-                        break
+        scanned = 0
+        for directory, names, filenames in os.walk(self.root, followlinks=False):
+            names[:] = sorted(name for name in names if name not in IGNORED_DIRS and not (Path(directory) / name).is_symlink())
+            for filename in sorted(filenames):
+                path = Path(directory) / filename
+                if path.is_symlink():
+                    continue
+                try:
+                    scanned += 1
+                    # ponytail: cap scans at 2000 files and 1 MiB each; raise if large-repo search misses files.
+                    if scanned > 2000:
+                        return results
+                    if path.stat().st_size > 1_048_576:
+                        continue
+                    with path.open(encoding="utf-8", errors="ignore") as file:
+                        for lineno, line in enumerate(file, start=1):
+                            if regex.search(line):
+                                results.append((self._relative(path), lineno, line.strip()))
+                                if len(results) >= limit:
+                                    return results
+                except OSError:
+                    continue
         return results
 
     def build_prompt(self, user_text: str) -> str:
@@ -99,6 +114,11 @@ class ProjectContext:
         for file in self.files.values():
             blocks.append(f"\n--- {file.path} ---\n{file.content}")
         return "\n".join(blocks) + f"\n\nUser request:\n{user_text}"
+
+    def build_context(self) -> str:
+        if not self.files:
+            return ""
+        return "\n".join(f"\n--- {file.path} ---\n{file.content}" for file in self.files.values())
 
     def build_system_prompt(self) -> str | None:
         if not self.files:
@@ -130,6 +150,8 @@ class ProjectContext:
         if not resolved.is_absolute():
             resolved = self.root / resolved
         resolved = resolved.resolve()
+        if not resolved.is_relative_to(self.root):
+            raise ValueError("Path must stay inside the project.")
         if self._is_ignored(resolved):
             raise ValueError(f"Ignored path: {path}")
         if not resolved.exists():
@@ -145,7 +167,8 @@ class ProjectContext:
             return str(path)
 
     def _read_limited(self, path: Path) -> str:
-        content = path.read_text(encoding="utf-8", errors="ignore")
+        with path.open(encoding="utf-8", errors="ignore") as file:
+            content = file.read(self.max_file_chars + 1)
         if len(content) > self.max_file_chars:
             return content[: self.max_file_chars] + "\n[truncated]"
         return content

@@ -1,9 +1,20 @@
 
+from pathlib import Path
+
+
 class Skill:
-    def __init__(self, name: str, description: str, content: str):
+    def __init__(self, name: str, description: str, content: str = "", path: str | Path | None = None):
         self.name = name
         self.description = description
-        self.content = content
+        self._content = content
+        self.path = Path(path) if path else None
+
+    @property
+    def content(self):
+        if self.path is not None and self._content == "":
+            self._content = self.path.read_text(encoding="utf-8")
+            self._content = parse_skill(self.name, self._content).content
+        return self._content
 
     def __repr__(self):
         return f"Skill(name={self.name!r}, description={self.description!r})"
@@ -34,3 +45,30 @@ def parse_skill(name: str, body: str):
             description = stripped
             break
     return Skill(name=skill_name, description=description or "No description", content=content.strip())
+
+
+def skill_metadata(path: str | Path, name: str | None = None) -> Skill:
+    path = Path(path)
+    fallback_name = name or path.parent.name if path.name == "SKILL.md" else name or path.stem
+    description = ""
+    with path.open(encoding="utf-8") as file:
+        first = file.readline()
+        if first.strip() == "---":
+            for line in file:
+                if line.strip() == "---":
+                    break
+                if ":" in line:
+                    key, value = line.split(":", 1)
+                    if key.strip() == "name":
+                        fallback_name = value.strip().strip("\"'") or fallback_name
+                    elif key.strip() == "description":
+                        description = value.strip().strip("\"'")
+        elif first.strip() and not first.strip().startswith("#"):
+            description = first.strip()
+        if not description:
+            for line in file:
+                text = line.strip()
+                if text and not text.startswith("#"):
+                    description = text
+                    break
+    return Skill(fallback_name, description or "No description", path=path)

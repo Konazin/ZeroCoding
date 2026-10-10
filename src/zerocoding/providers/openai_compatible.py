@@ -8,12 +8,18 @@ from .base import BaseProvider
 
 
 class OpenAICompatibleProvider(BaseProvider):
+    supports_tools = True
     def __init__(self, api_key: str, api_url: str, model: str):
         self.api_key = api_key
         self.api_url = api_url.rstrip("/")
         self.model = model
+        self._active_response = None
 
-    def _post(self, endpoint, payload):
+    def cancel(self):
+        if self._active_response:
+            self._active_response.close()
+
+    def _post(self, endpoint, payload, stream=False):
         headers = {
             "Content-Type": "application/json",
         }
@@ -26,6 +32,9 @@ class OpenAICompatibleProvider(BaseProvider):
             method="POST",
         )
         try:
+            if stream:
+                self._active_response = urllib.request.urlopen(request, timeout=30)
+                return self._active_response
             with urllib.request.urlopen(request, timeout=30) as response:
                 body = response.read().decode("utf-8")
                 return json.loads(body)
@@ -58,13 +67,71 @@ class OpenAICompatibleProvider(BaseProvider):
         payload = {
             "model": self.model,
             "messages": messages,
-            **kwargs,
+            **{k: v for k, v in kwargs.items() if k != "max_output_tokens"},
+            "max_tokens": kwargs.get("max_output_tokens", kwargs.get("max_tokens", 512)),
         }
         response = self._post(endpoint, payload)
         choice = response.get("choices", [{}])[0]
         if "message" in choice:
             return choice["message"].get("content", "")
         return choice.get("text", "")
+
+    def chat_with_tools(self, messages, tools, max_output_tokens=512):
+        endpoint = urljoin(self.api_url + "/", "chat/completions")
+        response = self._post(endpoint, {
+            "model": self.model,
+            "messages": messages,
+            "tools": tools,
+            "tool_choice": "auto",
+            "max_tokens": max_output_tokens,
+        })
+        message = response.get("choices", [{}])[0].get("message", {})
+        return {"content": message.get("content") or "", "tool_calls": message.get("tool_calls", [])}
+
+    def chat_stream_with_tools(self, messages, tools, max_output_tokens=512):
+        endpoint = urljoin(self.api_url + "/", "chat/completions")
+        response = self._post(endpoint, {
+            "model": self.model,
+            "messages": messages,
+            "tools": tools,
+            "tool_choice": "auto",
+            "stream": True,
+            "stream_options": {"include_usage": True},
+            "max_tokens": max_output_tokens,
+        }, stream=True)
+        tool_calls = {}
+        try:
+            for raw_line in response:
+                line = raw_line.decode("utf-8").strip()
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    data = json.loads(payload)
+                except json.JSONDecodeError:
+                    continue
+                if data.get("usage"):
+                    yield {"usage": data["usage"]}
+                choices = data.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta", {})
+                if delta.get("content"):
+                    yield {"content": delta["content"]}
+                for item in delta.get("tool_calls", []):
+                    index = item.get("index", 0)
+                    call = tool_calls.setdefault(index, {"id": "", "type": "function", "function": {"name": "", "arguments": ""}})
+                    if item.get("id"):
+                        call["id"] = item["id"]
+                    function = item.get("function", {})
+                    call["function"]["name"] += function.get("name", "")
+                    call["function"]["arguments"] += function.get("arguments", "")
+            yield {"tool_calls": [tool_calls[index] for index in sorted(tool_calls)]}
+        finally:
+            response.close()
+            self._active_response = None
 
     def healthcheck(self) -> bool:
         try:

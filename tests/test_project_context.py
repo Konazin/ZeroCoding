@@ -36,6 +36,22 @@ class TestProjectContext(unittest.TestCase):
             self.assertEqual(len(results), 1)
             self.assertEqual(results[0][0], "src/app.py")
 
+    def test_context_rejects_paths_outside_project(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "project"
+            root.mkdir()
+            outside = Path(tmp) / "secret.txt"
+            outside.write_text("secret", encoding="utf-8")
+            context = ProjectContext(root)
+            with self.assertRaises(ValueError):
+                context.add(outside)
+            try:
+                (root / "link.txt").symlink_to(outside)
+            except (OSError, NotImplementedError):
+                return
+            with self.assertRaises(ValueError):
+                context.add("link.txt")
+
 
 if __name__ == "__main__":
     unittest.main()

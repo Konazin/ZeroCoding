@@ -8,11 +8,18 @@ from .base import BaseProvider
 
 
 class OllamaProvider(BaseProvider):
+    supports_tools = True
     def __init__(self, url: str, model: str, timeout: int = 300):
         self.url = url.rstrip("/")
         self.model = model
         self.timeout = timeout
         self.max_retries = 2
+        self._active_response = None
+        self.last_usage = None
+
+    def cancel(self):
+        if self._active_response:
+            self._active_response.close()
 
     def _post(self, endpoint, payload, stream=False):
         request = urllib.request.Request(
@@ -24,7 +31,8 @@ class OllamaProvider(BaseProvider):
         try:
             if stream:
                 # Streaming response - retorna um generator
-                return urllib.request.urlopen(request, timeout=self.timeout)
+                self._active_response = urllib.request.urlopen(request, timeout=self.timeout)
+                return self._active_response
             else:
                 with urllib.request.urlopen(request, timeout=self.timeout) as response:
                     return json.loads(response.read().decode("utf-8"))
@@ -57,6 +65,7 @@ class OllamaProvider(BaseProvider):
             "stream": False,
             "options": {
                 "num_ctx": 4096,
+                "num_predict": kwargs.get("max_output_tokens", 512),
                 **kwargs.get("options", {}),
             },
         }
@@ -83,6 +92,7 @@ class OllamaProvider(BaseProvider):
             "stream": False,
             "options": {
                 "num_ctx": 4096,
+                "num_predict": kwargs.get("max_output_tokens", 512),
                 **kwargs.get("options", {}),
             },
         }
@@ -91,8 +101,59 @@ class OllamaProvider(BaseProvider):
             return response["message"].get("content", "")
         return response.get("response", "")
 
+    def chat_with_tools(self, messages, tools, max_output_tokens=512):
+        endpoint = urljoin(self.url + "/", "api/chat")
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "tools": tools,
+            "stream": False,
+            "options": {"num_ctx": 4096, "num_predict": max_output_tokens},
+        }
+        response = self._post(endpoint, payload, stream=False)
+        message = response.get("message", {})
+        return {"content": message.get("content", ""), "tool_calls": message.get("tool_calls", [])}
+
+    def chat_stream_with_tools(self, messages, tools, max_output_tokens=512):
+        endpoint = urljoin(self.url + "/", "api/chat")
+        response = self._post(endpoint, {
+            "model": self.model,
+            "messages": messages,
+            "tools": tools,
+            "stream": True,
+            "options": {"num_ctx": 4096, "num_predict": max_output_tokens},
+        }, stream=True)
+        tool_calls = []
+        try:
+            for line in response:
+                if not line.strip():
+                    continue
+                data = json.loads(line.decode("utf-8"))
+                message = data.get("message", {})
+                if message.get("content"):
+                    yield {"content": message["content"]}
+                if message.get("tool_calls"):
+                    tool_calls = message["tool_calls"]
+                if data.get("done"):
+                    usage = {
+                        "input_tokens": data.get("prompt_eval_count"),
+                        "prefill_ms": round(data["prompt_eval_duration"] / 1_000_000, 1) if data.get("prompt_eval_duration") else None,
+                        "output_tokens": data.get("eval_count"),
+                        "generation_ms": round(data["eval_duration"] / 1_000_000, 1) if data.get("eval_duration") else None,
+                        "total_ms": round(data["total_duration"] / 1_000_000, 1) if data.get("total_duration") else None,
+                    }
+                    usage = {key: value for key, value in usage.items() if value is not None}
+                    if usage:
+                        yield {"usage": usage}
+                    break
+            yield {"tool_calls": tool_calls}
+        finally:
+            response.close()
+            self._active_response = None
+
     def chat_stream(self, messages, **kwargs) -> Generator[str, None, None]:
         """Chat com streaming - gera tokens um por um."""
+        self.last_usage = None
         # Usa a API nativa do Ollama (/api/chat) para streaming
         endpoint = urljoin(self.url + "/", "api/chat")
         payload = {
@@ -101,24 +162,36 @@ class OllamaProvider(BaseProvider):
             "stream": True,
             "options": {
                 "num_ctx": 4096,
+                "num_predict": kwargs.get("max_output_tokens", 512),
                 **kwargs.get("options", {}),
             },
         }
 
         response = self._post(endpoint, payload, stream=True)
 
-        for line in response:
-            line = line.decode("utf-8").strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-                if "message" in data:
-                    content = data["message"].get("content", "")
-                    if content:
-                        yield content
-                # Verifica se terminou
-                if data.get("done", False):
-                    break
-            except json.JSONDecodeError:
-                continue
+        try:
+            for line in response:
+                line = line.decode("utf-8").strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    if "message" in data:
+                        content = data["message"].get("content", "")
+                        if content:
+                            yield content
+                    if data.get("done", False):
+                        usage = {
+                            "input_tokens": data.get("prompt_eval_count"),
+                            "prefill_ms": round(data["prompt_eval_duration"] / 1_000_000, 1) if data.get("prompt_eval_duration") else None,
+                            "output_tokens": data.get("eval_count"),
+                            "generation_ms": round(data["eval_duration"] / 1_000_000, 1) if data.get("eval_duration") else None,
+                            "total_ms": round(data["total_duration"] / 1_000_000, 1) if data.get("total_duration") else None,
+                        }
+                        self.last_usage = {key: value for key, value in usage.items() if value is not None}
+                        break
+                except json.JSONDecodeError:
+                    continue
+        finally:
+            response.close()
+            self._active_response = None

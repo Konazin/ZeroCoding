@@ -6,18 +6,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "zerocoding"
 version = "0.1.0"
-description = "Open source terminal coding assistant with providers, skills and memory"
+description = "Lightweight terminal coding assistant with providers, tools and skills"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "rich>=13.0.0",
     "prompt_toolkit>=3.0.0",
-    "httpx>=0.27.0",
-    "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
-    "textual>=0.80.0",
-    "typer>=0.12.0",
 ]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.0"]
 
 [project.scripts]
 zerocoding = "zerocoding.cli:main"
