@@ -35,6 +35,14 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - M2, sobre prompt/contexto, foi declarado concluído pelo usuário em 2026-10-14. Os relatórios em `docs/` ficam como referência; o prompt de produção segue inalterado até uma decisão explícita.
 - M3 está liberado, mas só deve começar quando o usuário pedir. Ver `docs/ROADMAP-extension.md` para os itens de revisão e sub-marcos adicionais.
 
+### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
+
+- Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.
+- Suíte: `uv run python -m unittest discover -s tests -p 'test_*.py'` com 81 testes passando.
+- Ressalvas tratadas: contexto dinâmico opcional (`dynamic_context`, desligado por padrão, não medido); testes de caracterização dos comandos do `cli.py`; `providers/ollama.py` marcado como legado.
+- Pendente para o fim do M3 (decisão do usuário): estimativa real de tokens (`/tokenize` do llama-server com fallback) no lugar de ~4 caracteres por token.
+- Pendente de medição: ativar `dynamic_context` por padrão só depois de comparar com `scripts/prompt_study.py` usando o servidor Ornith.
+
 ## Regras de trabalho
 
 - Trabalhar na branch `development` salvo orientação diferente.
