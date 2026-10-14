@@ -9,6 +9,7 @@ from typing import Generator
 from .context import ConversationContext
 from .events import AgentEvent
 from .prompt import build_messages
+from .relevance import select_skills, select_tool_schemas
 from .tools import READ_ONLY_TOOL_NAMES
 from ..providers.base import ProviderTurn, ToolCall, normalize_turn
 
@@ -54,8 +55,10 @@ def fit_messages(messages: list[dict], max_tokens: int) -> list[dict]:
 class Agent:
     def __init__(self, provider, memory=None, skills=None, max_input_tokens=4096,
                  max_output_tokens=1024, max_tool_rounds=6, tools=None,
-                 effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False):
+                 effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
+                 dynamic_context=False):
         self.provider = provider
+        self.dynamic_context = bool(dynamic_context)
         self.memory = memory  # retained for API compatibility; global history is never injected.
         self.skills = skills or []
         self.active_skills = []
@@ -150,7 +153,8 @@ class Agent:
                 "Propose changes clearly; file writes and commands require user approval."
             )
             system_prompt = base_prompt + "\n\n" + "\n".join(instructions)
-        messages = build_messages(text, system_prompt, history=self.context.history, skills=self.active_skills)
+        skills = select_skills(text, self.active_skills) if self.dynamic_context else self.active_skills
+        messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
         return fit_messages(messages, self.max_input_tokens)
 
     @staticmethod
@@ -162,6 +166,8 @@ class Agent:
         messages = self._messages(text, system_prompt)
         if use_tools and self.tools:
             tool_schemas = self.tools.read_only_schemas if self.plan_mode else self.tools.schemas
+            if self.dynamic_context and not self.plan_mode:
+                tool_schemas = select_tool_schemas(text, tool_schemas)
         else:
             tool_schemas = None
         tool_budget = self.max_input_tokens

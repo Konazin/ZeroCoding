@@ -226,7 +226,7 @@ Activate a skill in the TUI:
 - `core/project_context.py` manages explicit project context, tree and grep.
 - `providers/base.py` defines `generate`, `chat`, `chat_stream`, `healthcheck` and `list_models`.
 - `providers/llama_cpp.py` adapts llama.cpp's OpenAI-compatible server, including native effort requests.
-- `providers/ollama.py` supports native Ollama endpoints `/api/generate`, `/api/chat` and `/api/tags` for custom configurations.
+- `providers/ollama.py` is a **legacy** adapter for native Ollama endpoints (`/api/generate`, `/api/chat`, `/api/tags`). It is kept for existing configurations, is not validated against a real Ollama server, and receives no new features; llama.cpp is the supported runtime.
 - `providers/openai_compatible.py` supports `/chat/completions` and `/models`.
 - `core/agent.py` budgets prompts, runs bounded structured tool-call loops and tracks active skills.
 - `core/tools.py` provides workspace-scoped file reading/search and approval-gated writes/commands.

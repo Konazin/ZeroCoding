@@ -1,3 +1,10 @@
+"""LEGACY provider for native Ollama endpoints.
+
+Kept for compatibility with existing configs only. The supported runtime is llama.cpp
+(`llama_cpp.py`); this module is not exercised against a real Ollama server and receives
+no new features. Known limitation: when the caller omits `num_ctx`/`max_tokens` it falls
+back to its own defaults instead of the agent budgets.
+"""
 import json
 import urllib.error
 import urllib.request

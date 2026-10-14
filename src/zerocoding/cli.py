@@ -48,6 +48,7 @@ def main(argv=None):
         max_output_tokens=config.max_output_tokens,
         max_tool_rounds=config.max_tool_rounds,
         effort_profiles=config.effort_profiles,
+        dynamic_context=config.dynamic_context,
     )
     console = Console(force_terminal=True, color_system="truecolor")
 

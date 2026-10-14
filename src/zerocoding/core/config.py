@@ -116,6 +116,7 @@ class Config:
     max_input_tokens: int = 4096
     max_output_tokens: int = 1024
     max_tool_rounds: int = 6
+    dynamic_context: bool = False
     effort_profiles: dict[str, EffortProfile] = field(default_factory=lambda: dict(DEFAULT_EFFORT_PROFILES))
 
     @property
@@ -161,6 +162,7 @@ class Config:
             "max_input_tokens": self.max_input_tokens,
             "max_output_tokens": self.max_output_tokens,
             "max_tool_rounds": self.max_tool_rounds,
+            "dynamic_context": self.dynamic_context,
             "effort_profiles": {name: profile.to_dict() for name, profile in self.effort_profiles.items()},
         }
 
@@ -209,6 +211,7 @@ class ConfigManager:
             max_input_tokens=max(256, int(data.get("max_input_tokens", 4096))),
             max_output_tokens=medium.max_output_tokens,
             max_tool_rounds=medium.max_tool_rounds,
+            dynamic_context=self._as_bool(data.get("dynamic_context", False)),
             effort_profiles=effort_profiles,
         )
 

@@ -21,6 +21,7 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 
 ## Arquitetura e contratos
 
+- `providers/ollama.py` é legado: mantido só por compatibilidade de configs antigas, sem novas funcionalidades e sem validação contra um servidor Ollama real. O runtime suportado é llama.cpp.
 - Runtime principal em Python; TUI de produção em Rich + prompt_toolkit.
 - `core/agent.py` monta contexto limitado, chama o provider e executa um loop limitado de ferramentas.
 - Providers normalizam texto, tool calls, uso de tokens e dados de reasoning. Raciocínio privado nunca deve aparecer na TUI nem ser salvo em histórico de sessão.
