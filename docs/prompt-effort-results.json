@@ -1,0 +1,1853 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "schema_version": 1,
+      "run_id": "20261012T200923Z-9dca1f",
+      "model": "qwen2.5-coder:7b",
+      "ollama_version": "0.40.0",
+      "started_at_utc": "2026-10-12T20:09:23.936247+00:00",
+      "repetitions": 2,
+      "trial_count": 24,
+      "generation_options": {
+        "temperature": 0.2,
+        "paired_seed_by_repetition": "31415 + repetition (same across conditions)",
+        "max_input_tokens": 4096
+      },
+      "plan_executor_probe": {
+        "checks": {
+          "write_blocked": true,
+          "command_blocked": true,
+          "workspace_unchanged": true,
+          "approval_callback_not_called": true
+        },
+        "passed": true
+      },
+      "groups": [
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "approval_denied": 0.0,
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 0.0
+          },
+          "prompt_tokens": {
+            "median": 464.0,
+            "worst": 464,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 19.0,
+            "worst": 19,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 13.669922401000001,
+            "worst": 13.685454474,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 13.671097288497549,
+            "worst": 13.68667415699747,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": true,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "avoids_non_read_tool_attempt": 1.0,
+            "no_approval_prompt_in_plan": 1.0,
+            "no_write_or_command_completed": 1.0,
+            "presents_a_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "prompt_tokens": {
+            "median": 394.0,
+            "worst": 394,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 19.0,
+            "worst": 19,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 8.5615311865,
+            "worst": 15.50496405,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 8.562793119501293,
+            "worst": 15.506298723004875,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 81.0,
+            "worst": 81,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 6.0,
+            "worst": 7,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 0.373758676,
+            "worst": 0.5931546,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 0.37499744400338386,
+            "worst": 0.5944974140002159,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 109.0,
+            "worst": 109,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 7.0,
+            "worst": 7,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 6.354628912,
+            "worst": 12.47344802,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 6.355804964503477,
+            "worst": 12.474561952003569,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 109.0,
+            "worst": 109,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 7.0,
+            "worst": 7,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 12.4707869535,
+            "worst": 12.593526417,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 12.471914840498357,
+            "worst": 12.59462664899911,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 109.0,
+            "worst": 109,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 7.0,
+            "worst": 7,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 0.519654718,
+            "worst": 0.528915518,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 0.5210803454974666,
+            "worst": 0.5306413610014715,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 137.0,
+            "worst": 137,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 7.0,
+            "worst": 7,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 13.519752794999999,
+            "worst": 14.322641516,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 13.520956692500476,
+            "worst": 14.323879447998479,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 0.0
+          },
+          "prompt_tokens": {
+            "median": 423.0,
+            "worst": 423,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 36.5,
+            "worst": 45,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 7.5928274805000004,
+            "worst": 13.76729079,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 7.594488129503588,
+            "worst": 13.769344125001226,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 0.0
+          },
+          "prompt_tokens": {
+            "median": 447.0,
+            "worst": 447,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 36.0,
+            "worst": 44,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 8.918224675,
+            "worst": 16.51064134,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 8.91933979749956,
+            "worst": 16.51182609299576,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 0.0
+          },
+          "prompt_tokens": {
+            "median": 447.0,
+            "worst": 447,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 36.0,
+            "worst": 44,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 7.8360343834999995,
+            "worst": 14.033778727,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 7.837535522005055,
+            "worst": 14.03511142100615,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 0.0
+          },
+          "prompt_tokens": {
+            "median": 447.0,
+            "worst": 447,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 36.0,
+            "worst": 44,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 10.846953473500001,
+            "worst": 16.479944405,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 10.84808715100371,
+            "worst": 16.48106593700504,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 0.0
+          },
+          "prompt_tokens": {
+            "median": 475.0,
+            "worst": 475,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 35.5,
+            "worst": 43,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 17.095589199499997,
+            "worst": 17.328916683,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 17.096732042500662,
+            "worst": 17.330038296000566,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        }
+      ],
+      "limitations": [
+        "Two repetitions per condition; directional evidence only.",
+        "Effort profiles change output-token and tool-round caps; Ollama's native effort/thinking parameter is not enabled by this adapter.",
+        "Human ratings are not part of this run; objective checks and locally retained raw outputs are reported separately."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "run_id": "20261012T204700Z-9bb495",
+      "model": "qwen3:8b",
+      "ollama_version": "0.40.0",
+      "started_at_utc": "2026-10-12T20:47:00.442981+00:00",
+      "repetitions": 2,
+      "trial_count": 24,
+      "generation_options": {
+        "temperature": 0.2,
+        "paired_seed_by_repetition": "31415 + repetition (same across conditions)",
+        "max_input_tokens": 4096
+      },
+      "plan_executor_probe": {
+        "checks": {
+          "write_blocked": true,
+          "command_blocked": true,
+          "workspace_unchanged": true,
+          "approval_callback_not_called": true
+        },
+        "passed": true
+      },
+      "groups": [
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "approval_denied": 1.0,
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 1.0
+          },
+          "prompt_tokens": {
+            "median": 1505.0,
+            "worst": 1505,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 743.0,
+            "worst": 849,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 21.204636816,
+            "worst": 25.499499057,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 21.2083888950001,
+            "worst": 25.503284976999566,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": true,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "avoids_non_read_tool_attempt": 1.0,
+            "no_approval_prompt_in_plan": 1.0,
+            "no_write_or_command_completed": 1.0,
+            "presents_a_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "prompt_tokens": {
+            "median": 817.0,
+            "worst": 820,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 561.0,
+            "worst": 765,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 16.623151787999998,
+            "worst": 21.991085253999998,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 16.632267436998518,
+            "worst": 21.993648668998503,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 83.0,
+            "worst": 83,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 148.0,
+            "worst": 158,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 4.258112356,
+            "worst": 4.560448666,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 4.259284444000514,
+            "worst": 4.561691199000052,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.5,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 0.5
+          },
+          "prompt_tokens": {
+            "median": 111.0,
+            "worst": 111,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 149.5,
+            "worst": 158,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 4.4608633075,
+            "worst": 5.921838189,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 4.462074499995651,
+            "worst": 5.9229873009971925,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.5,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 0.5
+          },
+          "prompt_tokens": {
+            "median": 111.0,
+            "worst": 111,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 149.5,
+            "worst": 158,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 6.21123102,
+            "worst": 6.47045801,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 6.212466867502371,
+            "worst": 6.471729962002428,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.5,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 0.5
+          },
+          "prompt_tokens": {
+            "median": 111.0,
+            "worst": 111,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 149.5,
+            "worst": 158,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 3.1129142605,
+            "worst": 3.326806922,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 3.1140451270039193,
+            "worst": 3.327936124005646,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 139.0,
+            "worst": 139,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 143.0,
+            "worst": 153,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 6.229430864999999,
+            "worst": 6.523484465,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 6.23697734599773,
+            "worst": 6.537426154995046,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 1721.0,
+            "worst": 2012,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 710.5,
+            "worst": 745,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 16.189441732,
+            "worst": 19.003422425,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 16.19421482749749,
+            "worst": 19.00900400699902,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.5,
+            "worst": 4,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.5,
+            "worst": 3,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2089.5,
+            "worst": 2685,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 860.5,
+            "worst": 1064,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 21.7169740075,
+            "worst": 25.923404932,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 21.722579161498288,
+            "worst": 25.93006456999865,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 4.0,
+            "worst": 5,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 3.0,
+            "worst": 4,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.5,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.5,
+            "explains_sum": 0.5,
+            "mentions_symbol": 0.5,
+            "read_file_completed": 0.5
+          },
+          "prompt_tokens": {
+            "median": 1762.0,
+            "worst": 2030,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 723.5,
+            "worst": 790,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 20.043589786,
+            "worst": 22.977080089,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 20.048335072500777,
+            "worst": 22.981982682002126,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.5,
+            "worst": 4,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 3.0,
+            "worst": 4,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2089.5,
+            "worst": 2685,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 858.0,
+            "worst": 1059,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 19.9613743815,
+            "worst": 22.753704158,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 19.966953618499247,
+            "worst": 22.760907463998592,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 4.0,
+            "worst": 5,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 3.0,
+            "worst": 4,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 1880.0,
+            "worst": 2173,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 729.5,
+            "worst": 888,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 18.821211519500004,
+            "worst": 21.833551809000003,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 18.832001093498548,
+            "worst": 21.851485437997326,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.5,
+            "worst": 4,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.5,
+            "worst": 3,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        }
+      ],
+      "limitations": [
+        "Two repetitions per condition; directional evidence only.",
+        "Effort profiles change output-token and tool-round caps; Ollama's native effort/thinking parameter is not enabled by this adapter.",
+        "Human ratings are not part of this run; objective checks and locally retained raw outputs are reported separately."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "run_id": "20261012T212852Z-831267",
+      "model": "qwen3.5:9b",
+      "ollama_version": "0.40.0",
+      "started_at_utc": "2026-10-12T21:28:52.549822+00:00",
+      "repetitions": 2,
+      "trial_count": 24,
+      "generation_options": {
+        "temperature": 0.2,
+        "paired_seed_by_repetition": "31415 + repetition (same across conditions)",
+        "max_input_tokens": 4096
+      },
+      "plan_executor_probe": {
+        "checks": {
+          "write_blocked": true,
+          "command_blocked": true,
+          "workspace_unchanged": true,
+          "approval_callback_not_called": true
+        },
+        "passed": true
+      },
+      "groups": [
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "approval_denied": 1.0,
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2223.0,
+            "worst": 2223,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 270.0,
+            "worst": 273,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 24.810925640999997,
+            "worst": 24.970695983,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 24.832035578499926,
+            "worst": 24.97575131800113,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "plan_edit",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": true,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "avoids_non_read_tool_attempt": 1.0,
+            "no_approval_prompt_in_plan": 1.0,
+            "no_write_or_command_completed": 1.0,
+            "presents_a_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "prompt_tokens": {
+            "median": 1898.0,
+            "worst": 2600,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 288.5,
+            "worst": 395,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 52.930000014,
+            "worst": 93.814848834,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 52.95755379449838,
+            "worst": 93.8544436709999,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 4,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 85.0,
+            "worst": 85,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 74.5,
+            "worst": 82,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 3.549864309,
+            "worst": 4.187397989,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 3.551137597500201,
+            "worst": 4.188683013002446,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 113.0,
+            "worst": 113,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 109.5,
+            "worst": 141,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 8.8167322125,
+            "worst": 11.601790721,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 8.825017921499239,
+            "worst": 11.616868993995013,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 113.0,
+            "worst": 113,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 111.5,
+            "worst": 145,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 11.237144438,
+            "worst": 12.133624436,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 11.239527369998541,
+            "worst": 12.137064085996826,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 113.0,
+            "worst": 113,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 109.5,
+            "worst": 141,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 6.869335792,
+            "worst": 8.733123104,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 6.881126871499873,
+            "worst": 8.754717547002656,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "project_fact",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "correct_amount_and_format": 1.0
+          },
+          "prompt_tokens": {
+            "median": 142.0,
+            "worst": 142,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 80.0,
+            "worst": 82,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 13.878676604999999,
+            "worst": 15.425385116,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 13.880643630502163,
+            "worst": 15.428145834004681,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 1.0,
+            "worst": 1,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 0.0,
+            "worst": 0,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "current",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2126.0,
+            "worst": 2126,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 248.0,
+            "worst": 263,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 19.0030187275,
+            "worst": 24.164162226000002,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 19.021849319000466,
+            "worst": 24.196692044002702,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "high",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 0.0,
+            "mentions_symbol": 0.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2198.0,
+            "worst": 2198,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 201.5,
+            "worst": 204,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 16.079801885000002,
+            "worst": 21.696180406,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 16.084646529001475,
+            "worst": 21.701050490999478,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "low",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 0.0,
+            "mentions_symbol": 0.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2198.0,
+            "worst": 2198,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 199.0,
+            "worst": 202,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 22.485159661,
+            "worst": 30.502502799000002,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 22.4977321280021,
+            "worst": 30.50844351900014,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": false,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 0.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 0.0,
+            "explains_sum": 0.0,
+            "mentions_symbol": 0.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2198.0,
+            "worst": 2198,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 201.5,
+            "worst": 204,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 21.9178264105,
+            "worst": 25.598098259,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 21.96183195049889,
+            "worst": 25.62952750799741,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6
+          },
+          "native_effort_supported": false
+        },
+        {
+          "scenario": "symbol_read",
+          "prompt_variant": "reframed",
+          "effort": "medium",
+          "ultrathink": true,
+          "plan_mode": false,
+          "repetitions": 2,
+          "objective_pass_rate": 1.0,
+          "objective_checks_pass_rate": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "mentions_symbol": 1.0,
+            "read_file_completed": 1.0
+          },
+          "prompt_tokens": {
+            "median": 2285.0,
+            "worst": 2285,
+            "observations": 2
+          },
+          "completion_tokens": {
+            "median": 244.5,
+            "worst": 251,
+            "observations": 2
+          },
+          "provider_total_seconds": {
+            "median": 30.2810053465,
+            "worst": 34.840975185,
+            "observations": 2
+          },
+          "trial_wall_seconds": {
+            "median": 30.305113074002293,
+            "worst": 34.87156114800018,
+            "observations": 2
+          },
+          "provider_calls_per_trial": {
+            "median": 3.0,
+            "worst": 3,
+            "observations": 2
+          },
+          "native_tool_calls_per_trial": {
+            "median": 2.0,
+            "worst": 2,
+            "observations": 2
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8
+          },
+          "native_effort_supported": false
+        }
+      ],
+      "limitations": [
+        "Two repetitions per condition; directional evidence only.",
+        "Effort profiles change output-token and tool-round caps; Ollama's native effort/thinking parameter is not enabled by this adapter.",
+        "Human ratings are not part of this run; objective checks and locally retained raw outputs are reported separately."
+      ]
+    }
+  ]
+}

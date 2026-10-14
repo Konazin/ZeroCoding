@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 from typing import Generator
 
 from .base import BaseProvider
+from .base import ProviderTurn, ToolCall
 
 
 class OllamaProvider(BaseProvider):
@@ -13,6 +14,9 @@ class OllamaProvider(BaseProvider):
         self.model = model
         self.timeout = timeout
         self.max_retries = 2
+
+    def tool_result_message(self, call_id: str, name: str, content: str) -> dict:
+        return {"role": "tool", "content": content}
 
     def _post(self, endpoint, payload, stream=False):
         request = urllib.request.Request(
@@ -81,14 +85,51 @@ class OllamaProvider(BaseProvider):
             "model": self.model,
             "messages": messages,
             "stream": False,
+            "tools": kwargs.get("tools"),
             "options": {
-                "num_ctx": 4096,
+                "num_ctx": kwargs.get("num_ctx", 5120),
+                "num_predict": kwargs.get("max_tokens", 1024),
                 **kwargs.get("options", {}),
             },
         }
+        if kwargs.get("think") is not None:
+            payload["think"] = kwargs["think"]
+        if not payload["tools"]:
+            payload.pop("tools")
         response = self._post(endpoint, payload, stream=False)
         if "message" in response:
-            return response["message"].get("content", "")
+            message = response["message"]
+            calls = []
+            for item in message.get("tool_calls", []) or []:
+                fn = item.get("function", {})
+                args = fn.get("arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except ValueError:
+                        args = {}
+                calls.append(ToolCall(fn.get("name", ""), args if isinstance(args, dict) else {}, item.get("id", "")))
+            usage = {}
+            for source_key, usage_key in (
+                ("prompt_eval_count", "prompt_tokens"),
+                ("eval_count", "completion_tokens"),
+                ("prompt_eval_duration", "prompt_eval_duration_ns"),
+                ("eval_duration", "eval_duration_ns"),
+                ("total_duration", "total_duration_ns"),
+                ("load_duration", "load_duration_ns"),
+            ):
+                value = response.get(source_key)
+                if isinstance(value, (int, float)):
+                    usage[usage_key] = value
+            done_reason = response.get("done_reason")
+            if isinstance(done_reason, str):
+                usage["done_reason"] = done_reason
+            return ProviderTurn(
+                content=message.get("content", ""),
+                tool_calls=calls,
+                usage=usage,
+                thinking_present=bool(message.get("thinking")),
+            )
         return response.get("response", "")
 
     def chat_stream(self, messages, **kwargs) -> Generator[str, None, None]:
@@ -100,10 +141,13 @@ class OllamaProvider(BaseProvider):
             "messages": messages,
             "stream": True,
             "options": {
-                "num_ctx": 4096,
+                "num_ctx": kwargs.get("num_ctx", 5120),
+                "num_predict": kwargs.get("max_tokens", 1024),
                 **kwargs.get("options", {}),
             },
         }
+        if kwargs.get("think") is not None:
+            payload["think"] = kwargs["think"]
 
         response = self._post(endpoint, payload, stream=True)
 

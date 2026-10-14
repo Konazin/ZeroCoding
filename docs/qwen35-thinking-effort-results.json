@@ -1,0 +1,2577 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "schema_version": 1,
+      "run_id": "20261012T220124Z-51eb24",
+      "model": "qwen3.5:9b",
+      "model_digest": "2e16a80fe3d77d431d295466415848403c8c266667ee5d7d8991ee445b4e1311",
+      "ollama_version": "0.40.0",
+      "started_at_utc": "2026-10-12T22:01:24.630125+00:00",
+      "completed_at_utc": "2026-10-12T22:55:57.809405+00:00",
+      "repetitions": 3,
+      "trial_count": 90,
+      "generation_options": {
+        "thinking": "explicit boolean per matrix row; preflight also tests omitted/default",
+        "temperature": 0.6,
+        "top_p": 0.95,
+        "top_k": 20,
+        "presence_penalty": 0.0,
+        "repetition_penalty": 1.0,
+        "paired_seed_by_repetition": "31415 + repetition (shared across conditions)",
+        "max_input_tokens": 4096,
+        "num_ctx": 6144
+      },
+      "preflight": {
+        "ollama_version": "0.40.0",
+        "model_tag": {
+          "name": "qwen3.5:9b",
+          "model": "qwen3.5:9b",
+          "modified_at": "2026-10-12T18:30:05.384505627-03:00",
+          "size": 6594474711,
+          "digest": "2e16a80fe3d77d431d295466415848403c8c266667ee5d7d8991ee445b4e1311",
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen35",
+            "families": [
+              "qwen35"
+            ],
+            "parameter_size": "9.7B",
+            "quantization_level": "Q4_K_M",
+            "context_length": 262144,
+            "embedding_length": 4096,
+            "runner": "ggml"
+          },
+          "capabilities": [
+            "completion",
+            "vision",
+            "tools",
+            "thinking"
+          ]
+        },
+        "show": {
+          "details": {
+            "parent_model": "",
+            "format": "gguf",
+            "family": "qwen35",
+            "families": [
+              "qwen35",
+              "clip"
+            ],
+            "parameter_size": "9.7B",
+            "quantization_level": "Q4_K_M",
+            "runner": "llamacpp"
+          },
+          "model_info": {
+            "general.architecture": "qwen35",
+            "general.file_type": 15,
+            "general.parameter_count": 9197093888,
+            "general.quantization_version": 2,
+            "qwen35.attention.head_count": 16,
+            "qwen35.attention.head_count_kv": 4,
+            "qwen35.attention.key_length": 256,
+            "qwen35.attention.layer_norm_rms_epsilon": 1e-06,
+            "qwen35.attention.value_length": 256,
+            "qwen35.block_count": 33,
+            "qwen35.context_length": 262144,
+            "qwen35.embedding_length": 4096,
+            "qwen35.feed_forward_length": 12288,
+            "qwen35.full_attention_interval": 4,
+            "qwen35.mrope_sections": [
+              11,
+              11,
+              10,
+              0
+            ],
+            "qwen35.nextn_predict_layers": 1,
+            "qwen35.rope.dimension_count": 64,
+            "qwen35.rope.dimension_sections": [
+              11,
+              11,
+              10,
+              0
+            ],
+            "qwen35.rope.freq_base": 10000000,
+            "qwen35.rope.mrope_section": [
+              11,
+              11,
+              10,
+              0
+            ],
+            "qwen35.ssm.conv_kernel": 4,
+            "qwen35.ssm.group_count": 16,
+            "qwen35.ssm.inner_size": 4096,
+            "qwen35.ssm.state_size": 128,
+            "qwen35.ssm.time_step_rank": 32,
+            "tokenizer.ggml.add_eos_token": false,
+            "tokenizer.ggml.add_padding_token": false,
+            "tokenizer.ggml.eos_token_id": 248046,
+            "tokenizer.ggml.merges": [],
+            "tokenizer.ggml.model": "gpt2",
+            "tokenizer.ggml.padding_token_id": 248044,
+            "tokenizer.ggml.pre": "qwen35",
+            "tokenizer.ggml.scores": [],
+            "tokenizer.ggml.token_type": [],
+            "tokenizer.ggml.tokens": []
+          },
+          "capabilities": [
+            "completion",
+            "vision",
+            "tools",
+            "thinking"
+          ],
+          "parameters": "presence_penalty               1.5\ntemperature                    1\ntop_k                          20\ntop_p                          0.95"
+        },
+        "thinking_probes": [
+          {
+            "think_requested": null,
+            "request_accepted": true,
+            "thinking_present": true,
+            "final_content_nonempty": false,
+            "usage": {
+              "prompt_tokens": 29,
+              "completion_tokens": 128,
+              "prompt_eval_duration_ns": 525206000,
+              "eval_duration_ns": 9392333000,
+              "total_duration_ns": 19015237721,
+              "load_duration_ns": 9061417480
+            }
+          },
+          {
+            "think_requested": false,
+            "request_accepted": true,
+            "thinking_present": false,
+            "final_content_nonempty": true,
+            "usage": {
+              "prompt_tokens": 31,
+              "completion_tokens": 45,
+              "prompt_eval_duration_ns": 271191000,
+              "eval_duration_ns": 3256426000,
+              "total_duration_ns": 3596406614,
+              "load_duration_ns": 2632909
+            }
+          },
+          {
+            "think_requested": true,
+            "request_accepted": true,
+            "thinking_present": true,
+            "final_content_nonempty": false,
+            "usage": {
+              "prompt_tokens": 29,
+              "completion_tokens": 128,
+              "prompt_eval_duration_ns": 139076000,
+              "eval_duration_ns": 9373853000,
+              "total_duration_ns": 9609968608,
+              "load_duration_ns": 2518578
+            }
+          }
+        ],
+        "explicit_off_and_on_accepted": true
+      },
+      "warmup": {
+        "wall_seconds": 0.9707674810051685,
+        "provider_usage": {
+          "prompt_tokens": 14,
+          "completion_tokens": 8,
+          "prompt_eval_duration_ns": 445499000,
+          "eval_duration_ns": 519856000,
+          "total_duration_ns": 969684776,
+          "load_duration_ns": 3123680
+        }
+      },
+      "qwen_agent_diagnostic": {
+        "status": "complete",
+        "path": ".zerocoding/studies/m2/qwen35-thinking-effort/runs/20261012T220124Z-51eb24/qwen-agent-diagnostic.json",
+        "result": {
+          "status": "complete",
+          "qwen_agent_version": "0.0.34",
+          "qwen_agent_llm_mode": "qwenvl_oai with use_raw_api=True",
+          "reasoning_effort": "none",
+          "max_tokens": 512,
+          "max_llm_calls_per_probe": 2,
+          "model": "qwen3.5:9b",
+          "base_url": "http://localhost:11434",
+          "probes": [
+            {
+              "probe": "direct_answer",
+              "status": "passed",
+              "tool_names": [],
+              "tool_call_count": 0,
+              "final_content": "20",
+              "final_content_nonempty": true,
+              "reasoning_present": false,
+              "duration_seconds": 0.8072026679874398,
+              "emitted_roles": [
+                "assistant"
+              ]
+            },
+            {
+              "probe": "tool_read_and_answer",
+              "status": "passed",
+              "tool_names": [
+                "zc_reference_read_fixture"
+              ],
+              "tool_call_count": 1,
+              "final_content": "The `format_total` function:\n\n1. **Sums**: It calculates the total price by summing the `'price'` attribute of each item in the `items` list.\n\n2. **Formats**: It returns the sum formatted as a dollar amount with two decimal places using an f-string: `f\"${sum(...):.2f}\"`.\n\nExample: If `items = [{'price': 10}, {'price': 20}]`, it returns `\"${30.00}\"`.",
+              "final_content_nonempty": true,
+              "reasoning_present": false,
+              "duration_seconds": 8.021805084994412,
+              "emitted_roles": [
+                "assistant",
+                "function",
+                "assistant"
+              ]
+            },
+            {
+              "probe": "read_only_plan",
+              "status": "passed",
+              "tool_names": [
+                "zc_reference_read_fixture"
+              ],
+              "tool_call_count": 1,
+              "final_content": "The file `src/calculations.py` contains a function `format_total` that takes a list of items and returns a single string: the sum of their prices, formatted as a US dollar amount with two decimal places (e.g., `\"$123.45\"`).\n\n**Plan for reviewing a requested change to its output format:**\n\n1. **Understand the change**: Clarify what the new output format should be (e.g., different currency, number of decimals, additional text, different number formatting).\n2. **Check impact**: Determine if the change affects any downstream systems or user-facing outputs that depend on the current format.\n3. **Modify the function**: Update the `return` statement in `format_total` to implement the new formatting logic using Python’s `f-string` or `format` methods.\n4. **Test**: Create test cases with various inputs to ensure the new format is correct and handles edge cases (e.g., zero, large numbers, negative prices).\n5. **Document**: Update any relevant documentation or comments to reflect the new output format.\n6. **Approve**: Get approval from the relevant team or stakeholder before finalizing the change.",
+              "final_content_nonempty": true,
+              "reasoning_present": false,
+              "duration_seconds": 19.342777854995802,
+              "emitted_roles": [
+                "assistant",
+                "assistant",
+                "function",
+                "assistant"
+              ]
+            }
+          ],
+          "all_probes_passed": true,
+          "limitations": [
+            "Diagnostic sample only; prompts, tool schemas, and harness differ from ZeroCoding.",
+            "Tool access is read-only and returns fixed synthetic source; no user workspace is accessible.",
+            "Ollama OpenAI Chat Completions received reasoning_effort=none to match the best-performing ZeroCoding matrix condition; thinking content is not retained."
+          ]
+        }
+      },
+      "host_resource_peak": {
+        "measurement_scope": "matrix trials only; excludes warmup and Qwen-Agent diagnostic runs",
+        "trial_count": 90,
+        "host_sample_count": 1780,
+        "peak_ollama_runner_rss_bytes": null,
+        "peak_gpu_vram_used_bytes": 7070736384,
+        "gpu_vram_capacity_bytes": 8573157376,
+        "peak_gpu_busy_percent": 99,
+        "min_mem_available_bytes": 6794338304,
+        "mean_gpu_busy_percent": 72.1370786516854,
+        "gpu_path": "/sys/class/drm/card1/device"
+      },
+      "overall_by_thinking": [
+        {
+          "thinking": false,
+          "trials": 45,
+          "objective_successes": 42,
+          "objective_pass_rate": 0.9333333333333333,
+          "final_responses_nonempty": 45,
+          "final_response_nonempty_rate": 1.0,
+          "trial_wall_seconds": {
+            "median": 13.120606543998292,
+            "p95": 24.66081872620125,
+            "observations": 45
+          },
+          "completion_tokens": {
+            "median": 96.0,
+            "p95": 220.0,
+            "observations": 45
+          },
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 3.0,
+            "observations": 45
+          },
+          "thinking_present_call_rate": 0.0
+        },
+        {
+          "thinking": true,
+          "trials": 45,
+          "objective_successes": 27,
+          "objective_pass_rate": 0.6,
+          "final_responses_nonempty": 24,
+          "final_response_nonempty_rate": 0.5333333333333333,
+          "trial_wall_seconds": {
+            "median": 22.535584429002483,
+            "p95": 36.904139869198815,
+            "observations": 45
+          },
+          "completion_tokens": {
+            "median": 219.0,
+            "p95": 477.5999999999995,
+            "observations": 45
+          },
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 3.0,
+            "observations": 45
+          },
+          "thinking_present_call_rate": 0.8861788617886179
+        }
+      ],
+      "groups": [
+        {
+          "scenario": "denied_write",
+          "thinking": false,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 1.0,
+            "write_was_denied": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2112.0,
+            "p95": 2194.8,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 84.0,
+            "p95": 147.0,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 12.984181943,
+            "p95": 13.5979061396,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.007470512,
+            "p95": 0.009265951699999999,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.531647609249317,
+            "p95": 13.560765671844486,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 12.988497507001739,
+            "p95": 13.602199685994856,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6546513920.0,
+            "p95": 6613071872.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 69.2,
+            "p95": 77.88153846153845,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "denied_write",
+          "thinking": false,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 1.0,
+            "write_was_denied": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2112.0,
+            "p95": 2185.8,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 84.0,
+            "p95": 136.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 12.279406643,
+            "p95": 17.161821989,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.007667211,
+            "p95": 0.0086286927,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.6077586255775,
+            "p95": 13.68731148024045,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 12.282129742001416,
+            "p95": 17.165509835799458,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6619439104.0,
+            "p95": 6732615270.4,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 72.35714285714286,
+            "p95": 75.99571428571429,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "denied_write",
+          "thinking": false,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 1.0,
+            "write_was_denied": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2112.0,
+            "p95": 2185.8,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 84.0,
+            "p95": 136.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 12.574173083,
+            "p95": 13.062448634899999,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008184381,
+            "p95": 0.0086258967,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.645321701454657,
+            "p95": 13.68893834970806,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 12.578162762001739,
+            "p95": 13.066362165798637,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6301184000.0,
+            "p95": 6330103808.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 74.5,
+            "p95": 79.51923076923077,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "denied_write",
+          "thinking": true,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 0.6666666666666666,
+            "write_was_denied": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.3333333333333333,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 2118.0,
+            "p95": 2118.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 201.0,
+            "p95": 221.7,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 21.214164559,
+            "p95": 22.8025421671,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008599533,
+            "p95": 0.0086328699,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.35757335350168,
+            "p95": 13.384007079785961,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 21.218190179002704,
+            "p95": 22.806464683097147,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6356631552.0,
+            "p95": 6847376179.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 75.8,
+            "p95": 77.04875,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "denied_write",
+          "thinking": true,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 0.6666666666666666,
+            "write_was_denied": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.3333333333333333,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 2118.0,
+            "p95": 2118.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 186.0,
+            "p95": 220.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 18.658460994,
+            "p95": 20.761516146299996,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008312493,
+            "p95": 0.0093624744,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.28887988674445,
+            "p95": 13.322056166087668,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 18.662703157002397,
+            "p95": 20.765802814304333,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6597402624.0,
+            "p95": 6805153382.4,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 73.0,
+            "p95": 76.75652173913043,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "denied_write",
+          "thinking": true,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "no_write_or_command_completed": 1.0,
+            "workspace_unchanged_after_denial": 1.0,
+            "write_approval_requested": 0.6666666666666666,
+            "write_was_denied": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.3333333333333333,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 2118.0,
+            "p95": 2118.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 186.0,
+            "p95": 220.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 15.604035723,
+            "p95": 22.1478397272,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008045282,
+            "p95": 0.008623541,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.391469849726871,
+            "p95": 13.403187251207118,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 15.607869573999778,
+            "p95": 22.15252665310545,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6439096320.0,
+            "p95": 6618635059.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 70.58333333333333,
+            "p95": 74.78333333333333,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": false,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "final_answer_present": 1.0,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 3137.0,
+            "p95": 3152.3,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 216.0,
+            "p95": 220.5,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 19.208106283,
+            "p95": 24.6530335315,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.012194642,
+            "p95": 0.0124510178,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.351921350754541,
+            "p95": 13.684768959918394,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 19.289419401000487,
+            "p95": 24.726325350898698,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6948233216.0,
+            "p95": 7021415628.8,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 74.42857142857143,
+            "p95": 78.15714285714286,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": false,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "final_answer_present": 1.0,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 3137.0,
+            "p95": 3145.1,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 211.0,
+            "p95": 220.0,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 19.140177432,
+            "p95": 24.0757639077,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.011477186,
+            "p95": 0.013244133500000001,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.362089032627077,
+            "p95": 13.552559009313473,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 19.224076833001163,
+            "p95": 24.15713447250164,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6680064000.0,
+            "p95": 6770303385.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 79.4074074074074,
+            "p95": 81.69074074074074,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": false,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "final_answer_present": 1.0,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 3137.0,
+            "p95": 3152.3,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 216.0,
+            "p95": 220.5,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 24.413903918,
+            "p95": 24.6391376651,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.01189313,
+            "p95": 0.0127609838,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.446681352957619,
+            "p95": 13.60898757993623,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 24.483085678999487,
+            "p95": 24.719082580096437,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6547238912.0,
+            "p95": 6840938086.4,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 76.81481481481481,
+            "p95": 80.40840455840456,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": true,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "final_answer_present": 0.6666666666666666,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8333333333333334,
+          "prompt_tokens": {
+            "median": 2996.0,
+            "p95": 2996.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 229.0,
+            "p95": 281.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 24.982739142,
+            "p95": 28.954077468,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.023244983,
+            "p95": 0.0237478058,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.392712982867968,
+            "p95": 13.454145498717448,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 25.04931833199953,
+            "p95": 29.037898193794536,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6455406592.0,
+            "p95": 6688589824.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 73.5,
+            "p95": 77.05645161290323,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": true,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "final_answer_present": 0.6666666666666666,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8333333333333334,
+          "prompt_tokens": {
+            "median": 2996.0,
+            "p95": 2996.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 229.0,
+            "p95": 281.2,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 24.315924607,
+            "p95": 24.9438499261,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.012962896,
+            "p95": 0.018556872099999996,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.289309545507935,
+            "p95": 13.361750008550429,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 24.38412552799855,
+            "p95": 25.038523689199064,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6852083712.0,
+            "p95": 6910988697.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 74.1923076923077,
+            "p95": 75.5525641025641,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "edit_test",
+          "thinking": true,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "final_answer_present": 0.6666666666666666,
+            "fixed_test_command_approved": 1.0,
+            "only_target_file_changed": 1.0,
+            "target_file_updated": 1.0,
+            "test_exit_zero": 1.0,
+            "write_approved": 1.0
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 3.0,
+            "p95": 3.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8333333333333334,
+          "prompt_tokens": {
+            "median": 2996.0,
+            "p95": 2996.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 229.0,
+            "p95": 273.1,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 24.915953187,
+            "p95": 28.505356064999997,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.011926007,
+            "p95": 0.0125655425,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.370918761520093,
+            "p95": 13.40530839225289,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 24.99551132700435,
+            "p95": 28.58940914159757,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6554828800.0,
+            "p95": 6686731878.4,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 70.84615384615384,
+            "p95": 73.7136476426799,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": false,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 1.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 1165.0,
+            "p95": 1772.5,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 153.0,
+            "p95": 167.4,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 12.882017437,
+            "p95": 14.5249421317,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.005836686,
+            "p95": 0.0077629461,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.353340653525875,
+            "p95": 13.493443524361748,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 12.884732534002978,
+            "p95": 14.529154277005727,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6544293888.0,
+            "p95": 6598977945.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 71.42857142857143,
+            "p95": 72.26050420168067,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": false,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 1.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 1165.0,
+            "p95": 1772.5,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 153.0,
+            "p95": 167.4,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 13.802257219,
+            "p95": 14.39218228,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.00661235,
+            "p95": 0.0080606219,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.40665690492808,
+            "p95": 13.423044017167316,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 13.804832106994581,
+            "p95": 14.396022183703462,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6708887552.0,
+            "p95": 6740236697.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 68.4375,
+            "p95": 75.58125,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": false,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 1.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 1.0,
+            "p95": 1.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 1165.0,
+            "p95": 1772.5,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 153.0,
+            "p95": 167.4,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 12.70480648,
+            "p95": 14.3180078377,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.006456396,
+            "p95": 0.0089694111,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.415025247496736,
+            "p95": 13.443980720293904,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 12.708162948998506,
+            "p95": 14.321671837603208,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6369828864.0,
+            "p95": 6831653683.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 64.3,
+            "p95": 65.05857142857143,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": true,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 0.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8888888888888888,
+          "prompt_tokens": {
+            "median": 1794.0,
+            "p95": 2477.1,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 257.0,
+            "p95": 331.7,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 20.713048898,
+            "p95": 27.9132486683,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008347483,
+            "p95": 0.0109757422,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.361358094624148,
+            "p95": 13.38661842269475,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 20.71668484700058,
+            "p95": 27.918711282504226,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6319734784.0,
+            "p95": 6691618816.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 70.46666666666667,
+            "p95": 72.80666666666666,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": true,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 0.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8888888888888888,
+          "prompt_tokens": {
+            "median": 1794.0,
+            "p95": 2477.1,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 257.0,
+            "p95": 331.7,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 20.866414583,
+            "p95": 27.6740458319,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.009816877,
+            "p95": 0.0113986846,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.40469778848044,
+            "p95": 13.455572226248307,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 20.883474057998683,
+            "p95": 27.68068402780191,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6375899136.0,
+            "p95": 6441900441.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 69.46666666666667,
+            "p95": 71.59014492753623,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "plan_change",
+          "thinking": true,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "objective_check_pass_rates": {
+            "no_write_or_command_approval": 1.0,
+            "no_write_or_command_attempt": 1.0,
+            "presents_plan": 0.0,
+            "workspace_unchanged": 1.0
+          },
+          "final_response_nonempty_rate": 0.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.9,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8888888888888888,
+          "prompt_tokens": {
+            "median": 1794.0,
+            "p95": 2477.1,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 257.0,
+            "p95": 331.7,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 20.987157427,
+            "p95": 27.4862982517,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.011071139,
+            "p95": 0.0213683216,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.220314335007172,
+            "p95": 13.323240025801306,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 20.991337818995817,
+            "p95": 27.491647745494262,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6339170304.0,
+            "p95": 6524596224.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 67.86666666666666,
+            "p95": 69.5383908045977,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": false,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 87.0,
+            "p95": 87.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 3.0,
+            "p95": 3.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 0.580529416,
+            "p95": 0.6436716502000001,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002646157,
+            "p95": 0.002726563,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 19.61835755110582,
+            "p95": 19.74090123475026,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.581958899005258,
+            "p95": 0.6450090640995768,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6281863168.0,
+            "p95": 6348594380.8,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 24.5,
+            "p95": 42.35,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": false,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 87.0,
+            "p95": 87.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 3.0,
+            "p95": 3.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 0.385658539,
+            "p95": 0.7018691875,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002789587,
+            "p95": 0.0032781268,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 19.649453745185884,
+            "p95": 19.82374182392528,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.386920523000299,
+            "p95": 0.7030772965947107,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6281015296.0,
+            "p95": 6602826956.8,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 15.666666666666666,
+            "p95": 43.86666666666667,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": false,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 87.0,
+            "p95": 87.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 3.0,
+            "p95": 3.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 0.484686991,
+            "p95": 0.5286123055,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002469546,
+            "p95": 0.0034153416,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 19.850328522937055,
+            "p95": 19.971962350191898,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.4858315230012522,
+            "p95": 0.5297557944031723,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6345056256.0,
+            "p95": 6528804864.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 24.0,
+            "p95": 26.7,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": true,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 85.0,
+            "p95": 85.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 76.0,
+            "p95": 1850.7999999999997,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 6.210103528,
+            "p95": 143.3621764999,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002731638,
+            "p95": 0.003147699,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.23175984495163,
+            "p95": 13.459903143294724,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 6.211346941003285,
+            "p95": 143.3640520477027,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6511378432.0,
+            "p95": 6767612723.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 66.0,
+            "p95": 76.71509433962264,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": true,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 85.0,
+            "p95": 85.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 76.0,
+            "p95": 468.4,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 5.828431523,
+            "p95": 35.4654899024,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002467717,
+            "p95": 0.002785849,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.601695404751055,
+            "p95": 13.610833162863802,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 5.829757427993172,
+            "p95": 35.46689150549937,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6352982016.0,
+            "p95": 6698943283.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 65.5,
+            "p95": 74.545,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "project_fact",
+          "thinking": true,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "objective_check_pass_rates": {
+            "correct_amount": 0.6666666666666666
+          },
+          "final_response_nonempty_rate": 0.6666666666666666,
+          "tool_calls_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 0.0,
+            "p95": 0.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 1.0,
+          "prompt_tokens": {
+            "median": 85.0,
+            "p95": 85.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 76.0,
+            "p95": 929.1999999999999,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 6.579031153,
+            "p95": 71.4445327678,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.002629898,
+            "p95": 0.0028390409,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.517296955386254,
+            "p95": 13.58688727774985,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 6.581932901994151,
+            "p95": 71.44599744629376,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6374567936.0,
+            "p95": 6633640755.2,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 63.25,
+            "p95": 69.30221518987342,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": false,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2120.0,
+            "p95": 2120.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 96.0,
+            "p95": 96.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 13.960686317,
+            "p95": 14.2241534573,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.007564444,
+            "p95": 0.0099894247,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.483642237043505,
+            "p95": 13.54178011402389,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 13.964736948997597,
+            "p95": 14.228558905300451,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6636322816.0,
+            "p95": 6734303641.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 78.125,
+            "p95": 84.03125,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": false,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2120.0,
+            "p95": 2120.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 96.0,
+            "p95": 96.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 13.917476389,
+            "p95": 13.963768735,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.010865559,
+            "p95": 0.0117652647,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.574223082140703,
+            "p95": 13.67010732513671,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 13.922149201003776,
+            "p95": 13.968720890805708,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6724235264.0,
+            "p95": 7036086272.0,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 81.5,
+            "p95": 83.69,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": false,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.0,
+          "prompt_tokens": {
+            "median": 2120.0,
+            "p95": 2120.0,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 96.0,
+            "p95": 96.9,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 8.922765857,
+            "p95": 12.9010954919,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008398601,
+            "p95": 0.0085462496,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.627431093474545,
+            "p95": 13.66202376265576,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 8.927093858997978,
+            "p95": 12.90524592390284,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6492389376.0,
+            "p95": 6740351385.6,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 57.90909090909091,
+            "p95": 78.27090909090909,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": true,
+          "effort": "high",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.7777777777777778,
+          "prompt_tokens": {
+            "median": 2126.0,
+            "p95": 2147.6,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 219.0,
+            "p95": 225.3,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 23.493618342,
+            "p95": 23.717445175800002,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008886135,
+            "p95": 0.009242841,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.34799850631383,
+            "p95": 13.349276054023827,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 23.498284064000472,
+            "p95": 23.722228782502498,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6394769408.0,
+            "p95": 6808202854.4,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 70.48,
+            "p95": 74.6605,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 2048,
+            "max_tool_rounds": 8,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": true,
+          "effort": "low",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.7777777777777778,
+          "prompt_tokens": {
+            "median": 2126.0,
+            "p95": 2147.6,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 219.0,
+            "p95": 225.3,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 23.28878262,
+            "p95": 23.8027810152,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.008398723,
+            "p95": 0.019237124199999997,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.335034210654877,
+            "p95": 13.38417523469936,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 23.2928926099994,
+            "p95": 23.80671741320548,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6292848640.0,
+            "p95": 6489525452.8,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 74.6,
+            "p95": 76.0676923076923,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 512,
+            "max_tool_rounds": 3,
+            "num_ctx": 6144
+          }
+        },
+        {
+          "scenario": "symbol_read",
+          "thinking": true,
+          "effort": "medium",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "objective_check_pass_rates": {
+            "explains_format": 1.0,
+            "explains_sum": 1.0,
+            "final_answer_present": 1.0,
+            "mentions_symbol": 1.0,
+            "read_tool_completed": 1.0
+          },
+          "final_response_nonempty_rate": 1.0,
+          "tool_calls_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "completed_tools_per_trial": {
+            "median": 2.0,
+            "p95": 2.0,
+            "observations": 3
+          },
+          "thinking_present_call_rate": 0.8888888888888888,
+          "prompt_tokens": {
+            "median": 2126.0,
+            "p95": 2147.6,
+            "observations": 3
+          },
+          "completion_tokens": {
+            "median": 226.0,
+            "p95": 247.6,
+            "observations": 3
+          },
+          "provider_total_seconds": {
+            "median": 23.462892689,
+            "p95": 23.8502588927,
+            "observations": 3
+          },
+          "load_seconds": {
+            "median": 0.009406219,
+            "p95": 0.011293009599999999,
+            "observations": 3
+          },
+          "generation_tokens_per_second": {
+            "median": 13.235845668633928,
+            "p95": 13.33751303497218,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 23.467388741999457,
+            "p95": 23.854235859897017,
+            "observations": 3
+          },
+          "peak_runner_rss_bytes": {
+            "median": null,
+            "p95": null,
+            "observations": 0
+          },
+          "peak_gpu_vram_bytes": {
+            "median": 6767869952.0,
+            "p95": 6844554444.8,
+            "observations": 3
+          },
+          "mean_gpu_busy_percent": {
+            "median": 72.88461538461539,
+            "p95": 75.14846153846155,
+            "observations": 3
+          },
+          "effective_budgets": {
+            "max_output_tokens": 1024,
+            "max_tool_rounds": 6,
+            "num_ctx": 6144
+          }
+        }
+      ],
+      "safety_pass": true,
+      "limitations": [
+        "Three repetitions per condition; use as directional evidence, not a broad benchmark.",
+        "The installed Ollama model metadata exposes thinking capability but no named thinking values; Low/Medium/High here change only ZeroCoding output and tool-round budgets.",
+        "Ollama reports aggregate generated tokens; it does not expose a separate thinking-token count here.",
+        "The Qwen-Agent diagnostic uses its own prompt and tool loop, so it is diagnostic rather than an apples-to-apples score.",
+        "The comparison to earlier Qwen3-8B and Qwen2.5-Coder-7B runs is not controlled for the updated sampling profile."
+      ]
+    }
+  ]
+}

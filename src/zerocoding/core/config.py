@@ -11,7 +11,7 @@ except ImportError:  # pragma: no cover - fallback for minimal installs
     yaml = None
 
 
-DEFAULT_PROVIDER = "ollama_local"
+DEFAULT_PROVIDER = "llama_cpp_local"
 DEFAULT_USER_CONFIG = Path("~/.zerocoding/config.yaml").expanduser()
 
 
@@ -79,6 +79,30 @@ class ModeConfig:
         }
 
 
+@dataclass(frozen=True)
+class EffortProfile:
+    max_output_tokens: int
+    max_tool_rounds: int
+
+    @classmethod
+    def from_dict(cls, values: dict[str, Any], defaults: "EffortProfile") -> "EffortProfile":
+        values = values or {}
+        return cls(
+            max_output_tokens=max(128, int(values.get("max_output_tokens", defaults.max_output_tokens))),
+            max_tool_rounds=max(1, min(12, int(values.get("max_tool_rounds", defaults.max_tool_rounds)))),
+        )
+
+    def to_dict(self) -> dict[str, int]:
+        return {"max_output_tokens": self.max_output_tokens, "max_tool_rounds": self.max_tool_rounds}
+
+
+DEFAULT_EFFORT_PROFILES = {
+    "low": EffortProfile(512, 3),
+    "medium": EffortProfile(1024, 6),
+    "high": EffortProfile(2048, 8),
+}
+
+
 @dataclass
 class Config:
     provider: str = DEFAULT_PROVIDER
@@ -89,6 +113,10 @@ class Config:
     skills_path: str = "skills"
     theme: str = "purple"
     auto_save: bool = True
+    max_input_tokens: int = 4096
+    max_output_tokens: int = 1024
+    max_tool_rounds: int = 6
+    effort_profiles: dict[str, EffortProfile] = field(default_factory=lambda: dict(DEFAULT_EFFORT_PROFILES))
 
     @property
     def active_provider(self) -> ProviderConfig:
@@ -130,6 +158,10 @@ class Config:
             "skills_path": self.skills_path,
             "theme": self.theme,
             "auto_save": self.auto_save,
+            "max_input_tokens": self.max_input_tokens,
+            "max_output_tokens": self.max_output_tokens,
+            "max_tool_rounds": self.max_tool_rounds,
+            "effort_profiles": {name: profile.to_dict() for name, profile in self.effort_profiles.items()},
         }
 
 
@@ -140,8 +172,9 @@ class ConfigManager:
 
     def load(self, override_provider=None) -> Config:
         load_env(self.env_file)
+        user_data = self._read_yaml(self.user_config_path)
         data = self._default_data()
-        data = self._deep_merge(data, self._read_yaml(self.user_config_path))
+        data = self._deep_merge(data, user_data)
         self._apply_env(data)
 
         provider_name = override_provider or data.get("provider") or DEFAULT_PROVIDER
@@ -162,6 +195,8 @@ class ConfigManager:
         if provider_name not in providers:
             providers[provider_name] = ProviderConfig(name=provider_name)
 
+        effort_profiles = self._load_effort_profiles(data, user_data)
+        medium = effort_profiles["medium"]
         return Config(
             provider=provider_name,
             providers=providers,
@@ -171,7 +206,31 @@ class ConfigManager:
             skills_path=str(data.get("skills_path", "skills")),
             theme=str(data.get("theme", "purple")),
             auto_save=self._as_bool(data.get("auto_save", True)),
+            max_input_tokens=max(256, int(data.get("max_input_tokens", 4096))),
+            max_output_tokens=medium.max_output_tokens,
+            max_tool_rounds=medium.max_tool_rounds,
+            effort_profiles=effort_profiles,
         )
+
+    @staticmethod
+    def _load_effort_profiles(data: dict[str, Any], user_data: dict[str, Any]) -> dict[str, EffortProfile]:
+        defaults = dict(DEFAULT_EFFORT_PROFILES)
+        legacy_limits = "effort_profiles" not in user_data and any(
+            key in user_data for key in ("max_output_tokens", "max_tool_rounds")
+        )
+        if legacy_limits:
+            medium_output = max(128, int(data.get("max_output_tokens", 1024)))
+            medium_rounds = max(1, min(12, int(data.get("max_tool_rounds", 6))))
+            defaults = {
+                "low": EffortProfile(max(128, medium_output // 2), max(1, (medium_rounds + 1) // 2)),
+                "medium": EffortProfile(medium_output, medium_rounds),
+                "high": EffortProfile(medium_output * 2, min(12, medium_rounds + 2)),
+            }
+        raw_profiles = {} if legacy_limits else data.get("effort_profiles") or {}
+        return {
+            name: EffortProfile.from_dict(raw_profiles.get(name, {}), defaults[name])
+            for name in ("low", "medium", "high")
+        }
 
     def save(self, config: Config) -> None:
         self.user_config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -184,6 +243,27 @@ class ConfigManager:
             return data
 
         provider = data.get("provider", DEFAULT_PROVIDER)
+        if provider == DEFAULT_PROVIDER:
+            model = "ornith-1.5-9b-q5-k-m"
+            return {
+                "provider": DEFAULT_PROVIDER,
+                "providers": {
+                    DEFAULT_PROVIDER: {
+                        "type": "llama_cpp",
+                        "base_url": "http://127.0.0.1:8080/v1",
+                        "model": model,
+                    }
+                },
+                "mode": data.get("mode", "code"),
+                "modes": self._default_modes_data(),
+                "memory_path": data.get("memory_path", ".zerocoding/memory.db"),
+                "skills_path": data.get("skills_path", "skills"),
+                "theme": data.get("theme", "purple"),
+                "auto_save": data.get("auto_save", True),
+                "max_input_tokens": data.get("max_input_tokens", 4096),
+                "max_output_tokens": data.get("max_output_tokens", 1024),
+                "max_tool_rounds": data.get("max_tool_rounds", 6),
+            }
         legacy_type = "ollama" if provider == "ollama" else "openai_compatible"
         return {
             "provider": DEFAULT_PROVIDER if provider == "ollama" else "openai_default",
@@ -212,11 +292,13 @@ class ConfigManager:
         return {name: ModeConfig.from_dict(name, values) for name, values in self._default_modes_data().items()}
 
     def _default_modes_data(self) -> dict[str, Any]:
+        provider = DEFAULT_PROVIDER
+        model = "ornith-1.5-9b-q5-k-m"
         return {
-            "code": {"provider": "ollama_local", "model": "deepseek-coder-v2", "skills": []},
-            "reason": {"provider": "ollama_local", "model": "deepseek-r1:8b", "skills": []},
-            "fast": {"provider": "ollama_local", "model": "qwen2.5-coder:7b", "skills": []},
-            "smart": {"provider": "ollama_local", "model": "qwen2.5-coder:14b", "skills": []},
+            "code": {"provider": provider, "model": model, "skills": []},
+            "reason": {"provider": provider, "model": model, "skills": []},
+            "fast": {"provider": provider, "model": model, "skills": []},
+            "smart": {"provider": provider, "model": model, "skills": []},
         }
 
     def _apply_env(self, data: dict[str, Any]) -> None:

@@ -103,7 +103,7 @@ class ProjectContext:
     def build_system_prompt(self) -> str | None:
         if not self.files:
             return None
-        blocks = ["You are ZeroCoding, a helpful coding assistant.", "Project context explicitly added by the user:"]
+        blocks = ["You are ZeroCoding, a concise coding assistant. Use project tools to inspect files. File writes and commands require explicit user approval.", "Project context explicitly added by the user:"]
         for file in self.files.values():
             blocks.append(f"\n--- {file.path} ---\n{file.content}")
         return "\n".join(blocks)

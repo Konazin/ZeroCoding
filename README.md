@@ -2,68 +2,99 @@
 
 ZeroCoding is an open source terminal coding assistant built in Python. It is inspired by the general experience of modern coding agents in the terminal, but uses its own identity, interface text, provider layer and ghost ASCII logo.
 
-The MVP focuses on a clean purple transcript-style TUI where you can choose a provider, configure local Ollama, select a model, keep sessions, add explicit project context, receive streamed responses and activate multiple Markdown skills.
+The MVP focuses on a compact coding-agent loop for local and OpenAI-compatible models. It keeps each conversation in its own session, limits prompt input to 4,096 estimated tokens by default, reserves 1,024 tokens for output, and supports structured tool calls. In the TUI, reading and searching are available to the agent; file writes and shell commands always show a preview and require approval.
 
 ## Install
 
 ```bash
-pip install -e .
+uv sync --locked
 ```
 
-Run it with either command:
+This creates `.venv` and installs the versions recorded in `uv.lock`. Run project commands with `uv run` so they use that environment:
 
 ```bash
-zerocoding
-zc
+uv run zerocoding
+uv run zc
 ```
+
+Use `uv add <package>` or `uv remove <package>` to change runtime dependencies; commit both `pyproject.toml` and `uv.lock`.
 
 Send a one-shot prompt:
 
 ```bash
-zc -m "Explique este projeto em poucas linhas"
+uv run zc -m "Explique este projeto em poucas linhas"
 ```
 
-## Ollama
+## M1 UI prototypes
 
-Start Ollama locally:
+To compare the Rich + prompt_toolkit scrollback prototype with the persistent Textual prototype, follow the shared scenarios in [the stack comparison guide](docs/m1-stack-comparison.md):
 
 ```bash
-ollama serve
+uv run python -m zerocoding.tui.demo rich
 ```
 
-Pull a coding model:
+Textual is optional and is not installed for the production TUI. To run its prototype, install the extra first:
 
 ```bash
-ollama pull deepseek-coder-v2
+uv sync --locked --extra prototype
+uv run python -m zerocoding.tui.demo textual
 ```
 
-ZeroCoding ships with `ollama_local` configured for:
+## Local Ornith with llama.cpp
 
-```txt
-http://localhost:11434
-```
+The default model is the local Ornith-1.5-9B Q5_K_M GGUF served through llama.cpp. The default endpoint is `http://127.0.0.1:8080/v1`; start the model server before ZeroCoding.
 
-Inside the TUI you can test it with:
+### Build llama.cpp with Vulkan
 
-```txt
-/provider test
-```
-
-Use a main PC as an Ollama server for a notebook on the same LAN:
+If `llama-server` is already installed with Vulkan support, skip the build and check its devices:
 
 ```bash
-# On the main PC
-OLLAMA_HOST=0.0.0.0:11434 ollama serve
-
-# On the notebook, inside ZeroCoding
-/provider add ollama_lan ollama http://192.168.0.50:11434 deepseek-coder-v2
-/provider use ollama_lan
-/provider test
+llama-server --list-devices
 ```
+
+On Linux, install the Vulkan development files, `glslc`, SPIR-V headers, CMake, and a C++ compiler. Check that the Vulkan driver is visible with `vulkaninfo`, then build:
+
+```bash
+git clone https://github.com/ggml-org/llama.cpp
+cd llama.cpp
+cmake -B build -DGGML_VULKAN=ON
+cmake --build build --config Release -j
+```
+
+On NixOS, the same tools can be provided temporarily in a shell:
+
+```bash
+nix-shell -p cmake gcc git vulkan-loader vulkan-headers shaderc spirv-headers vulkan-tools
+vulkaninfo --summary
+```
+
+Make sure the system's AMD Vulkan driver is enabled. The official llama.cpp build guide has platform-specific dependency notes and Vulkan checks: [llama.cpp Vulkan build guide](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md#vulkan).
+
+### Start Ornith
+
+Adjust `MODEL` if the GGUF is stored elsewhere. `Vulkan0` selects the RX 5700 on the reference machine. Start with all layers requested; if the server reports an allocation failure, lower `-ngl` until it starts. `-c 8192` leaves room above ZeroCoding's default 5,120-token input-plus-output budget while keeping the active context bounded. `-np 1` keeps one server slot for this single-user CLI instead of allocating parallel slots automatically.
+
+```bash
+MODEL=/mnt/jogos/huggingFaceModels/Ornith-1.5-9B-Q5_K_M.gguf
+llama-server \
+  --model "$MODEL" \
+  --host 127.0.0.1 --port 8080 \
+  --alias ornith-1.5-9b-q5-k-m \
+  --device Vulkan0 -ngl 99 -c 8192 -np 1 \
+  --jinja --reasoning-format deepseek \
+  --temp 0.6 --top-p 0.95 --top-k 20 \
+  --presence-penalty 0 --repeat-penalty 1
+```
+
+The sampling values follow Ornith's published precise-coding profile: temperature 0.6, top-p 0.95, top-k 20, presence penalty 0, and repetition penalty 1. [Ornith model instructions](https://github.com/ornith-ai/Ornith-1#quickstart)
+
+For CPU-only inference, explicitly start another server with `-ngl 0`. It may be much slower; ZeroCoding does not switch to CPU silently.
+
+In the TUI, run `/provider test` to check the local server and model endpoint.
 
 ## Configuration
 
-Default configuration lives in [config/default.yaml](/home/kona/programas/zerocoding/config/default.yaml). User changes are saved to:
+Default configuration lives in `config/default.yaml`. User changes are saved to:
 
 ```txt
 ~/.zerocoding/config.yaml
@@ -72,35 +103,30 @@ Default configuration lives in [config/default.yaml](/home/kona/programas/zeroco
 Example provider config:
 
 ```yaml
-provider: ollama_local
+provider: llama_cpp_local
+mode: code
+max_input_tokens: 4096
+max_output_tokens: 1024
+max_tool_rounds: 6
 
 providers:
-  ollama_local:
-    type: ollama
-    base_url: "http://localhost:11434"
-    model: "deepseek-coder-v2"
-
-  qwen_api:
-    type: openai_compatible
-    base_url: "https://example.com/v1"
-    api_key_env: "QWEN_API_KEY"
-    model: "qwen-max"
-
-mode: code
+  llama_cpp_local:
+    type: llama_cpp
+    base_url: "http://127.0.0.1:8080/v1"
+    model: "ornith-1.5-9b-q5-k-m"
 
 modes:
   code:
-    provider: ollama_local
-    model: "deepseek-coder-v2"
-    skills: []
-
-  reason:
-    provider: ollama_local
-    model: "deepseek-r1:8b"
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
     skills: []
 ```
 
-You can also use environment variables from [.env.example](/home/kona/programas/zerocoding/.env.example).
+The built-in `code`, `fast`, `reason` and `smart` modes use the same Ornith model; they adjust the output-token and tool-round budgets, not the model. ZeroCoding also sends the `reasoning_effort` request field, but the tested Ornith chat template reports that it does not support native effort control. Treat that field as ineffective for this model unless a later runtime/template check confirms otherwise. The model alias must match the `--alias` passed to `llama-server`. The GGUF path belongs to the server launch command and is not stored in ZeroCoding's shared config.
+
+The llama.cpp server context (`-c`) must be at least the combined input and output budgets; the documented default is 5,120 estimated tokens, so the launch example uses 8,192. The input budget includes conversation messages and tool schemas; older session turns are dropped first when the budget is exceeded. Legacy SQLite memory is preserved but is not appended to prompts, so unrelated sessions cannot inflate context.
+
+You can also use environment variables from `.env.example`.
 
 ## TUI Commands
 
@@ -110,17 +136,20 @@ You can also use environment variables from [.env.example](/home/kona/programas/
 - `/resume <id>` resumes a previous session.
 - `/new` starts a clean session.
 - `/mode` lists configured modes.
-- `/mode code`, `/mode reason`, `/mode fast` and `/mode smart` switch mode, provider and model.
+- `/mode code`, `/mode reason`, `/mode fast` and `/mode smart` switch mode, provider and model for the current session.
 - `/provider` lists configured providers.
-- `/provider use ollama_local` switches provider and saves it.
-- `/provider add local ollama http://localhost:11434 qwen2.5-coder:7b` adds a provider.
+- `/provider use llama_cpp_local` switches provider and saves it.
+- `/provider add local llama_cpp http://127.0.0.1:8080/v1 ornith-1.5-9b-q5-k-m` adds a llama.cpp endpoint.
 - `/provider remove local` removes a non-active provider.
 - `/provider test` tests the active provider.
 - `/model` or `/model list` lists models when the provider supports it.
-- `/model use deepseek-coder-v2` switches model and saves it.
+- `/model use ornith-1.5-9b-q5-k-m` switches model for the current session.
+- `/plan [on|off]` enables read-only planning. Plan mode exposes only project listing, search and file reading to the agent.
+- `/ultrathink [on|off]` adds output and tool-round budget for the current session.
+- `/effort [low|medium|high]` selects the session budget profile.
 - `/config` shows the active config.
-- `/config base_url http://localhost:11434` updates the active provider URL.
-- `/config add local ollama http://localhost:11434 qwen2.5-coder:7b` adds a provider.
+- `/config base_url http://127.0.0.1:8080/v1` updates the active provider URL.
+- `/config add local llama_cpp http://127.0.0.1:8080/v1 ornith-1.5-9b-q5-k-m` adds a provider.
 - `/health` also tests the active provider.
 - `/skills` lists Markdown skills.
 - `/skill add spring` activates a skill without removing others.
@@ -138,6 +167,8 @@ You can also use environment variables from [.env.example](/home/kona/programas/
 - `/clear` clears the screen.
 - `/exit` exits.
 
+The interactive TUI clears the visible terminal on startup. Its prompt is framed by full-width rules, starts at one row and grows to six; it shows only Effort below the prompt, while `/status` lists the full session state. `Enter` submits; `Ctrl+J` inserts a newline. During a turn, the ghost animates beside a short status; the complete response is displayed when the turn finishes. Approval previews show the complete diff or command. Press `Y` to approve, `N` or `Esc` to deny. One-shot `-m` requests do not receive tools and cannot execute changes.
+
 ## Sessions
 
 Interactive `zc` starts a local session with an ID. Sessions are stored as JSON files in:
@@ -146,7 +177,7 @@ Interactive `zc` starts a local session with an ID. Sessions are stored as JSON 
 ~/.zerocoding/sessions
 ```
 
-Each session stores provider, model, mode, active skills, project path, chat history and explicitly added context files.
+Each session stores provider, model, mode, Plan/Ultra/Effort state, active skills, project path, chat history and explicitly added context files. `/resume` restores that state; `/new` starts with Plan and Ultra off and Medium effort, using the configured provider, model and mode.
 
 ```txt
 /sessions
@@ -167,7 +198,7 @@ ZeroCoding never reads project files automatically for prompts. Add context expl
 
 ## Skills
 
-Skills are Markdown files in [skills/](/home/kona/programas/zerocoding/skills). Frontmatter is supported:
+Skills are Markdown files in [skills/](/home/kona/Projetos/ZeroCoding/skills). Frontmatter is supported:
 
 ```md
 ---
@@ -194,26 +225,21 @@ Activate a skill in the TUI:
 - `core/sessions.py` stores local JSON sessions.
 - `core/project_context.py` manages explicit project context, tree and grep.
 - `providers/base.py` defines `generate`, `chat`, `chat_stream`, `healthcheck` and `list_models`.
-- `providers/ollama.py` supports native Ollama endpoints `/api/generate`, `/api/chat` and `/api/tags`.
+- `providers/llama_cpp.py` adapts llama.cpp's OpenAI-compatible server, including native effort requests.
+- `providers/ollama.py` supports native Ollama endpoints `/api/generate`, `/api/chat` and `/api/tags` for custom configurations.
 - `providers/openai_compatible.py` supports `/chat/completions` and `/models`.
-- `core/agent.py` builds prompts, calls providers and tracks multiple active skills.
+- `core/agent.py` budgets prompts, runs bounded structured tool-call loops and tracks active skills.
+- `core/tools.py` provides workspace-scoped file reading/search and approval-gated writes/commands.
 - `tui/app.py` provides the purple Rich-based terminal interface.
 - `tui/textual_app.py` is a prepared Textual prototype for future expansion.
 
 ## Development
 
 ```bash
-PYTHONPATH=src python -m unittest discover -s tests -p 'test_*.py'
-PYTHONPATH=src python -m py_compile src/zerocoding/**/*.py
+uv run python -m unittest discover -s tests -p 'test_*.py'
+uv run python -m py_compile src/zerocoding/**/*.py
 ```
 
 ## Roadmap
 
-- Add a richer provider configuration modal.
-- Add optional streaming for OpenAI-compatible APIs.
-- Add file editing tools after the chat MVP is stable.
-- Add shell/git tools behind clear safety prompts.
-
-## Current TODO
-
-File editing, shell execution and autonomous agent loops are intentionally not implemented in the MVP.
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the milestone plan, baseline, deliverables and acceptance criteria.
