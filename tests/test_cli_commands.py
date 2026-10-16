@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zerocoding.cli import handle_command, refresh_tui_state, save_session_state
+from zerocoding.commands import handle_command, refresh_tui_state, save_session_state
 from zerocoding.core.agent import Agent
 from zerocoding.core.config import ConfigManager
 from zerocoding.core.project_context import ProjectContext

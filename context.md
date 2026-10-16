@@ -45,6 +45,7 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 
 - 1.1 limpeza feita: removidos o pacote morto `src/zerocoding/tools/` e `tui/widgets.py` vazio; `ToolRegistry` mantém só `approve`. Os protótipos `tui/demo*.py`/`textual_app.py` continuam em `src/` (mover para `scripts/` exige ajustar README, CLAUDE.md e `scripts/measure_m1_ui.py`; decisão pendente).
 - 1.2 estimativa real de tokens: `core/tokens.py` (`TokenCounter`) usa `/tokenize` do llama-server via `LlamaCppProvider.count_tokens`, com cache e fallback permanente para ~4 chars/token após a primeira falha. `fit_messages` recebe o contador. Ainda não validado contra o servidor real (estava offline): falta medir o erro da heurística e confirmar o formato da resposta de `/tokenize`.
+- 1.3 decomposição: `core/agent.py` (loop em métodos `_chat`, `_chat_non_empty`, `_run_tool_call`) + `core/budget.py` (`fit_messages`) + `core/toolcalls.py` (marcador compacto, eventos, resumos); `cli.py` ficou só com `main` e os handlers de slash commands foram para `commands.py`. Correção embutida: o `fit_messages` pós-rodada de ferramentas passou a usar o contador de tokens configurado. O retry de resposta vazia (item 1.4) ficou consolidado em `_chat_non_empty`.
 
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
