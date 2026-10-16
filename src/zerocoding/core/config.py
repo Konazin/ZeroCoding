@@ -120,6 +120,7 @@ class Config:
     max_tool_rounds: int = 6
     dynamic_context: bool = False
     streaming_enabled: bool = False
+    session_persistence: bool = True
     metrics_enabled: bool = True
     hooks: list = field(default_factory=list)
     mcp: dict = field(default_factory=dict)
@@ -174,6 +175,7 @@ class Config:
             "max_tool_rounds": self.max_tool_rounds,
             "dynamic_context": self.dynamic_context,
             "streaming_enabled": self.streaming_enabled,
+            "session_persistence": self.session_persistence,
             "metrics_enabled": self.metrics_enabled,
             "hooks": list(self.hooks),
             "mcp": dict(self.mcp),
@@ -230,6 +232,7 @@ class ConfigManager:
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
             streaming_enabled=self._as_bool(data.get("streaming_enabled", False)),
+            session_persistence=self._as_bool(data.get("session_persistence", True)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
             hooks=list(data.get("hooks") or []),
             mcp=dict(data.get("mcp") or {}),
@@ -351,6 +354,7 @@ class ConfigManager:
             "ZEROCODING_MEMORY_PATH": "memory_path",
             "ZEROCODING_SKILLS_PATH": "skills_path",
             "ZEROCODING_THEME": "theme",
+            "ZEROCODING_SESSION_PERSISTENCE": "session_persistence",
         }
         for env_name, key in env_map.items():
             if os.getenv(env_name):

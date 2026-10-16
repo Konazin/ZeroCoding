@@ -1,6 +1,10 @@
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from scripts.m5_eval import CASES, summarize
+from scripts.m5_eval import CASES, run_trial, summarize
+from zerocoding.providers.base import ProviderTurn
 
 
 class TestM5EvaluationMetrics(unittest.TestCase):
@@ -20,6 +24,38 @@ class TestM5EvaluationMetrics(unittest.TestCase):
         summary = summarize(trials)
 
         self.assertEqual(summary["per_case"][case]["ttft_ms"], {"median": 112.5, "worst": 125.0})
+
+    def test_trial_workspace_is_removed_after_completion(self):
+        class FakeProvider:
+            responses = []
+
+            def chat(self, messages, **kwargs):
+                return ProviderTurn(content="A pure function has no side effects.")
+
+        class FakeSampler:
+            peak_rss = 0
+            peak_vram = 0
+
+            def __init__(self, _pid):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return None
+
+        with tempfile.TemporaryDirectory() as temporary:
+            scratch = Path(temporary)
+            with (
+                patch("scripts.m5_eval.tempfile.tempdir", str(scratch)),
+                patch("scripts.m5_eval.RecordingProvider", return_value=FakeProvider()),
+                patch("scripts.m5_eval.MemorySampler", FakeSampler),
+            ):
+                result = run_trial(CASES[0], "http://unused", "unused", None, 1)
+
+            self.assertTrue(result["passed"])
+            self.assertEqual(list(scratch.iterdir()), [])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,16 @@
+{
+  "model": "ornith-1.5-9b-q5-k-m",
+  "base_url": "http://127.0.0.1:8080/v1",
+  "request_duration_s": 25.705,
+  "first_public_delta_s": 25.704,
+  "public_delta_count": 1,
+  "public_text_chars_before_cancel": 1,
+  "cancellation_raised": true,
+  "server_slot_processing_after_cancel": [
+    false
+  ],
+  "server_idle_after_cancel": true,
+  "error": null,
+  "slot_error": null,
+  "passed": true
+}

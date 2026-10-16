@@ -1,8 +1,11 @@
 """Slash-command handlers and session-state helpers for the interactive CLI."""
+from datetime import datetime
 from pathlib import Path
 
 from .core.config import ProviderConfig
+from .core.project_context import ProjectContext
 from .core.router import build_provider, build_session_provider
+from .core.sessions import Session
 
 
 def handle_command(command, tui, agent, config, manager, skills, project_context, session_manager, session):
@@ -97,13 +100,15 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         handle_grep(args_text, tui, project_context)
         return False, None, session
     if name == "/sessions":
-        handle_sessions(tui, session_manager)
+        handle_sessions(args_text, tui, session_manager, session)
         return False, None, session
     if name == "/session":
         handle_session(tui, session, agent, project_context)
         return False, None, session
     if name == "/resume":
-        provider, session = handle_resume(args_text, tui, agent, config, manager, project_context, session_manager, skills)
+        provider, session = handle_resume(
+            args_text, tui, agent, config, manager, project_context, session_manager, skills, session,
+        )
         refresh_tui_state(tui, config, agent, session=session)
         return False, provider, session
     if name == "/new":
@@ -360,13 +365,102 @@ def handle_grep(args_text, tui, project_context):
         tui.show_info(f"{path}:{lineno}: {line}")
 
 
-def handle_sessions(tui, session_manager):
-    sessions = session_manager.list_recent()
-    if not sessions:
-        tui.show_info("No saved sessions.")
+def handle_sessions(args_text, tui, session_manager, current_session=None):
+    args = args_text.split()
+    action = args[0].lower() if args else "list"
+    if action == "list" and len(args) <= 1:
+        if not session_manager.persist:
+            tui.show_info("Session persistence is disabled for this run.")
+            return
+        try:
+            sessions, invalid = session_manager.list_recent_with_errors(limit=None)
+            rows = [
+                (session, session_manager.size_bytes(session.id))
+                for session in sessions
+            ]
+        except (OSError, ValueError) as exc:
+            tui.show_error(f"Could not read saved sessions: {exc}")
+            return
+        if not rows and not invalid:
+            tui.show_info("No saved sessions.")
+            return
+        for saved, size in rows:
+            try:
+                updated = datetime.fromtimestamp(saved.updated_at).astimezone().strftime("%Y-%m-%d %H:%M")
+            except (OverflowError, OSError, ValueError):
+                updated = "unknown date"
+            tui.show_info(
+                f"{saved.id}  {saved.provider}/{saved.model}  {updated}  "
+                f"{len(saved.history)} messages  {size} bytes  {saved.path}"
+            )
+        if invalid:
+            tui.show_warning(
+                f"Ignored {len(invalid)} unreadable session file(s): "
+                + ", ".join(session_id for session_id, _ in invalid)
+                + ". Use /sessions delete <full-id> to remove an invalid file."
+            )
         return
-    for session in sessions:
-        tui.show_info(f"{session.id}  {session.provider}/{session.model}  mode:{session.mode}  {session.path}")
+
+    if action == "delete" and len(args) == 2:
+        session_id = args[1]
+        if not session_manager.persist:
+            tui.show_error("Session persistence is disabled for this run.")
+            return
+        if current_session is not None and session_id == current_session.id:
+            tui.show_error("The active session cannot be deleted. Start a new session first.")
+            return
+        try:
+            size = session_manager.size_bytes(session_id)
+        except (OSError, ValueError) as exc:
+            tui.show_error(f"Could not inspect session: {exc}")
+            return
+        if not _confirm_session_action(tui, "Delete session", f"ID: {session_id}\nStored size: {size} bytes"):
+            tui.show_info("Session deletion cancelled.")
+            return
+        try:
+            session_manager.delete(session_id)
+        except (OSError, ValueError) as exc:
+            tui.show_error(f"Could not delete session: {exc}")
+            return
+        tui.show_success(f"Deleted session {session_id}.")
+        return
+
+    if action == "clear" and len(args) == 1:
+        if not session_manager.persist:
+            tui.show_error("Session persistence is disabled for this run.")
+            return
+        try:
+            session_ids = session_manager.saved_ids()
+        except (OSError, ValueError) as exc:
+            tui.show_error(f"Could not inspect saved sessions: {exc}")
+            return
+        if current_session is not None:
+            session_ids = [session_id for session_id in session_ids if session_id != current_session.id]
+        if not session_ids:
+            tui.show_info("No inactive saved sessions to delete.")
+            return
+        active = f"\nActive session {current_session.id} will be kept." if current_session else ""
+        preview = f"Delete {len(session_ids)} saved session(s)?{active}\nOnly session JSON files will be removed."
+        if not _confirm_session_action(tui, "Delete saved sessions", preview):
+            tui.show_info("Session cleanup cancelled.")
+            return
+        try:
+            deleted = session_manager.delete_many(session_ids)
+        except (OSError, ValueError) as exc:
+            tui.show_error(f"Could not finish deleting sessions: {exc}")
+            return
+        tui.show_success(f"Deleted {len(deleted)} saved session(s).")
+        return
+
+    tui.show_error("Usage: /sessions [list|delete <full-id>|clear]")
+
+
+def _confirm_session_action(tui, action, preview):
+    confirm = getattr(tui, "confirm_action", None)
+    if not callable(confirm):
+        tui.show_error("This action requires an interactive confirmation prompt.")
+        return False
+    return confirm(action, preview)
 
 
 def handle_session(tui, session, agent, project_context):
@@ -377,17 +471,32 @@ def handle_session(tui, session, agent, project_context):
     tui.show_info("Context: " + (", ".join(project_context.tree()) if project_context.tree() else "empty"))
 
 
-def handle_resume(args_text, tui, agent, config, manager, project_context, session_manager, skills):
+def handle_resume(args_text, tui, agent, config, manager, project_context, session_manager, skills,
+                  current_session=None):
     if not args_text:
         tui.show_error("Usage: /resume session-id")
-        session = handle_new(tui, agent, config, project_context, session_manager)[0]
-        return build_provider(config), session
+        return None, current_session
     try:
         session = session_manager.load(args_text)
-    except Exception as exc:
+    except FileNotFoundError as exc:
         tui.show_error(str(exc))
-        session = handle_new(tui, agent, config, project_context, session_manager)[0]
-        return build_provider(config), session
+        return None, current_session
+    except (OSError, ValueError) as exc:
+        tui.show_error(str(exc))
+        return None, current_session
+
+    try:
+        provider = build_session_provider(config, session.provider, session.model)
+        tools = agent.tools.clone_for(session.path) if agent.tools is not None else None
+        restored_context = ProjectContext(
+            project_context.root,
+            max_file_chars=project_context.max_file_chars,
+            max_total_chars=project_context.max_total_chars,
+        )
+        restored_context.restore(session.context_files)
+    except Exception as exc:
+        tui.show_error(f"Could not prepare session: {exc}")
+        return None, current_session
 
     agent.context.history = list(session.history)
     agent.set_active_skills(session.skills)
@@ -396,26 +505,36 @@ def handle_resume(args_text, tui, agent, config, manager, project_context, sessi
         ultrathink=session.ultrathink,
         effort=session.effort,
     )
-    if agent.tools is not None:
-        agent.tools = agent.tools.clone_for(session.path)
-    project_context.restore(session.context_files)
+    agent.tools = tools
+    project_context.files = restored_context.files
     tui.show_success(f"Session resumed: {session.id}")
-    return build_session_provider(config, session.provider, session.model), session
+    return provider, session
 
 
 def handle_new(tui, agent, config, project_context, session_manager):
-    agent.context.history = []
-    project_context.clear()
-    agent.set_session_controls(plan_mode=False, ultrathink=False, effort="medium")
     mode = config.modes.get(config.mode)
-    agent.set_active_skills(mode.skills if mode else [])
-    session = session_manager.create(config.provider, config.model, config.mode, str(Path.cwd()))
-    session.skills = agent.active_skill_names()
+    requested_skills = mode.skills if mode else []
+    active_skills = []
+    for name in requested_skills:
+        skill = next((item for item in agent.skills if item.name == name), None)
+        if skill is not None and skill not in active_skills:
+            active_skills.append(skill)
+
+    session = Session.new(config.provider, config.model, config.mode, str(Path.cwd()))
+    session.skills = [skill.name for skill in active_skills]
     session.plan_mode = False
     session.ultrathink = False
     session.effort = "medium"
+    provider = build_provider(config)
+    tools = agent.tools.clone_for(Path.cwd()) if agent.tools is not None else None
     session_manager.save(session)
-    return session, build_provider(config)
+
+    agent.context.history = []
+    project_context.clear()
+    agent.active_skills = active_skills
+    agent.set_session_controls(plan_mode=False, ultrathink=False, effort="medium")
+    agent.tools = tools
+    return session, provider
 
 
 def refresh_tui_state(tui, config, agent, session=None):

@@ -140,8 +140,11 @@ def _case_catalog() -> list[BenchCase]:
                       "stats.py": "def total(values):\n    return sum(values)\n",
                       "tests/test_stats.py": "import unittest\nfrom stats import average\n\nclass TestStats(unittest.TestCase):\n    def test_average(self):\n        self.assertEqual(average([2, 4, 6]), 4)\n",
                   }), lambda c: _average_added(c["root"]), writable_paths=("stats.py",)),
-        BenchCase("change_signature", ("Adicione o parâmetro greeting a greet e atualize os chamadores e testes.",
-                                         "Mude greet para receber uma saudação e ajuste todas as chamadas."),
+        BenchCase("change_signature", (
+                      "Adicione o parâmetro greeting a greet. Atualize chamadores e testes para passar "
+                      "'Welcome' explicitamente e verificar 'Welcome, Ada'.",
+                      "Mude greet para receber greeting, ajuste todas as chamadas para greet('Ada', 'Welcome') "
+                      "e faça o teste esperar 'Welcome, Ada'."),
                   lambda root: _write(root, {
                       "greetings.py": "def greet(name):\n    return f'Hello, {name}'\n",
                       "app.py": "from greetings import greet\nprint(greet('Ada'))\n",
@@ -405,6 +408,7 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=7001)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--case", choices=[case.id for case in CASES], help="execute somente uma tarefa do catálogo")
     parser.add_argument("--streaming", action="store_true", help="opt in to SSE and record measured TTFT")
     args = parser.parse_args(argv)
     if args.repetitions < 1:
@@ -412,8 +416,9 @@ def main(argv=None):
     pid = _server_pid()
     idle = {"rss_mb": round(_rss_mb(pid)), "vram_mb": round(_vram_mb())}
     trials = []
+    selected_cases = [case for case in CASES if args.case is None or case.id == args.case]
     for repetition in range(1, args.repetitions + 1):
-        for case in CASES:
+        for case in selected_cases:
             trial = run_trial(case, args.base_url, args.model, pid, args.timeout,
                               repetition=repetition, seed=args.seed, streaming=args.streaming)
             trials.append(trial)
@@ -429,7 +434,7 @@ def main(argv=None):
         "repetitions": args.repetitions,
         "seed_base": args.seed,
         "streaming": args.streaming,
-        "cases": [case.id for case in CASES],
+        "cases": [case.id for case in selected_cases],
         "idle_memory": idle,
         "summary": summarize(trials),
         "trials": trials,

@@ -116,8 +116,12 @@ Este roadmap orienta a evolução do ZeroCoding como agente de programação par
 - O relatório identifica modelos/configurações recomendados para a máquina-alvo e deixa claras as limitações observadas.
 - Todo aumento de prompt, contexto ou dependências é avaliado contra qualidade, latência e memória.
 
+### M8 — Integridade e privacidade das sessões locais
+
+**Estado:** implementação local concluída e suíte automatizada aprovada. A confirmação da instalação empacotada pela CI está pendente. O mega teste M7.2–M7.4 foi depois executado por autorização do usuário e seus gates não passaram; evidências em [`MEGA-TEST-M7-M8-2026-10-16.md`](MEGA-TEST-M7-M8-2026-10-16.md) e [`ROADMAP-m8.md`](ROADMAP-m8.md).
+
 ## Ordem e escopo
 
-M1 e M2 estão concluídos (M2 declarado pelo usuário em 2026-10-14). O M3 está liberado para início. Os resultados do M2 orientam as decisões de M3. M4 depende dos contratos definidos em M3. M5 mede o fluxo integrado de M4 e alimenta novas decisões de contexto e arquitetura.
+M1 e M2 estão concluídos (M2 declarado pelo usuário em 2026-10-14). O M3 está liberado para início. Os resultados do M2 orientam as decisões de M3. M4 depende dos contratos definidos em M3. M5 mede o fluxo integrado de M4 e alimenta novas decisões de contexto e arquitetura. M6 e M7 têm roadmaps específicos (`ROADMAP-m6.md` e `ROADMAP-m7.md`); M8 teve implementação e validação local concluídas, com instalação empacotada pela CI pendente.
 
-O núcleo inicial cobre TUI, agente, ferramentas, contexto, sessões, permissões e desempenho. MCP, subagentes, plugins e hooks ficam fora desses marcos e só entram em um roadmap posterior se houver necessidade comprovada e custo aceitável.
+O núcleo inicial cobre TUI, agente, ferramentas, contexto, sessões, permissões e desempenho. M8 foi implementado antes do mega teste M7 por autorização explícita; o teste foi executado posteriormente, mas os gates M7.2–M7.4 ainda precisam de correções e nova validação. MCP, subagentes, plugins e hooks ficam fora desses marcos e só entram em um roadmap posterior se houver necessidade comprovada e custo aceitável.

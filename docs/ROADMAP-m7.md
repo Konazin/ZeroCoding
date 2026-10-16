@@ -2,7 +2,7 @@
 
 O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta não é mais recurso, é confiança**: os dois defeitos mais graves encontrados (aprovação que nunca funcionava e aprovação por qualquer texto) estavam na TUI, passaram por revisão e pelos 100+ testes, e só apareceram ao dirigir a TUI de verdade. Além disso, a contagem de tokens está errada justamente no caso mais comum (com ferramentas) e não há como saber se uma mudança de prompt ou modelo melhora a qualidade. O M7 corrige isso **antes** de acrescentar mais capacidade.
 
-**Andamento em 2026-10-16:** M7.1 agora cobre aprovação/recusa na TUI, cancelamento do turno, retomada de sessão com extensões, `zc doctor` e fluxo de escrita também por PTY. O harness M7.2 foi implementado com 15 tarefas verificáveis, repetição/seeds e métricas; ainda não foi executado contra o Ornith. M7.3 conta o prompt renderizado por `/apply-template` + `/tokenize` e preserva chamadas/resultados de ferramentas ao ajustar o histórico. M7.4 adiciona SSE, TTFT, cancelamento e fallback, desligado por padrão até comparação de qualidade. M7.9 empacota defaults e skills e atualiza `INSTALL.md`; o teste de instalação fora do checkout usa cópia isolada porque setuptools/wheel não estão disponíveis neste ambiente. A suíte automatizada usa providers/servidores falsos: nenhuma chamada de geração ao modelo local foi feita. Precisão ≤3%, paridade de qualidade/latência e publicação continuam como gates do mega teste; detalhes em [`IMPLEMENTATION-PLAN-m7.md`](IMPLEMENTATION-PLAN-m7.md).
+**Andamento em 2026-10-16:** M7.1 está coberto por testes de TUI/PTY e `zc doctor`. O mega teste local M7.2–M7.4 foi executado no Ornith; os gates de qualidade e precisão não passaram, e streaming permanece desligado. M5 passou 21/21 nos dois modos, mas streaming registrou 2 erros de ferramenta e TTFT mediano de 6,35 s (pior 83,36 s). O cancelamento SSE fechou o socket e deixou o slot ocioso, porém o primeiro texto público levou 25,7 s. A suíte automatizada M7+M8 passou 239 testes e 10 subtestes. M7.9 continua pendente de CI/wheel. Métricas completas e limitações em [`MEGA-TEST-M7-M8-2026-10-16.md`](MEGA-TEST-M7-M8-2026-10-16.md).
 
 ## Evidências que motivam o plano
 
@@ -15,7 +15,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 | O ciclo de 4–45 s não mostra nada até o fim; sem streaming não há TTFT | M5 | Percepção de lentidão e métrica faltando |
 | Os 7 casos do M5 são minúsculos (1 arquivo, 6 linhas) | M5 | Não mede qualidade em tarefa real; nenhuma decisão de prompt/modelo tem lastro |
 | `run_command` e servidores/hooks aprovados rodam com os privilégios do usuário; a política é lista de negação + aprovação | M4, M6 | `bwrap` está instalado na máquina-alvo; sandbox opcional é viável |
-| Servidor rodando com 4 slots (sem `-np 1`) e sem `--alias` | M3/M5 | O `doctor` precisa avisar; efeito em memória nunca medido |
+| Servidor observado no M3/M5 com 4 slots e sem alias; no mega teste, alias explícito e 1 slot | M3/M5 e mega teste | O `doctor` precisa avisar sobre a configuração real; o mega teste mediu uma configuração estável de slot único |
 
 ## Princípios
 
@@ -38,7 +38,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.2 — Benchmark de tarefas reais pequenas (a régua do resto)
 
-**Harness implementado em `scripts/m7_bench.py` (15 tarefas; padrão de 5 repetições).** O relatório inclui sucesso, mediana/pior caso/intervalo, tokens, tempo, tool calls inválidas e aprovações. Rodar e publicar a baseline Ornith está deliberadamente adiado para o mega teste.
+**Medição local executada, gate não aprovado.** Agregado reconciliado das 15 tarefas × 5 repetições: 64/75 (85,3%) sem streaming e 65/75 (86,7%) com streaming. O verificador de `change_signature` exigia `Welcome` sem o enunciado pedir; com o enunciado alinhado, passou 5/5 em ambos os modos. `run_tests` segue em 0/5; `destructive_request` passou 3/5. Chamadas inválidas: 2 sem streaming e 6 com streaming. Consulte os agregados [`buffered corrigido`](m7-ornith-1.5-9b-q5_k_m-mega-20261016-corrected.json) e [`streaming corrigido`](m7-ornith-1.5-9b-q5_k_m-mega-20261016-streaming-corrected.json); os primeiros relatórios foram preservados como evidência da execução inicial.
 
 - **Por quê:** sem isso, M7.3–M7.7 são opinião.
 - **O quê:** `scripts/m7_bench.py` com 12–15 tarefas em mini-repositórios gerados (nada baixado), cada uma verificada **executando os testes**: corrigir teste que falha, renomear em vários arquivos, adicionar função com teste, mudar assinatura e atualizar chamadores, localizar a origem de um erro, explicar um fluxo (verificação por fatos), recusar uma ação destrutiva pedida. Métricas: sucesso pass@1, rodadas, tokens, tempo, chamadas de ferramenta inválidas, aprovações pedidas. 5 repetições por tarefa (as 3 do M5 não separaram variância).
@@ -46,7 +46,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.3 — Contagem exata do prompt (`/apply-template` + `/tokenize`)
 
-**Implementação e testes simulados concluídos; validação contra o servidor real pendente.** O contador inclui schemas e usa cache; o fallback conserva o caminho heurístico. O histórico remove turnos antigos como unidade, preserva pares de tool call/result e retorna erro explícito se o pedido atual não couber. O orçamento continua em 4.096 até medição real.
+**Caminho exato validado; precisão do fallback reprovada.** O servidor aplicou o template ativo e contou via `/tokenize`; `fit_messages` preservou pares de tool call/result e o pedido atual. Uma amostra variada de 20 prompts mediu erro máximo por classe entre 7,3% e 31,0%, acima do limite de 3%. Sem ferramentas o fallback superestimou; em prompts curtos com ferramentas subestimou. O relatório está em [`m7-ornith-token-calibration-mega-20261016-v2.json`](m7-ornith-token-calibration-mega-20261016-v2.json). O limite permanece em 4.096 até o fallback ser corrigido e medido novamente.
 
 - **Por quê:** erro de −26% com ferramentas; o orçamento de entrada é o limite central do produto.
 - **O quê:** `TokenCounter` passa a renderizar `messages + tools` com `/apply-template` e contar com `/tokenize` (com cache e **fallback** para o estimador atual, hoje inalterado), e o orçamento reserva o custo real do bloco de ferramentas. Calibrar a heurística de fallback com um fator medido para o caso com ferramentas. Reavaliar com dado se o orçamento de entrada de 4 096 deve mudar, já que o servidor tem janela de 8 192 e margem de VRAM de ~1 GB.
@@ -54,7 +54,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.4 — Streaming real e TTFT
 
-**SSE e testes simulados implementados; validação/paridade real pendente.** Tool calls fragmentadas são remontadas, conteúdo de raciocínio não é emitido, `Ctrl+C` fecha a resposta e falha de stream limpa texto parcial antes do fallback. Streaming fica `streaming_enabled: false` até passar no benchmark.
+**SSE validado no servidor; gate de latência/qualidade reprovado.** O M5 passou 21/21 com e sem streaming, mas streaming teve 2 erros de ferramenta, `usage` ausente e TTFT mediano 6,35 s (20 medições; pior 83,36 s). No M7.2 reconciliado, a taxa foi 86,7% contra 85,3%, com chamadas inválidas aumentando de 2 para 6. O cancelamento foi confirmado pelo endpoint `/slots`: após o primeiro delta, o cliente recebeu `TurnCancelled` e o servidor ficou ocioso; o primeiro texto público demorou 25,7 s. `streaming_enabled` continua falso. Artefatos em [`M5 streaming`](m5-ornith-1.5-9b-q5_k_m-mega-20261016-streaming-results.json) e [`cancelamento`](m7-stream-cancel-mega-20261016.json).
 
 - **Por quê:** turnos de até 45 s sem sinal; TTFT não medido; o M1 já permitia streaming real desde que não fosse simulado.
 - **O quê:** `stream: true` (SSE) no `LlamaCppProvider`, montando texto e deltas de chamada de ferramenta; a TUI mostra o texto à medida que chega **depois** do estado de trabalho; o conteúdo de raciocínio nunca é exibido nem salvo (regra existente). `Ctrl+C` fecha o socket e confirma-se que o servidor parou de gerar. Fallback automático para o modo atual se o stream falhar. TTFT passa a entrar em `m5_eval` e nas métricas.
@@ -62,6 +62,8 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 - **Saída:** TTFT medido; benchmark e `m5_eval` sem regressão; cancelamento no meio do stream testado.
 
 ### M7.5 — Orientação do modelo no workspace (portão: o benchmark)
+
+**Não executado:** os gates M7.2–M7.4 não passaram. Há ainda uma divergência a resolver: o plano mede um resumo da árvore do workspace, enquanto `dynamic_context` no código seleciona schemas de ferramentas e skills. O A/B existente é de uma repetição e deixa um workspace temporário global; ele não mede a hipótese descrita aqui.
 
 - **Hipótese:** um resumo compacto do projeto (árvore de até N entradas, ≲ 150 tokens, só quando o pedido cita arquivos ou o projeto é pequeno) reduz chutes de caminho e rodadas.
 - **Regra:** a hipótese é **testada, não presumida**. Entra no prompt de produção só se, no benchmark (5 repetições), melhorar sucesso ou reduzir rodadas/erros de ferramenta de forma que supere a variância medida, com custo de prompt dentro do limite. Se não superar, o resultado negativo é registrado e o prompt de produção segue como está desde o M2.
@@ -72,6 +74,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 - **Por quê:** o que o usuário aprova roda com os privilégios dele; `bwrap` já está na máquina-alvo.
 - **O quê:** `command_policy.sandbox: bwrap` (desligado por padrão): raiz somente leitura, workspace gravável, `/tmp` privado, **sem rede** por padrão (liberável por comando/servidor), sem acesso ao `$HOME`. Aplicável a `run_command`, hooks e servidores MCP. Se `bwrap` faltar, mensagem clara e **nenhum fallback silencioso**.
 - **Condição:** só avança se o benchmark (M7.2) mostrar que comandos continuam funcionando (testes, `python`, `git`) dentro do sandbox; senão fica documentado como limite conhecido.
+- **Estado:** `run_tests` passou 0/5 sem sandbox nos dois modos. O pré-requisito não foi atendido; M7.6 não avança.
 - **Saída:** testes provando que um comando sandboxed não escreve fora do workspace nem alcança a rede; `m5_eval`/benchmark sem regressão com o sandbox ligado.
 
 ### M7.7 — Comparação de modelos e ajuste do servidor (condicional à decisão do usuário)
@@ -87,7 +90,7 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.9 — Empacotamento e liberação
 
-**Recursos instalados e instruções atualizadas; artefato wheel e liberação ainda pendentes.** Defaults e skills estão incluídos no package-data e são carregados fora do checkout. O ambiente atual não tem `setuptools`/`wheel`, então a automação cobre uma cópia isolada do pacote, sem declarar que o wheel foi validado.
+**Recursos instalados e instruções atualizadas; validação do wheel pela CI e liberação pendentes.** Defaults e skills estão incluídos no package-data e são carregados fora do checkout. O ambiente atual não tem `setuptools` nem `wheel`; o workflow Python instala sem modo editável e ainda precisa ser executado para confirmar o caminho do artefato.
 
 - Versão e `CHANGELOG`, instalação por `uv tool install`, `INSTALL.md` atualizado, CI que roda a suíte sem servidor (a suíte de integração do M7.1 usa modelo simulado), e checagem de que o pacote instalado enxerga `config/default.yaml` e `skills/` fora do diretório do repositório (hoje o carregamento usa o caminho relativo ao fonte).
 - **Saída:** instalação limpa em um diretório novo roda `zc doctor` e um turno.

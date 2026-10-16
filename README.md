@@ -141,6 +141,8 @@ You can also use environment variables from `.env.example`.
 
 - `/help` lists available commands.
 - `/sessions` lists recent local sessions.
+- `/sessions delete <full-id>` deletes one inactive session after explicit approval.
+- `/sessions clear` deletes inactive saved sessions after explicit approval; the active session stays.
 - `/session` shows the current session.
 - `/resume <id>` resumes a previous session.
 - `/new` starts a clean session.
@@ -200,11 +202,17 @@ Interactive `zc` starts a local session with an ID. Sessions are stored as JSON 
 
 Each session stores provider, model, mode, Plan/Ultra/Effort state, active skills, project path, chat history and explicitly added context files. `/resume` restores that state; `/new` starts with Plan and Ultra off and Medium effort, using the configured provider, model and mode.
 
+Sessions are plain local JSON and can contain prompts and tool results from the project. On POSIX systems, ZeroCoding restricts the session directory to the current user (`0700`) and session files to `0600`. This protects against other local accounts, not against the current user, malware or unencrypted backups. Set `session_persistence: false` in the config or start `zc --no-session-save` to keep the interactive session in memory only; it cannot be resumed after exit. Persistence is enabled by default for compatibility, and sessions are never removed automatically.
+
 ```txt
 /sessions
-/resume a1b2c3d4
+/resume a1b2c3d4e5f60718293a4b5c6d7e8f90
+/sessions delete a1b2c3d4e5f60718293a4b5c6d7e8f90
+/sessions clear
 /new
 ```
+
+New sessions use 32-character UUIDs. Existing 8-character session IDs remain valid; `/resume` accepts a prefix only when it matches one saved session. An unknown or malformed resume request leaves the current session intact. `/sessions` reports unreadable session files by ID without displaying their contents, so they can be removed explicitly with `/sessions delete <full-id>`.
 
 ## Project Context
 

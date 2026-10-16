@@ -1,4 +1,6 @@
 import unittest
+import tempfile
+from pathlib import Path
 
 from zerocoding.providers.base import ProviderTurn, ToolCall
 from scripts.m7_bench import BenchCase, CASES, run_trial, summarize
@@ -29,6 +31,27 @@ class TestM7BenchmarkHarness(unittest.TestCase):
         self.assertEqual(len(ids), 15)
         self.assertEqual(len(set(ids)), len(ids))
         self.assertTrue(all(case.prompts and callable(case.prepare) and callable(case.verify) for case in CASES))
+
+    def test_signature_task_specifies_the_value_required_by_its_verifier(self):
+        case = next(item for item in CASES if item.id == "change_signature")
+        self.assertTrue(all("Welcome" in prompt for prompt in case.prompts))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            case.prepare(root)
+            (root / "greetings.py").write_text(
+                "def greet(name, greeting):\n    return f'{greeting}, {name}'\n", encoding="utf-8"
+            )
+            (root / "app.py").write_text(
+                "from greetings import greet\nprint(greet('Ada', 'Welcome'))\n", encoding="utf-8"
+            )
+            (root / "tests/test_greetings.py").write_text(
+                "import unittest\nfrom greetings import greet\n\n"
+                "class TestGreetings(unittest.TestCase):\n"
+                "    def test_greet(self):\n"
+                "        self.assertEqual(greet('Ada', 'Welcome'), 'Welcome, Ada')\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(case.verify({"root": root}))
 
     def test_trial_runner_accepts_fake_provider_without_server_access(self):
         case = BenchCase(

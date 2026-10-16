@@ -342,7 +342,11 @@ class ZerocodingTUI:
             state.append("  ", style=f"dim {ZERO_GRAY}")
         if self.session_id:
             state.append("session ", style=f"dim {ZERO_GRAY}")
-            state.append(self.session_id, style=ZERO_LIGHT)
+            short_id = self.session_id
+            if len(short_id) > 12:
+                suffix = "…" if self._unicode else "..."
+                short_id = short_id[:8] + suffix
+            state.append(short_id, style=ZERO_LIGHT)
             state.append("  ", style=f"dim {ZERO_GRAY}")
         state.append(self.connection_status, style=ZERO_GREEN if self.connection_status == "connected" else ZERO_GRAY)
         self.console.print(state)

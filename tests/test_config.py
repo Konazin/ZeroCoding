@@ -1,6 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from zerocoding.core.config import Config, ConfigManager
 
@@ -43,6 +44,27 @@ class TestConfigLoad(unittest.TestCase):
             config.streaming_enabled = True
             manager.save(config)
             self.assertTrue(manager.load().streaming_enabled)
+
+    def test_session_persistence_defaults_on_and_can_be_disabled(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.yaml"
+            manager = ConfigManager(user_config_path=path, env_file=str(Path(directory) / "missing.env"))
+            config = manager.load()
+            self.assertTrue(config.session_persistence)
+
+            config.session_persistence = False
+            manager.save(config)
+
+            self.assertFalse(manager.load().session_persistence)
+
+    def test_session_persistence_can_be_disabled_by_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = ConfigManager(
+                user_config_path=Path(directory) / "missing.yaml",
+                env_file=str(Path(directory) / "missing.env"),
+            )
+            with patch.dict("os.environ", {"ZEROCODING_SESSION_PERSISTENCE": "false"}):
+                self.assertFalse(manager.load().session_persistence)
 
 
 if __name__ == '__main__':

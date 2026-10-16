@@ -40,6 +40,7 @@ metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
 streaming_enabled: false # Opt-in until latency and task quality are compared against the buffered path.
+session_persistence: true # Set false or pass --no-session-save to keep the current run ephemeral.
 
 # run_command: always needs approval; this policy decides what may even be offered for approval.
 # deny/allow are executable names (a denied list is always merged with built-in defaults such as sudo, dd, mkfs).

@@ -2,15 +2,19 @@
 import os
 import tempfile
 import unittest
+import contextlib
+import io
 from pathlib import Path
+from unittest.mock import patch
 
 from zerocoding.commands import handle_command, refresh_tui_state, save_session_state
 from zerocoding.core.agent import Agent
 from zerocoding.core.config import ConfigManager
 from zerocoding.core.external import ExternalTool
 from zerocoding.core.project_context import ProjectContext
-from zerocoding.core.sessions import SessionManager
+from zerocoding.core.sessions import Session, SessionManager
 from zerocoding.core.tools import ToolRegistry
+from zerocoding.cli import main
 
 
 class FakeTUI:
@@ -24,6 +28,8 @@ class FakeTUI:
         self.effort = "medium"
         self.connection_status = "unknown"
         self.runtime = {}
+        self.confirm_result = False
+        self.confirmations = []
 
     def _log(self, kind, text):
         self.messages.append((kind, str(text)))
@@ -39,6 +45,9 @@ class FakeTUI:
     def render_tool_call(self, name, target=""): self._log("tool", f"{name} {target}")
     def render_tool_done(self, *args): self._log("tool_done", args)
     def set_runtime_state(self, **kwargs): self.runtime = kwargs
+    def confirm_action(self, action, preview):
+        self.confirmations.append((action, preview))
+        return self.confirm_result
 
     def kinds(self):
         return [kind for kind, _ in self.messages]
@@ -98,6 +107,59 @@ class CliCommandTests(unittest.TestCase):
         )
         self.session = session
         return should_exit, provider
+
+    def test_cli_help_exposes_ephemeral_session_override(self):
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            with self.assertRaises(SystemExit) as result:
+                main(["--no-session-save", "--help"])
+
+        self.assertEqual(result.exception.code, 0)
+        self.assertIn("--no-session-save", output.getvalue())
+
+    def test_cli_reports_session_storage_startup_errors_without_traceback(self):
+        class BrokenSessionManager:
+            persist = True
+            root = Path("/private/session/path")
+
+            def save(self, session):
+                raise NotADirectoryError(f"Session path is not a directory: {self.root}")
+
+        stderr = io.StringIO()
+        with (
+            patch("zerocoding.cli.load_env"),
+            patch("zerocoding.cli.ConfigManager", return_value=self.manager),
+            patch.object(self.manager, "load", return_value=self.config),
+            patch("zerocoding.cli.build_provider", return_value=DummyProvider()),
+            patch("zerocoding.cli.SessionManager", return_value=BrokenSessionManager()),
+            patch("zerocoding.cli.load_skills", return_value=[]),
+            contextlib.redirect_stderr(stderr),
+        ):
+            result = main([])
+
+        self.assertEqual(result, 1)
+        self.assertIn("Could not create a private session", stderr.getvalue())
+        self.assertIn("/private/session/path", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
+
+    def test_ephemeral_session_state_commands_work_without_writing_files(self):
+        root = Path(self.tmp.name) / "ephemeral-sessions"
+        ephemeral_manager = SessionManager(root, persist=False)
+        ephemeral_session = ephemeral_manager.create(
+            self.config.provider, self.config.model, self.config.mode, str(self.workspace)
+        )
+        self.agent.context.add_message("user", "keep in memory")
+
+        save_session_state(
+            ephemeral_manager, ephemeral_session, self.config, self.agent, self.project_context,
+        )
+        handle_command(
+            "/sessions", self.tui, self.agent, self.config, self.manager, self.skills,
+            self.project_context, ephemeral_manager, ephemeral_session,
+        )
+
+        self.assertFalse(root.exists())
+        self.assertIn("persistence is disabled", self.tui.text())
+        self.assertEqual(self.agent.context.history[0]["content"], "keep in memory")
 
     # --- basic flow -------------------------------------------------
     def test_exit_aliases(self):
@@ -317,16 +379,157 @@ class CliCommandTests(unittest.TestCase):
         self.assertEqual(self.agent.context.history, [])
         self.assertEqual(self.session_manager.load(self.session.id).history, [])
 
-    def test_resume_unknown_id_starts_new_session_with_error(self):
+    def test_resume_unknown_id_preserves_current_session_and_history(self):
         first_id = self.session.id
+        self.agent.context.add_message("user", "keep this turn")
         self.run_command("/resume deadbeef")
         self.assertIn("error", self.tui.kinds())
-        self.assertNotEqual(self.session.id, first_id)
+        self.assertEqual(self.session.id, first_id)
+        self.assertEqual(self.agent.context.history, [{"role": "user", "content": "keep this turn"}])
+
+    def test_resume_ambiguous_prefix_preserves_current_session(self):
+        first = Session(id="deadbeef" + "0" * 24, provider="local", model="first")
+        second = Session(id="deadbeef" + "1" * 24, provider="local", model="second")
+        self.session_manager.save(first)
+        self.session_manager.save(second)
+        current_id = self.session.id
+
+        self.run_command("/resume deadbeef")
+
+        self.assertEqual(self.session.id, current_id)
+        self.assertTrue(any("ambiguous" in message.lower() for message in self.tui.text().splitlines()))
+
+    def test_resume_malformed_session_preserves_current_session_and_history(self):
+        current_id = self.session.id
+        self.agent.context.add_message("user", "current history")
+        malformed = self.session_manager.root / "deadbeef.json"
+        malformed.write_text('{"id":"deadbeef","skills":"not-a-list"}', encoding="utf-8")
+
+        self.run_command("/resume deadbeef")
+
+        self.assertEqual(self.session.id, current_id)
+        self.assertEqual(self.agent.context.history, [{"role": "user", "content": "current history"}])
+        self.assertIn("skills", self.tui.text())
+
+    def test_resume_provider_setup_failure_preserves_all_current_state(self):
+        saved = self.session_manager.create("local", "saved-model", path="/saved-workspace")
+        saved.history = [{"role": "assistant", "content": "saved history"}]
+        self.session_manager.save(saved)
+        self.agent.context.add_message("user", "current history")
+        self.agent.add_skill("python")
+        self.agent.set_session_controls(plan_mode=True, effort="high")
+        self.project_context.add("hello.py")
+        current_id = self.session.id
+        original_tools = self.agent.tools
+        original_context = dict(self.project_context.files)
+
+        with patch("zerocoding.commands.build_session_provider", side_effect=RuntimeError("provider setup failed")):
+            self.run_command(f"/resume {saved.id}")
+
+        self.assertEqual(self.session.id, current_id)
+        self.assertEqual(self.agent.context.history, [{"role": "user", "content": "current history"}])
+        self.assertEqual(self.agent.active_skill_names(), ["python"])
+        self.assertTrue(self.agent.plan_mode)
+        self.assertEqual(self.agent.effort, "high")
+        self.assertIs(self.agent.tools, original_tools)
+        self.assertEqual(self.project_context.files, original_context)
+        self.assertIn("provider setup failed", self.tui.text())
+
+    def test_new_session_storage_failure_preserves_current_state(self):
+        self.agent.context.add_message("user", "current history")
+        self.agent.add_skill("python")
+        self.agent.set_session_controls(plan_mode=True, effort="high")
+        self.project_context.add("hello.py")
+        current_id = self.session.id
+        original_tools = self.agent.tools
+        original_context = dict(self.project_context.files)
+
+        with patch.object(self.session_manager, "save", side_effect=OSError("disk full")):
+            with self.assertRaisesRegex(OSError, "disk full"):
+                self.run_command("/new")
+
+        self.assertEqual(self.session.id, current_id)
+        self.assertEqual(self.agent.context.history, [{"role": "user", "content": "current history"}])
+        self.assertEqual(self.agent.active_skill_names(), ["python"])
+        self.assertTrue(self.agent.plan_mode)
+        self.assertEqual(self.agent.effort, "high")
+        self.assertIs(self.agent.tools, original_tools)
+        self.assertEqual(self.project_context.files, original_context)
+
+    def test_new_after_resume_targets_current_workspace_for_tools(self):
+        self.agent.tools = self.agent.tools.clone_for("/previous-workspace")
+
+        self.run_command("/new")
+
+        self.assertEqual(self.agent.tools.root, self.workspace.resolve())
+
+    def test_sessions_delete_requires_confirmation_and_cannot_delete_active_session(self):
+        saved = self.session_manager.create("local", "old-model", path="/old-project")
+
+        self.run_command(f"/sessions delete {saved.id}")
+        self.assertTrue((self.session_manager.root / f"{saved.id}.json").exists())
+        self.assertEqual(self.tui.confirmations[-1][0], "Delete session")
+
+        self.tui.confirm_result = True
+        self.run_command(f"/sessions delete {self.session.id}")
+        self.assertTrue((self.session_manager.root / f"{self.session.id}.json").exists())
+        self.assertEqual(len(self.tui.confirmations), 1)
+
+        self.run_command(f"/sessions delete {saved.id}")
+        self.assertFalse((self.session_manager.root / f"{saved.id}.json").exists())
+
+    def test_sessions_delete_without_confirmation_capability_does_not_delete(self):
+        saved = self.session_manager.create("local", "old-model")
+        self.tui.confirm_action = None
+
+        self.run_command(f"/sessions delete {saved.id}")
+
+        self.assertTrue((self.session_manager.root / f"{saved.id}.json").exists())
+        self.assertIn("requires an interactive confirmation", self.tui.text())
+
+    def test_sessions_clear_removes_only_inactive_session_json_files(self):
+        first = self.session_manager.create("local", "first")
+        second = self.session_manager.create("local", "second")
+        unrelated = self.session_manager.root / "notes.json"
+        unrelated.write_text("keep", encoding="utf-8")
+        self.tui.confirm_result = True
+
+        self.run_command("/sessions clear")
+
+        self.assertTrue((self.session_manager.root / f"{self.session.id}.json").exists())
+        self.assertFalse((self.session_manager.root / f"{first.id}.json").exists())
+        self.assertFalse((self.session_manager.root / f"{second.id}.json").exists())
+        self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+
+    def test_sessions_list_shows_metadata_without_printing_history_content(self):
+        self.agent.context.add_message("user", "private workspace question")
+        save_session_state(self.session_manager, self.session, self.config, self.agent, self.project_context)
+
+        self.run_command("/sessions")
+
+        self.assertIn(self.session.id, self.tui.text())
+        self.assertIn("messages", self.tui.text())
+        self.assertNotIn("private workspace question", self.tui.text())
+
+    def test_sessions_list_warns_when_invalid_session_files_are_ignored(self):
+        invalid_id = "deadbeef"
+        invalid_path = self.session_manager.root / f"{invalid_id}.json"
+        invalid_path.write_text('{"private":"conversation content",', encoding="utf-8")
+
+        self.run_command("/sessions")
+
+        self.assertIn(invalid_id, self.tui.text())
+        self.assertIn("Ignored 1 unreadable session file", self.tui.text())
+        self.assertNotIn("conversation content", self.tui.text())
 
     def test_resume_without_id_reports_usage(self):
+        current_id = self.session.id
+        self.agent.context.add_message("user", "keep this turn")
         self.run_command("/resume")
         self.assertEqual(self.tui.messages[0][0], "error")
         self.assertIn("Usage", self.tui.messages[0][1])
+        self.assertEqual(self.session.id, current_id)
+        self.assertEqual(self.agent.context.history, [{"role": "user", "content": "keep this turn"}])
 
     def test_sessions_and_session_listing(self):
         self.run_command("/sessions")

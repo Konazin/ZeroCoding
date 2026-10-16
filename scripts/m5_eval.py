@@ -125,7 +125,11 @@ USE_EXPLORER = False
 
 
 def run_trial(case, base_url, model, pid, timeout, streaming=False):
-    root = Path(tempfile.mkdtemp(prefix=f"zc_m5_{case['id']}_"))
+    with tempfile.TemporaryDirectory(prefix=f"zc_m5_{case['id']}_") as temporary:
+        return _run_trial_in_workspace(case, base_url, model, pid, timeout, streaming, Path(temporary))
+
+
+def _run_trial_in_workspace(case, base_url, model, pid, timeout, streaming, root):
     (root / "calc.py").write_text(case["calc"], encoding="utf-8")
     (root / "test_calc.py").write_text(TEST_CALC, encoding="utf-8")
     approvals = []

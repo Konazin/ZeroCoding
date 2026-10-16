@@ -1,0 +1,181 @@
+{
+  "label": "ornith-1.5-9b-q5-k-m",
+  "date": "2026-10-16",
+  "base_url": "http://127.0.0.1:8080/v1",
+  "method": "server /apply-template followed by /tokenize versus TokenCounter fallback",
+  "samples_per_case": 5,
+  "acceptance_threshold_relative_error_pct": 3.0,
+  "all_cases_within_3_percent": false,
+  "summary": {
+    "long_with_tools": {
+      "samples": 5,
+      "median_relative_error_pct": 4.85,
+      "mean_relative_error_pct": 4.465,
+      "max_relative_error_pct": 7.274,
+      "within_3_percent": false
+    },
+    "long_without_tools": {
+      "samples": 5,
+      "median_relative_error_pct": 26.882,
+      "mean_relative_error_pct": 26.778,
+      "max_relative_error_pct": 27.555,
+      "within_3_percent": false
+    },
+    "short_with_tools": {
+      "samples": 5,
+      "median_relative_error_pct": 26.503,
+      "mean_relative_error_pct": 26.464,
+      "max_relative_error_pct": 26.676,
+      "within_3_percent": false
+    },
+    "short_without_tools": {
+      "samples": 5,
+      "median_relative_error_pct": 22.727,
+      "mean_relative_error_pct": 24.866,
+      "max_relative_error_pct": 30.952,
+      "within_3_percent": false
+    }
+  },
+  "samples": [
+    {
+      "case": "short_without_tools",
+      "sample": 1,
+      "exact_tokens": 40,
+      "fallback_estimate_tokens": 51,
+      "relative_error_pct": 27.5
+    },
+    {
+      "case": "short_without_tools",
+      "sample": 2,
+      "exact_tokens": 43,
+      "fallback_estimate_tokens": 52,
+      "relative_error_pct": 20.93
+    },
+    {
+      "case": "short_without_tools",
+      "sample": 3,
+      "exact_tokens": 45,
+      "fallback_estimate_tokens": 55,
+      "relative_error_pct": 22.222
+    },
+    {
+      "case": "short_without_tools",
+      "sample": 4,
+      "exact_tokens": 44,
+      "fallback_estimate_tokens": 54,
+      "relative_error_pct": 22.727
+    },
+    {
+      "case": "short_without_tools",
+      "sample": 5,
+      "exact_tokens": 42,
+      "fallback_estimate_tokens": 55,
+      "relative_error_pct": 30.952
+    },
+    {
+      "case": "short_with_tools",
+      "sample": 1,
+      "exact_tokens": 728,
+      "fallback_estimate_tokens": 535,
+      "relative_error_pct": 26.511
+    },
+    {
+      "case": "short_with_tools",
+      "sample": 2,
+      "exact_tokens": 731,
+      "fallback_estimate_tokens": 536,
+      "relative_error_pct": 26.676
+    },
+    {
+      "case": "short_with_tools",
+      "sample": 3,
+      "exact_tokens": 733,
+      "fallback_estimate_tokens": 539,
+      "relative_error_pct": 26.467
+    },
+    {
+      "case": "short_with_tools",
+      "sample": 4,
+      "exact_tokens": 732,
+      "fallback_estimate_tokens": 538,
+      "relative_error_pct": 26.503
+    },
+    {
+      "case": "short_with_tools",
+      "sample": 5,
+      "exact_tokens": 730,
+      "fallback_estimate_tokens": 539,
+      "relative_error_pct": 26.164
+    },
+    {
+      "case": "long_without_tools",
+      "sample": 1,
+      "exact_tokens": 871,
+      "fallback_estimate_tokens": 1111,
+      "relative_error_pct": 27.555
+    },
+    {
+      "case": "long_without_tools",
+      "sample": 2,
+      "exact_tokens": 1041,
+      "fallback_estimate_tokens": 1324,
+      "relative_error_pct": 27.185
+    },
+    {
+      "case": "long_without_tools",
+      "sample": 3,
+      "exact_tokens": 1209,
+      "fallback_estimate_tokens": 1534,
+      "relative_error_pct": 26.882
+    },
+    {
+      "case": "long_without_tools",
+      "sample": 4,
+      "exact_tokens": 1383,
+      "fallback_estimate_tokens": 1747,
+      "relative_error_pct": 26.32
+    },
+    {
+      "case": "long_without_tools",
+      "sample": 5,
+      "exact_tokens": 1553,
+      "fallback_estimate_tokens": 1956,
+      "relative_error_pct": 25.95
+    },
+    {
+      "case": "long_with_tools",
+      "sample": 1,
+      "exact_tokens": 1559,
+      "fallback_estimate_tokens": 1573,
+      "relative_error_pct": 0.898
+    },
+    {
+      "case": "long_with_tools",
+      "sample": 2,
+      "exact_tokens": 1729,
+      "fallback_estimate_tokens": 1783,
+      "relative_error_pct": 3.123
+    },
+    {
+      "case": "long_with_tools",
+      "sample": 3,
+      "exact_tokens": 1897,
+      "fallback_estimate_tokens": 1989,
+      "relative_error_pct": 4.85
+    },
+    {
+      "case": "long_with_tools",
+      "sample": 4,
+      "exact_tokens": 2071,
+      "fallback_estimate_tokens": 2199,
+      "relative_error_pct": 6.181
+    },
+    {
+      "case": "long_with_tools",
+      "sample": 5,
+      "exact_tokens": 2241,
+      "fallback_estimate_tokens": 2404,
+      "relative_error_pct": 7.274
+    }
+  ]
+}

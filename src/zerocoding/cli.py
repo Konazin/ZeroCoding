@@ -13,7 +13,7 @@ from .core.bootstrap import build_extensions, startup_warnings
 from .core.metrics import MetricsLog
 from .core.project_context import ProjectContext
 from .core.router import build_provider
-from .core.sessions import SessionManager
+from .core.sessions import Session, SessionManager
 from .core.tools import ToolRegistry
 from .commands import handle_command, refresh_tui_state, save_session_state, sync_tui_runtime
 from .memory.sqlite import SQLiteMemory
@@ -28,6 +28,7 @@ def main(argv=None):
     parser.add_argument("command", nargs="?", choices={"doctor"}, help="Run environment diagnostics")
     parser.add_argument("-m", "--message", help="Prompt to send")
     parser.add_argument("--provider", help="Configured provider to use")
+    parser.add_argument("--no-session-save", action="store_true", help="Do not save this interactive session")
     parser.add_argument("--list-skills", action="store_true")
     parser.add_argument("--clear-memory", action="store_true")
     args = parser.parse_args(argv)
@@ -92,18 +93,22 @@ def main(argv=None):
         return 0
 
     project_context = ProjectContext(Path.cwd())
-    session_manager = SessionManager()
-    session = session_manager.create(
-        provider=config.provider,
-        model=config.model,
-        mode=config.mode,
-        path=str(Path.cwd()),
-    )
-    default_mode = config.modes.get(config.mode)
-    if default_mode:
-        agent.set_active_skills(default_mode.skills)
-    session.skills = agent.active_skill_names()
-    session_manager.save(session)
+    session_manager = SessionManager(persist=config.session_persistence and not args.no_session_save)
+    try:
+        session = Session.new(
+            provider=config.provider,
+            model=config.model,
+            mode=config.mode,
+            path=str(Path.cwd()),
+        )
+        default_mode = config.modes.get(config.mode)
+        if default_mode:
+            agent.set_active_skills(default_mode.skills)
+        session.skills = agent.active_skill_names()
+        session_manager.save(session)
+    except (OSError, ValueError) as exc:
+        print(f"Error: Could not create a private session: {exc}", file=sys.stderr)
+        return 1
 
     metrics = MetricsLog(Path.cwd() / ".zerocoding" / "metrics" / "turns.jsonl") if config.metrics_enabled else None
     if metrics:
@@ -145,23 +150,32 @@ def main(argv=None):
             continue
 
         if prompt.startswith("/"):
-            should_exit, provider, session = handle_command(
-                prompt,
-                tui,
-                agent,
-                config,
-                manager,
-                skills,
-                project_context,
-                session_manager,
-                session,
-            )
+            try:
+                should_exit, provider, session = handle_command(
+                    prompt,
+                    tui,
+                    agent,
+                    config,
+                    manager,
+                    skills,
+                    project_context,
+                    session_manager,
+                    session,
+                )
+            except (OSError, ValueError) as exc:
+                tui.show_error(f"Command could not be completed: {exc}")
+                continue
             if provider is not None:
                 agent.provider = provider
             refresh_tui_state(tui, config, agent, session=session)
             sync_tui_runtime(tui, agent)
             if should_exit:
-                save_session_state(session_manager, session, config, agent, project_context)
+                try:
+                    save_session_state(session_manager, session, config, agent, project_context)
+                except (OSError, ValueError) as exc:
+                    tui.show_error(f"Could not save the session: {exc}")
+                    tui.goodbye()
+                    return 1
                 tui.goodbye()
                 return 0
             continue

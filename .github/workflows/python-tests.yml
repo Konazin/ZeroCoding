@@ -13,6 +13,10 @@ jobs:
         with:
           python-version: "3.10"
       - name: Install project and test dependencies
-        run: python -m pip install -e . pytest
+        run: python -m pip install . pytest
+      - name: Verify installed console commands
+        run: |
+          zc --help
+          zerocoding --help
       - name: Run automated tests
         run: python -m pytest -q
