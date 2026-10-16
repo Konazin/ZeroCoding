@@ -32,6 +32,12 @@ class TestConfirmAction(unittest.TestCase):
         self.assertFalse(self.ask("N"))
         self.assertFalse(self.ask("\x1b"))
 
+    def test_enter_or_arbitrary_text_refuses_by_default(self):
+        """Regression: bool(text) approved any typed text, e.g. a following '/exit' command."""
+        self.assertFalse(self.ask("\r"))
+        self.assertFalse(self.ask("/exit\r"))
+        self.assertFalse(self.ask("ok sure\r"))
+
 
 if __name__ == "__main__":
     unittest.main()

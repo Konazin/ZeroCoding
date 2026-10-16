@@ -509,7 +509,8 @@ class ZerocodingTUI:
                 event.app.exit(result=False)
 
             try:
-                return bool(PromptSession(key_bindings=bindings).prompt(prompt))
+                # Only the Y binding yields True; Enter or any typed text returns a string and must refuse.
+                return PromptSession(key_bindings=bindings).prompt(prompt) is True
             except (EOFError, KeyboardInterrupt):
                 return False
         try:
