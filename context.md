@@ -41,6 +41,10 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - `test_qwen35_study` agora garante um `python` no PATH do teste (sistemas só com `python3`).
 - Trabalho segue na branch `development`, sincronizada com `origin/main`.
 
+### M3 em andamento (iniciado em 2026-10-16)
+
+- 1.1 limpeza feita: removidos o pacote morto `src/zerocoding/tools/` e `tui/widgets.py` vazio; `ToolRegistry` mantém só `approve`. Os protótipos `tui/demo*.py`/`textual_app.py` continuam em `src/` (mover para `scripts/` exige ajustar README, CLAUDE.md e `scripts/measure_m1_ui.py`; decisão pendente).
+
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
 - Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.

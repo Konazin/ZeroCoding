@@ -20,7 +20,6 @@ class ToolRegistry:
     def __init__(self, root: str | Path, approve: Callable[[str, str], bool] | None = None):
         self.root = Path(root).resolve()
         self.approve = approve
-        self._approve = approve
         self._specs = [
             self._spec("list_files", "List project files", {"path": {"type": "string"}, "limit": {"type": "integer"}}),
             self._spec("search_files", "Search text in project files using a regular expression", {"pattern": {"type": "string"}, "path": {"type": "string"}, "limit": {"type": "integer"}}, ["pattern"]),
@@ -146,7 +145,7 @@ class ToolRegistry:
             self._emit(event_callback, AgentEvent(
                 "approval_requested", name, str(path.relative_to(self.root)), "Write preview ready"
             ))
-            if not self._approve or not self._approve("Write file", preview):
+            if not self.approve or not self.approve("Write file", preview):
                 return "Write denied by user. No file was changed."
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(new, encoding="utf-8")
@@ -159,7 +158,7 @@ class ToolRegistry:
             self._emit(event_callback, AgentEvent(
                 "approval_requested", name, target, "Command preview ready"
             ))
-            if not self._approve or not self._approve("Run command", command):
+            if not self.approve or not self.approve("Run command", command):
                 return "Command denied by user. Nothing was executed."
             argv = shlex.split(command)
             if not argv:
