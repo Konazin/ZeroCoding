@@ -56,6 +56,7 @@ def summarize(rows: list[dict]) -> dict:
         "turns": len(rows),
         "outcomes": outcomes,
         "duration_s": med_worst("duration_s"),
+        "ttft_ms": med_worst("ttft_ms"),
         "prompt_tokens": med_worst("prompt_tokens"),
         "completion_tokens": med_worst("completion_tokens"),
         "tool_calls": tool_calls,

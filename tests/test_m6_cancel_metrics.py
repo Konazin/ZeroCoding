@@ -119,14 +119,15 @@ class TestMetrics(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             log = MetricsLog(Path(directory, "m", "turns.jsonl"))
             self.assertEqual(summarize(log.recent()), {"turns": 0})
-            log.record({"outcome": "ok", "duration_s": 2.0, "prompt_tokens": 100, "tool_calls": 2, "tool_errors": 1, "trimmed_messages": 0})
-            log.record({"outcome": "cancelled", "duration_s": 6.0, "prompt_tokens": 300, "tool_calls": 0, "tool_errors": 0, "trimmed_messages": 4})
+            log.record({"outcome": "ok", "duration_s": 2.0, "ttft_ms": 100.0, "prompt_tokens": 100, "tool_calls": 2, "tool_errors": 1, "trimmed_messages": 0})
+            log.record({"outcome": "cancelled", "duration_s": 6.0, "ttft_ms": 200.0, "prompt_tokens": 300, "tool_calls": 0, "tool_errors": 0, "trimmed_messages": 4})
             with log.path.open("a") as handle:
                 handle.write("not json\n")
             summary = summarize(log.recent())
         self.assertEqual(summary["turns"], 2)
         self.assertEqual(summary["outcomes"], {"ok": 1, "cancelled": 1})
         self.assertEqual(summary["duration_s"], {"median": 4.0, "worst": 6.0})
+        self.assertEqual(summary["ttft_ms"], {"median": 150.0, "worst": 200.0})
         self.assertEqual(summary["tool_error_rate"], 0.5)
         self.assertEqual(summary["trimmed_turn_rate"], 0.5)
 

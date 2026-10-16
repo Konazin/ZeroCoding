@@ -21,8 +21,10 @@ class TokenCounter:
 
     def __init__(self, provider=None):
         self._tokenize = getattr(provider, "count_tokens", None)
+        self._count_prompt = getattr(provider, "count_prompt", None)
         self._cache: dict[str, int] = {}
         self.server_enabled = callable(self._tokenize)
+        self.template_enabled = callable(self._count_prompt)
 
     def _text(self, text: str) -> int:
         if not self.server_enabled:
@@ -47,3 +49,35 @@ class TokenCounter:
             return max(1, sum(self._text(json.dumps(m.get("content", ""), ensure_ascii=False)) + MESSAGE_OVERHEAD
                               for m in value))
         return self._text(json.dumps(value, ensure_ascii=False)) if self.server_enabled else estimate_tokens(value)
+
+    def count_prompt(self, messages: list[dict], tools: list[dict] | None = None) -> int:
+        """Count the rendered chat prompt, including tool schemas, when the provider supports it."""
+        payload = {"messages": messages, "tools": tools or None}
+        key = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        cached = self._cache.get(key)
+        if cached is not None:
+            return cached
+
+        if self.template_enabled:
+            try:
+                count = self._count_prompt(messages, tools or None)
+            except Exception:
+                count = None
+            if isinstance(count, int) and count >= 0:
+                self._remember(key, count)
+                return count
+            # Avoid adding two failing HTTP requests to every fit attempt.
+            self.template_enabled = False
+
+        if tools:
+            # The legacy tokenizer cannot see the rendered tool block or non-content fields.
+            count = estimate_tokens(payload)
+        else:
+            count = self(messages)
+        self._remember(key, count)
+        return count
+
+    def _remember(self, key: str, count: int) -> None:
+        if len(self._cache) >= _CACHE_LIMIT:
+            self._cache.clear()
+        self._cache[key] = count

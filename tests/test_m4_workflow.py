@@ -83,6 +83,49 @@ class TestEditFile(Workspace):
             registry.execute("edit_file", {"path": "../escape.py", "old_text": "1", "new_text": "2"})
         self.assertEqual(self.prompts, [])
 
+    def test_edit_refuses_if_file_changes_while_approval_is_open(self):
+        target = self.root / "a.py"
+        target.write_text("value = 1\n", encoding="utf-8")
+
+        def approve(_action, _preview):
+            target.write_text("concurrent update\n", encoding="utf-8")
+            return True
+
+        with self.assertRaisesRegex(ValueError, "changed after approval"):
+            ToolRegistry(self.root, approve=approve).execute(
+                "edit_file", {"path": "a.py", "old_text": "value = 1", "new_text": "value = 2"}
+            )
+        self.assertEqual(target.read_text(encoding="utf-8"), "concurrent update\n")
+
+
+class TestWriteFile(Workspace):
+    def test_write_refuses_if_existing_file_changes_during_approval(self):
+        target = self.root / "a.txt"
+        target.write_text("original\n", encoding="utf-8")
+
+        def approve(_action, _preview):
+            target.write_text("concurrent update\n", encoding="utf-8")
+            return True
+
+        with self.assertRaisesRegex(ValueError, "changed after approval"):
+            ToolRegistry(self.root, approve=approve).execute(
+                "write_file", {"path": "a.txt", "content": "model update\n"}
+            )
+        self.assertEqual(target.read_text(encoding="utf-8"), "concurrent update\n")
+
+    def test_write_does_not_replace_file_created_during_approval(self):
+        target = self.root / "new.txt"
+
+        def approve(_action, _preview):
+            target.write_text("created while waiting\n", encoding="utf-8")
+            return True
+
+        with self.assertRaisesRegex(ValueError, "appeared after approval"):
+            ToolRegistry(self.root, approve=approve).execute(
+                "write_file", {"path": "new.txt", "content": "model update\n"}
+            )
+        self.assertEqual(target.read_text(encoding="utf-8"), "created while waiting\n")
+
 
 class TestPathSandbox(Workspace):
     def test_symlink_escaping_workspace_is_rejected(self):
@@ -97,6 +140,18 @@ class TestPathSandbox(Workspace):
         with self.assertRaisesRegex(ValueError, "outside"):
             registry.execute("write_file", {"path": "link.txt", "content": "x"})
         self.assertEqual(secret.read_text(encoding="utf-8"), "top secret\n")
+
+    def test_search_does_not_follow_file_or_directory_symlinks(self):
+        outside = tempfile.TemporaryDirectory()
+        self.addCleanup(outside.cleanup)
+        external_file = Path(outside.name, "secret.txt")
+        external_file.write_text("OUTSIDE_SEARCH_SENTINEL", encoding="utf-8")
+        os.symlink(external_file, self.root / "linked-file.txt")
+        os.symlink(outside.name, self.root / "linked-directory", target_is_directory=True)
+
+        result = self.registry().execute("search_files", {"pattern": "OUTSIDE_SEARCH_SENTINEL"})
+
+        self.assertEqual(result, "No matches found.")
 
     def test_absolute_and_excluded_paths_are_rejected(self):
         registry = self.registry(True)

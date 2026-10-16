@@ -1,119 +1,61 @@
-# Instalação ZeroCoding
+# Instalação do ZeroCoding
 
-## Pré-requisitos
-- Python 3.10+
-- pip (ou python -m pip)
+ZeroCoding requer Python 3.10 ou mais recente e um endpoint compatível com a API OpenAI. O runtime recomendado é `llama-server`; a instalação do modelo e os parâmetros de Vulkan estão no [README](README.md#local-ornith-with-llamacpp).
 
-## Instalação Rápida
+## Instalar a partir do checkout
 
-### 1. Clone o repositório
-```bash
-cd /home/kona/programas/zerocoding
-```
-
-### 2. Crie um ambiente virtual (recomendado)
-```bash
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
-```
-
-### 3. Instale as dependências
-```bash
-python -m pip install --upgrade pip setuptools
-python -m pip install -e .
-```
-
-Ou manualmente instale `rich` e `prompt_toolkit`:
-```bash
-python -m pip install rich prompt_toolkit
-```
-
-## Configuração
-
-### 1. Copie o arquivo de exemplo
-```bash
-cp env.example .env
-```
-
-### 2. Configure suas credenciais no `.env`
-
-**Para OpenAI:**
-```bash
-ZEROCODING_PROVIDER=openai
-OPENAI_API_KEY=sk-seu-chave-aqui
-```
-
-**Para Ollama (local, legado — sem suporte ativo; o runtime suportado é o llama.cpp):**
-```bash
-ZEROCODING_PROVIDER=ollama
-OLLAMA_URL=http://localhost:11434
-ZEROCODING_MODEL=llama2
-```
-
-## Uso
-
-### Modo Interativo (com TUI bonito)
-```bash
-zerocoding
-```
-
-### Modo Interativo (sem TUI)
-```bash
-zerocoding --no-tui
-```
-
-### Enviar uma mensagem
-```bash
-zerocoding -m "Escreva um script Python que..."
-```
-
-### Ver skills disponíveis
-```bash
-zerocoding --list-skills
-```
-
-### Limpar memória
-```bash
-zerocoding --clear-memory
-```
-
-## Comandos dentro do modo interativo
-
-- `/exit` / `/quit` / `/q` - Sair
-- `/clear` - Limpar tela
-- `/skills` - Listar skills disponíveis
-- `/help` - Mostrar ajuda rápida
-- Ou simplesmente digite sua pergunta
-
-## Variáveis de Ambiente
+Com [uv](https://docs.astral.sh/uv/), instale o comando como ferramenta:
 
 ```bash
-ZEROCODING_PROVIDER=openai          # Provider: openai ou ollama
-OPENAI_API_KEY=sk-...              # Chave da API OpenAI
-OPENAI_API_URL=https://...         # URL customizada (ex: LM Studio)
-OLLAMA_URL=http://...              # URL do Ollama
-ZEROCODING_MODEL=gpt-4o-mini       # Modelo a usar
-ZEROCODING_MEMORY_PATH=.zerocoding/memory.db
-ZEROCODING_SKILLS_PATH=skills      # Diretório de skills
-ZEROCODING_THEME=dark              # Tema: dark, light
-ZEROCODING_AUTO_SAVE=true          # Auto-salvar conversa
+git clone <url-do-repositorio>
+cd ZeroCoding
+uv tool install .
 ```
 
-## Solução de Problemas
+Para desenvolver ou executar a suíte automatizada:
 
-### Erro: "No module named 'rich'"
-Instale: `python -m pip install rich`
+```bash
+uv sync --locked
+uv run pytest -q
+```
 
-### Erro: "OPENAI_API_KEY is required"
-- Configure `.env` com sua chave
-- Ou execute: `export OPENAI_API_KEY=sk-seu-chave`
+Também é possível instalar com pip:
 
-### Erro: "Connection refused" (Ollama)
-- Certifique-se que Ollama está rodando: `ollama serve`
-- Ou use OpenAI: `zerocoding --provider openai`
+```bash
+python -m pip install .
+```
 
-## Suporte
+A configuração padrão e as skills são incluídas no pacote. O primeiro uso também pode ser feito fora do diretório do checkout.
 
-Verifique o arquivo `README.md` para mais informações.
+## Configurar o servidor
+
+O padrão aponta para `http://127.0.0.1:8080/v1`. Inicie o `llama-server` com um alias de modelo e confira a configuração:
+
+```bash
+zc doctor
+```
+
+Para usar outro endereço ou alias, edite `~/.zerocoding/config.yaml`:
+
+```yaml
+provider: llama_cpp_local
+providers:
+  llama_cpp_local:
+    type: llama_cpp
+    base_url: http://127.0.0.1:8080/v1
+    model: ornith-1.5-9b-q5-k-m
+```
+
+O valor de `model` deve corresponder ao alias exposto pelo servidor. `zc doctor` verifica conectividade, contexto, slots, tokenizer e template sem gerar uma resposta do modelo.
+
+## Usar
+
+```bash
+zc                         # TUI interativa
+zc -m "Explique este projeto"  # resposta única
+zc --list-skills           # listar skills disponíveis
+```
+
+Streaming é opcional e permanece desligado até passar pela comparação de qualidade do M7. Para habilitá-lo, defina `streaming_enabled: true` na configuração.
+
+Na TUI, `/help` lista os comandos. `/provider test` verifica o endpoint atual. Escritas e comandos continuam exigindo aprovação explícita.

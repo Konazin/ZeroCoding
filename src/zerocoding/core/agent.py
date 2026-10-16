@@ -22,7 +22,7 @@ class Agent:
     def __init__(self, provider, memory=None, skills=None, max_input_tokens=4096,
                  max_output_tokens=1024, max_tool_rounds=6, tools=None,
                  effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
-                 dynamic_context=False):
+                 dynamic_context=False, streaming_enabled=False):
         self.provider = provider
         self.token_counter = TokenCounter(provider)
         self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
@@ -31,6 +31,7 @@ class Agent:
         self.hooks = None  # core.hooks.HookRunner | None
         self._stats: dict = self._new_stats()
         self.dynamic_context = bool(dynamic_context)
+        self.streaming_enabled = bool(streaming_enabled)
         self.memory = memory  # retained for API compatibility; global history is never injected.
         self.skills = skills or []
         self.active_skills = []
@@ -109,7 +110,7 @@ class Agent:
         describe = getattr(self.provider, "native_effort_status", None)
         return str(describe(self.effort)) if callable(describe) else "supported by provider"
 
-    def _messages(self, text, system_prompt):
+    def _messages(self, text, system_prompt, tool_schemas=None):
         instructions = []
         if self.plan_mode:
             instructions.append(
@@ -127,10 +128,12 @@ class Agent:
             system_prompt = base_prompt + "\n\n" + "\n".join(instructions)
         skills = select_skills(text, self.active_skills) if self.dynamic_context else self.active_skills
         messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
-        return self._fit(messages, self.max_input_tokens)
+        if tool_schemas and messages and messages[0].get("role") == "system":
+            messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
+        return self._fit(messages, self.max_input_tokens, tool_schemas)
 
-    def _fit(self, messages, budget):
-        fitted = fit_messages(messages, budget, self.token_counter)
+    def _fit(self, messages, budget, tool_schemas=None):
+        fitted = fit_messages(messages, budget, self.token_counter, tools=tool_schemas)
         self._stats["trimmed_messages"] += max(0, len(messages) - len(fitted))
         return fitted
 
@@ -164,15 +167,58 @@ class Agent:
         native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
         if native_effort:
             kwargs.update(native_effort)
+
+        def request(tools):
+            stream = getattr(self.provider, "chat_stream_turn", None)
+            if not (state.get("streaming") and callable(stream)):
+                return normalize_turn(self.provider.chat(messages=messages, tools=tools, **kwargs))
+
+            def on_delta(content):
+                if state.get("cancel"):
+                    state["cancel"].check()
+                if self._stats["ttft_ms"] is None:
+                    self._stats["ttft_ms"] = round((time.monotonic() - state["started_at"]) * 1000, 1)
+                if state.get("on_event"):
+                    state["stream_visible"] = True
+                    emit_event(state["on_event"], AgentEvent("response_delta", summary=content))
+
+            try:
+                turn = normalize_turn(stream(
+                    messages=messages, tools=tools, on_delta=on_delta,
+                    cancel=state.get("cancel"), **kwargs,
+                ))
+                if not turn.content.strip() and not turn.tool_calls:
+                    if state.get("stream_visible"):
+                        emit_event(state.get("on_event"), AgentEvent("response_reset"))
+                        state["stream_visible"] = False
+                    state["streaming"] = False
+                    return normalize_turn(self.provider.chat(messages=messages, tools=tools, **kwargs))
+                if state.get("stream_visible"):
+                    emit_event(state.get("on_event"), AgentEvent("response_end"))
+                    state["stream_visible"] = False
+                return turn
+            except (KeyboardInterrupt, TurnCancelled):
+                if state.get("stream_visible"):
+                    emit_event(state.get("on_event"), AgentEvent("response_reset"))
+                    state["stream_visible"] = False
+                raise
+            except Exception:
+                if state.get("stream_visible"):
+                    emit_event(state.get("on_event"), AgentEvent("response_reset"))
+                    state["stream_visible"] = False
+                # Streaming stays off for the rest of this turn after a transport/protocol failure.
+                state["streaming"] = False
+                return normalize_turn(self.provider.chat(messages=messages, tools=tools, **kwargs))
+
         if state["native_tools"]:
             try:
-                return normalize_turn(self.provider.chat(messages=messages, tools=tool_schemas, **kwargs))
+                return request(tool_schemas)
             except RuntimeError as exc:
                 reason = str(exc).lower()
                 if not any(term in reason for term in ("tool", "unsupported", "not support")):
                     raise
                 state["native_tools"] = False
-        return normalize_turn(self.provider.chat(messages=messages, tools=None, **kwargs))
+        return request(None)
 
     def _chat_non_empty(self, *args):
         """Ask once more if the first turn is empty; raise a clear error if it stays empty."""
@@ -232,8 +278,8 @@ class Agent:
 
     @staticmethod
     def _new_stats() -> dict:
-        return {"llm_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0,
-                "tool_errors": 0, "tool_denied": 0, "trimmed_messages": 0}
+        return {"llm_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0, "tool_rounds": 0,
+                "tool_errors": 0, "tool_denied": 0, "trimmed_messages": 0, "ttft_ms": None}
 
     def ask(self, text, system_prompt=None, use_tools=False, on_event=None, cancel=None):
         """Answer one request. ``cancel`` (CancelToken) is checked between provider calls and tool calls;
@@ -262,15 +308,11 @@ class Agent:
 
     def _ask(self, text, system_prompt, use_tools, on_event, cancel):
         output_tokens, tool_round_limit = self.effective_budgets()
-        messages = self._messages(text, system_prompt)
         tool_schemas = self._tool_schemas_for(text, use_tools)
-        tool_budget = self.max_input_tokens
-        if tool_schemas:
-            if messages and messages[0].get("role") == "system":
-                messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
-            tool_budget = max(256, self.max_input_tokens - self.token_counter(tool_schemas))
-            messages = self._fit(messages, tool_budget)
-        state = {"native_tools": bool(tool_schemas), "cancel": cancel}
+        messages = self._messages(text, system_prompt, tool_schemas)
+        state = {"native_tools": bool(tool_schemas), "cancel": cancel,
+                 "streaming": self.streaming_enabled, "stream_visible": False,
+                 "on_event": on_event, "started_at": time.monotonic()}
 
         turn = self._chat_non_empty(messages, tool_schemas, output_tokens, state, on_event)
         rounds = 0
@@ -293,6 +335,7 @@ class Agent:
                     response_text = turn.content
                     break
                 raise RuntimeError("The model returned a tool call without a valid function name.")
+            self._stats["tool_rounds"] += 1
             call_ids = [call.call_id or f"call_{uuid.uuid4().hex[:10]}" for call in calls]
             assistant_message = {
                 "role": "assistant",
@@ -309,7 +352,7 @@ class Agent:
                 messages.append(self._run_tool_call(call, call_id, on_event, cancel))
             rounds += 1
             tool_round_completed = True
-            messages = self._fit(messages, tool_budget)
+            messages = self._fit(messages, self.max_input_tokens, tool_schemas)
             turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)

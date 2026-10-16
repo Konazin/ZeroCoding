@@ -6,12 +6,14 @@ import json
 import os
 import re
 import shlex
-import subprocess
+import stat
+import tempfile
 from pathlib import Path
 from typing import Callable
 
 from .command_policy import CommandPolicy
 from .events import AgentEvent
+from .process import run_capped
 
 
 IGNORED = {".git", ".zerocoding", "node_modules", "venv", ".venv", "__pycache__", "target", "dist", "build"}
@@ -83,9 +85,69 @@ class ToolRegistry:
     @staticmethod
     def _iter_files(root: Path):
         for current, directories, filenames in os.walk(root):
-            directories[:] = sorted(name for name in directories if name not in IGNORED)
+            directories[:] = sorted(
+                name for name in directories
+                if name not in IGNORED and not (Path(current) / name).is_symlink()
+            )
             for filename in sorted(filenames):
-                yield Path(current) / filename
+                path = Path(current) / filename
+                if not path.is_symlink():
+                    yield path
+
+    def _file_snapshot(self, path: Path):
+        """Return a small identity/content snapshot used to detect edits during approval."""
+        if not path.exists():
+            return None
+        info = path.stat()
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("Path is not a regular file")
+        if info.st_size > 1_000_000:
+            raise ValueError("File is too large to update with this tool (limit: 1 MB)")
+        return (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_size), path.read_bytes()
+
+    def _assert_unchanged(self, original_value: str, path: Path, snapshot) -> None:
+        """Refuse an approved write if the path or file changed while approval was open."""
+        current = self._path(original_value, must_exist=snapshot is not None)
+        if current != path:
+            raise ValueError("Path changed after approval. Nothing was written; read the file again and retry.")
+        if snapshot is None:
+            if current.exists():
+                raise ValueError("File appeared after approval. Nothing was written; review the new file and retry.")
+            return
+        try:
+            now = self._file_snapshot(current)
+        except FileNotFoundError:
+            now = None
+        if now != snapshot:
+            raise ValueError("File changed after approval. Nothing was written; read it again and review a new diff.")
+
+    def _atomic_write(self, original_value: str, path: Path, content: str, snapshot) -> None:
+        """Write approved text atomically, preserving permissions and refusing stale previews."""
+        self._assert_unchanged(original_value, path, snapshot)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Creating a temporary file in the destination directory keeps os.replace atomic.
+        self._assert_unchanged(original_value, path, snapshot)
+        fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.zerocoding-", dir=path.parent)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="") as handle:
+                handle.write(content)
+                handle.flush()
+                os.fsync(handle.fileno())
+            if snapshot is not None:
+                current_mode = stat.S_IMODE(path.stat().st_mode)
+                os.chmod(temporary, current_mode)
+            self._assert_unchanged(original_value, path, snapshot)
+            if snapshot is None:
+                # link() fails atomically if another process created the target meanwhile.
+                os.link(temporary, path)
+                os.unlink(temporary)
+            else:
+                os.replace(temporary, path)
+        finally:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
 
     def execute(self, name: str, args: dict, *, plan_mode: bool = False) -> str:
         return self._execute(name, args, event_callback=None, plan_mode=plan_mode)
@@ -159,6 +221,11 @@ class ToolRegistry:
             scanned_bytes = 0
             scanned_files = 0
             for path in self._iter_files(root):
+                try:
+                    # Resolve again at use time so links and excluded targets are never read.
+                    path = self._path(str(path), must_exist=True)
+                except (ValueError, FileNotFoundError):
+                    continue
                 if not path.is_file() or path.stat().st_size > 1_000_000:
                     continue
                 scanned_bytes += path.stat().st_size
@@ -186,12 +253,11 @@ class ToolRegistry:
             end = min(len(lines), self._int(args, "end_line", start + 300, 1, 10**9))
             return "\n".join(f"{idx}: {line}" for idx, line in enumerate(lines[start - 1:end], start))[:12000]
         if name == "write_file":
-            path = self._path(args["path"])
-            if path.exists() and not path.is_file():
-                raise ValueError("Path is not a file")
-            if path.exists() and path.stat().st_size > 1_000_000:
-                raise ValueError("Existing file is too large to replace with this tool (limit: 1 MB)")
-            old = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+            original_value = args["path"]
+            path = self._path(original_value)
+            snapshot = self._file_snapshot(path)
+            old_bytes = snapshot[1] if snapshot is not None else b""
+            old = old_bytes.decode("utf-8", errors="replace")
             new = str(args["content"])
             if len(new) > 1_000_000:
                 raise ValueError("Proposed file is too large (limit: 1 MB)")
@@ -203,20 +269,19 @@ class ToolRegistry:
             ))
             if not self.approve or not self.approve("Write file", preview):
                 return "Write denied by user. No file was changed."
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(new, encoding="utf-8")
+            self._atomic_write(original_value, path, new, snapshot)
             return f"Wrote {path.relative_to(self.root)}."
         if name == "edit_file":
-            path = self._path(args["path"], must_exist=True)
-            if not path.is_file():
-                raise ValueError("Path is not a file")
-            if path.stat().st_size > 1_000_000:
-                raise ValueError("File is too large to edit with this tool (limit: 1 MB)")
+            original_value = args["path"]
+            path = self._path(original_value, must_exist=True)
+            snapshot = self._file_snapshot(path)
+            if snapshot is None:
+                raise FileNotFoundError(f"Path does not exist: {original_value}")
             old_text, new_text = str(args["old_text"]), str(args["new_text"])
             if not old_text:
                 raise ValueError("old_text must not be empty; use write_file to create a new file")
             try:
-                original = path.read_text(encoding="utf-8")
+                original = snapshot[1].decode("utf-8")
             except UnicodeDecodeError:
                 raise ValueError("File is not valid UTF-8 text and cannot be edited with this tool") from None
             relative = str(path.relative_to(self.root))
@@ -233,7 +298,7 @@ class ToolRegistry:
             self._emit(event_callback, AgentEvent("approval_requested", name, relative, "Edit preview ready"))
             if not self.approve or not self.approve("Edit file", diff):
                 return "Edit denied by user. No file was changed."
-            path.write_text(updated, encoding="utf-8")
+            self._atomic_write(original_value, path, updated, snapshot)
             return f"Edited {relative}."
         if name == "run_command":
             command = str(args["command"])
@@ -253,14 +318,14 @@ class ToolRegistry:
             if not self.approve or not self.approve("Run command", command):
                 return "Command denied by user. Nothing was executed."
             try:
-                result = subprocess.run(argv, cwd=self.root, capture_output=True, text=True,
-                                        timeout=self.policy.timeout, shell=False, env=self.policy.environment())
-            except subprocess.TimeoutExpired:
-                return f"Command timed out after {self.policy.timeout}s and was stopped."
+                result = run_capped(argv, cwd=self.root, env=self.policy.environment(),
+                                    timeout=self.policy.timeout,
+                                    max_output_chars=self.policy.max_output_chars)
             except FileNotFoundError:
                 return f"Command not found: {argv[0]}. Nothing was executed."
             except OSError as exc:
                 return f"Command could not be started: {exc}. Nothing was executed."
-            output = self.policy.truncate((result.stdout + result.stderr).strip())
-            return f"exit code: {result.returncode}\n{output}"
+            if result.timed_out:
+                return f"Command timed out after {self.policy.timeout}s and was stopped."
+            return f"exit code: {result.returncode}\n{result.output.strip()}"
         raise ValueError(f"Unknown tool: {name}")

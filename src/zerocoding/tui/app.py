@@ -252,6 +252,8 @@ class ZerocodingTUI:
         self._is_small = TerminalSize.is_small()
         self._is_tiny = TerminalSize.is_tiny()
         self._prompt_session = None
+        self._response_live = None
+        self._response_text = ""
 
         if HAS_PROMPT_TOOLKIT:
             self._setup_prompt_toolkit()
@@ -431,6 +433,28 @@ class ZerocodingTUI:
 
     def handle_agent_event(self, event, animation: ThinkingAnimation | None = None) -> None:
         kind = getattr(event, "kind", "")
+        if kind == "response_delta":
+            if animation is not None:
+                animation.stop()
+            if self._response_live is None:
+                self._response_text = ""
+                self.console.print()
+                self._response_live = Live(
+                    Text("• ", style=f"bold {ZERO_PURPLE}"), console=self.console,
+                    refresh_per_second=20, transient=True,
+                )
+                self._response_live.start()
+            self._response_text += getattr(event, "summary", "")
+            self._response_live.update(
+                Text("• " + self._response_text, style=ZERO_LIGHT), refresh=True,
+            )
+            return
+        if kind in {"response_end", "response_reset"}:
+            if self._response_live is not None:
+                self._response_live.stop()
+                self._response_live = None
+            self._response_text = ""
+            return
         name = getattr(event, "tool_name", "")
         target = ellipsize(getattr(event, "target", ""), max(8, TerminalSize.get_width() - 30))
         summary = getattr(event, "summary", "")
@@ -514,7 +538,8 @@ class ZerocodingTUI:
             except (EOFError, KeyboardInterrupt):
                 return False
         try:
-            return input(prompt).strip().lower() in {"y", "yes"}
+            # Keep the plain-input fallback consistent with the explicit prompt_toolkit Y binding.
+            return input(prompt).strip().lower() == "y"
         except (EOFError, KeyboardInterrupt):
             return False
 

@@ -5,7 +5,7 @@ conclusão objetiva da tarefa, validade das chamadas de ferramenta, tokens de en
 tempo de processamento do prompt (proxy de TTFT; o provider não faz streaming), tokens/s de geração (timings do
 llama.cpp), duração total e RAM/VRAM de pico. Agrega mediana e pior caso.
 
-Uso: uv run python scripts/m5_eval.py --label ornith-1.5-9b-q5_k_m [--repetitions 3] [--extensions] [--output docs/m5-<label>-results.json]
+Uso: uv run python scripts/m5_eval.py --label ornith-1.5-9b-q5_k_m [--repetitions 3] [--streaming] [--extensions] [--output docs/m5-<label>-results.json]
 --extensions liga, sem uso previsto, um servidor MCP de teste (2 ferramentas) e o subagente explore, para medir o custo ocioso (M6).
 Não baixa nem troca modelos: mede o que estiver servido em --base-url.
 """
@@ -124,7 +124,7 @@ EXTENSION_TOOLS: list = []  # filled by --extensions (shared MCP server across t
 USE_EXPLORER = False
 
 
-def run_trial(case, base_url, model, pid, timeout):
+def run_trial(case, base_url, model, pid, timeout, streaming=False):
     root = Path(tempfile.mkdtemp(prefix=f"zc_m5_{case['id']}_"))
     (root / "calc.py").write_text(case["calc"], encoding="utf-8")
     (root / "test_calc.py").write_text(TEST_CALC, encoding="utf-8")
@@ -138,7 +138,7 @@ def run_trial(case, base_url, model, pid, timeout):
     registry = ToolRegistry(root, approve=approve)
     for tool in EXTENSION_TOOLS:
         registry.register_external(tool)
-    agent = Agent(provider, tools=registry, plan_mode=case["plan"])
+    agent = Agent(provider, tools=registry, plan_mode=case["plan"], streaming_enabled=streaming)
     if USE_EXPLORER:
         registry.register_external(make_explorer_tool(agent))
     events = []
@@ -167,12 +167,14 @@ def run_trial(case, base_url, model, pid, timeout):
         passed = False
     return dict(
         case=case["id"], passed=passed, error=error, duration_s=round(duration, 2),
-        llm_calls=len(provider.responses),
-        prompt_tokens=sum(u.get("prompt_tokens", 0) for u in usage),
-        completion_tokens=sum(u.get("completion_tokens", 0) for u in usage),
+        llm_calls=agent.last_turn.get("llm_calls", len(provider.responses)),
+        prompt_tokens=agent.last_turn.get("prompt_tokens", sum(u.get("prompt_tokens", 0) for u in usage)),
+        completion_tokens=agent.last_turn.get("completion_tokens", sum(u.get("completion_tokens", 0) for u in usage)),
         first_prompt_ms=round(timings[0].get("prompt_ms", 0), 1) if timings else None,
+        ttft_ms=agent.last_turn.get("ttft_ms"),
         gen_tokens_per_s=round(statistics.mean(gen_rates), 2) if gen_rates else None,
-        tool_calls=len(started_calls), tool_errors=len(errors), approvals=len(approvals),
+        tool_calls=len(started_calls), tool_rounds=agent.last_turn.get("tool_rounds", 0),
+        tool_errors=len(errors), approvals=len(approvals),
         peak_rss_mb=round(memory.peak_rss), peak_vram_mb=round(memory.peak_vram),
     )
 
@@ -194,6 +196,7 @@ def summarize(trials):
             prompt_tokens=dict(zip(("median", "worst"), _med_worst([r["prompt_tokens"] for r in rows]))),
             completion_tokens=dict(zip(("median", "worst"), _med_worst([r["completion_tokens"] for r in rows]))),
             first_prompt_ms=dict(zip(("median", "worst"), _med_worst([r["first_prompt_ms"] for r in rows]))),
+            ttft_ms=dict(zip(("median", "worst"), _med_worst([r.get("ttft_ms") for r in rows]))),
             gen_tokens_per_s=dict(zip(("median", "worst"), _med_worst([r["gen_tokens_per_s"] for r in rows], worst=min))),
             tool_errors_total=sum(r["tool_errors"] for r in rows),
         )
@@ -201,6 +204,7 @@ def summarize(trials):
         per_case=per_case,
         overall_passed=f"{sum(t['passed'] for t in trials)}/{len(trials)}",
         tool_calls=sum(t["tool_calls"] for t in trials),
+        tool_rounds=sum(t["tool_rounds"] for t in trials),
         tool_errors=sum(t["tool_errors"] for t in trials),
         peak_rss_mb=max((t["peak_rss_mb"] for t in trials), default=0),
         peak_vram_mb=max((t["peak_vram_mb"] for t in trials), default=0),
@@ -233,6 +237,7 @@ def main(argv=None):
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--streaming", action="store_true", help="opt in to SSE and record measured TTFT")
     parser.add_argument("--extensions", action="store_true", help="liga MCP de teste + explore (custo ocioso)")
     args = parser.parse_args(argv)
     global USE_EXPLORER
@@ -249,16 +254,17 @@ def main(argv=None):
     trials = []
     for repetition in range(1, args.repetitions + 1):
         for case in CASES:
-            trial = run_trial(case, args.base_url, args.model, pid, args.timeout)
+            trial = run_trial(case, args.base_url, args.model, pid, args.timeout, streaming=args.streaming)
             trial["repetition"] = repetition
             trials.append(trial)
             print(f"[{repetition}/{args.repetitions}] {case['id']:18} {'PASS' if trial['passed'] else 'FAIL'} "
                   f"{trial['duration_s']:6.1f}s  in={trial['prompt_tokens']:5} out={trial['completion_tokens']:4} "
-                  f"gen={trial['gen_tokens_per_s']} tok/s  tool_err={trial['tool_errors']}"
+                  f"ttft={trial['ttft_ms']}ms gen={trial['gen_tokens_per_s']} tok/s  tool_err={trial['tool_errors']}"
                   + (f"  ERROR {trial['error']}" if trial["error"] else ""), flush=True)
     if manager:
         manager.close()
     report = dict(label=args.label, date=time.strftime("%Y-%m-%d"), server=server_info(args.base_url),
+                  streaming=args.streaming,
                   extensions=([t.name for t in EXTENSION_TOOLS] + ["explore"]) if args.extensions else None,
                   idle_memory=idle, repetitions=args.repetitions, summary=summarize(trials), trials=trials)
     output = args.output or Path("docs") / f"m5-{args.label}-results.json"

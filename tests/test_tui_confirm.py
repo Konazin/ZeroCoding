@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 try:
     from prompt_toolkit.application import create_app_session
@@ -31,12 +32,24 @@ class TestConfirmAction(unittest.TestCase):
         self.assertFalse(self.ask("n"))
         self.assertFalse(self.ask("N"))
         self.assertFalse(self.ask("\x1b"))
+        self.assertFalse(self.ask("\x03"))
 
     def test_enter_or_arbitrary_text_refuses_by_default(self):
         """Regression: bool(text) approved any typed text, e.g. a following '/exit' command."""
         self.assertFalse(self.ask("\r"))
         self.assertFalse(self.ask("/exit\r"))
         self.assertFalse(self.ask("ok sure\r"))
+
+
+class TestConfirmFallback(unittest.TestCase):
+    def test_plain_input_accepts_only_y(self):
+        tui = ZerocodingTUI(provider_name="p", model="m", theme="purple", mode="code",
+                            session_id="s", connection_status="unknown", skills=[])
+        with patch("zerocoding.tui.app.HAS_PROMPT_TOOLKIT", False):
+            with patch("builtins.input", return_value="yes"):
+                self.assertFalse(tui.confirm_action("Edit file", "preview"))
+            with patch("builtins.input", return_value="Y"):
+                self.assertTrue(tui.confirm_action("Edit file", "preview"))
 
 
 if __name__ == "__main__":

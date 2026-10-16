@@ -30,7 +30,26 @@ class LlamaCppProvider(OpenAICompatibleProvider):
         """Exact token count from the server's /tokenize endpoint, or None if unavailable."""
         root = self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url
         try:
-            tokens = self._post(root.rstrip("/") + "/tokenize", {"content": text}).get("tokens")
+            response = self._post(root.rstrip("/") + "/tokenize", {"content": text})
         except RuntimeError:
             return None
+        tokens = response.get("tokens") if isinstance(response, dict) else None
         return len(tokens) if isinstance(tokens, list) else None
+
+    def render_prompt(self, messages: list[dict], tools: list[dict] | None = None) -> str | None:
+        """Render the same messages and tool schemas with the server's active chat template."""
+        root = self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url
+        payload = {"messages": messages, "add_generation_prompt": True}
+        if tools:
+            payload["tools"] = tools
+        try:
+            rendered = self._post(root.rstrip("/") + "/apply-template", payload)
+        except RuntimeError:
+            return None
+        prompt = rendered.get("prompt") if isinstance(rendered, dict) else None
+        return prompt if isinstance(prompt, str) else None
+
+    def count_prompt(self, messages: list[dict], tools: list[dict] | None = None) -> int | None:
+        """Count tokens after applying the server's chat template, including native tools."""
+        prompt = self.render_prompt(messages, tools)
+        return self.count_tokens(prompt) if prompt is not None else None

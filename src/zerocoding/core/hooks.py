@@ -8,11 +8,11 @@ from __future__ import annotations
 import fnmatch
 import json
 import shlex
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from .command_policy import CommandPolicy
+from .process import run_capped
 
 EVENTS = ("pre_tool", "post_tool", "turn_end")
 OUTPUT_LIMIT = 800
@@ -87,17 +87,15 @@ class HookRunner:
         })
         env = {**self.policy.environment(), "ZC_HOOK_EVENT": hook.event, "ZC_TOOL_NAME": tool_name, "ZC_TOOL_TARGET": target}
         try:
-            result = subprocess.run(argv, cwd=self.root, input=payload, capture_output=True, text=True,
-                                    timeout=hook.timeout, shell=False, env=env)
-        except subprocess.TimeoutExpired:
-            return False, f"timed out after {hook.timeout}s"
+            result = run_capped(argv, cwd=self.root, input_text=payload, env=env,
+                                timeout=hook.timeout, max_output_chars=OUTPUT_LIMIT)
         except FileNotFoundError:
             return False, f"command not found: {argv[0]}"
         except OSError as exc:
             return False, f"could not start: {exc}"
-        output = (result.stdout + result.stderr).strip()
-        if len(output) > OUTPUT_LIMIT:
-            output = output[:OUTPUT_LIMIT] + "…"
+        if result.timed_out:
+            return False, f"timed out after {hook.timeout}s"
+        output = result.output.strip()
         return result.returncode == 0, (output if result.returncode == 0 else f"exit {result.returncode}: {output}".rstrip(": "))
 
     def _matching(self, event: str, tool_name: str, target: str):

@@ -509,6 +509,7 @@ def handle_metrics(tui, agent):
     tui.show_info(f"Last {summary['turns']} turns · {log.path}")
     tui.show_info(f"  Outcomes: {', '.join(f'{k} {v}' for k, v in sorted(summary['outcomes'].items()))}")
     tui.show_info(f"  Duration s (median / worst): {pair(summary['duration_s'])}")
+    tui.show_info(f"  TTFT ms (median / worst): {pair(summary['ttft_ms'])}")
     tui.show_info(f"  Prompt tokens (median / worst): {pair(summary['prompt_tokens'])}")
     tui.show_info(f"  Completion tokens (median / worst): {pair(summary['completion_tokens'])}")
     tui.show_info(f"  Tool calls: {summary['tool_calls']} · error rate {summary['tool_error_rate']:.1%}")

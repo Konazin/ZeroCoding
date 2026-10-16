@@ -7,6 +7,7 @@ from pathlib import Path
 from zerocoding.commands import handle_command, refresh_tui_state, save_session_state
 from zerocoding.core.agent import Agent
 from zerocoding.core.config import ConfigManager
+from zerocoding.core.external import ExternalTool
 from zerocoding.core.project_context import ProjectContext
 from zerocoding.core.sessions import SessionManager
 from zerocoding.core.tools import ToolRegistry
@@ -285,6 +286,28 @@ class CliCommandTests(unittest.TestCase):
         self.assertEqual(self.agent.active_skill_names(), ["python"])
         self.assertEqual([m["content"] for m in self.agent.context.history], ["question", "answer"])
         self.assertEqual(self.project_context.tree(), ["hello.py"])
+
+    def test_new_and_resume_preserve_registered_extension_tools(self):
+        extension = ExternalTool(
+            name="mcp__demo__echo",
+            server="demo",
+            tool="echo",
+            spec={"type": "function", "function": {"name": "mcp__demo__echo", "parameters": {"type": "object"}}},
+            read_only=True,
+            handler=lambda args: f"echo:{args.get('value', '')}",
+        )
+        self.agent.tools.register_external(extension)
+        self.agent.context.add_message("user", "existing session")
+        save_session_state(self.session_manager, self.session, self.config, self.agent, self.project_context)
+        saved_id = self.session.id
+
+        self.run_command("/new")
+        self.assertIn("mcp__demo__echo", [schema["function"]["name"] for schema in self.agent.tools.schemas])
+        self.assertEqual(self.agent.tools.execute("mcp__demo__echo", {"value": "new"}), "echo:new")
+
+        self.run_command(f"/resume {saved_id}")
+        self.assertIn("mcp__demo__echo", [schema["function"]["name"] for schema in self.agent.tools.schemas])
+        self.assertEqual(self.agent.tools.execute("mcp__demo__echo", {"value": "resumed"}), "echo:resumed")
 
     def test_new_session_does_not_inherit_previous_history(self):
         self.agent.context.add_message("user", "secret from session one")

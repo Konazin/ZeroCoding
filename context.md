@@ -31,7 +31,7 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 
 ## Estado do roadmap
 
-- **M3, M4, M5 (só Ornith) e M6 concluídos em 2026-10-16** (detalhes abaixo). M7 apenas planejado em `docs/ROADMAP-m7.md`.
+- **M3, M4, M5 (só Ornith) e M6 concluídos em 2026-10-16** (detalhes abaixo). M7 segue em implementação: M7.1 está coberto por testes automatizados, e o harness M7.2, contagem exata, streaming opt-in e recursos empacotados estão no código. A validação com geração local e a liberação continuam pendentes do mega teste. Ver `docs/ROADMAP-m7.md` e `docs/IMPLEMENTATION-PLAN-m7.md`.
 
 - M1 visual/fluxo foi concluído e revisado pelo usuário.
 - M2, sobre prompt/contexto, foi declarado concluído pelo usuário em 2026-10-14. Os relatórios em `docs/` ficam como referência; o prompt de produção segue inalterado até uma decisão explícita.
@@ -68,6 +68,18 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - Medido: +228 tokens por chamada com MCP+explore ociosos (limite do plano: ~410); `scripts/m5_eval.py --extensions` 21/21, 0 erros em 40 chamadas.
 - Corrigido (vinha do M1): a aprovação na TUI falhava sempre (teclas `s-y`/`s-n` inválidas) e aceitava qualquer texto + Enter como "sim". Só `Y` aprova agora; `tests/test_tui_confirm.py`.
 - Decisão: o subagente foi implementado mesmo sem o gatilho de uso real do plano; segue desligado.
+
+### M7 — confiabilidade, medição e empacotamento (em andamento desde 2026-10-16)
+
+- `search_files` ignora links simbólicos, corrigindo leitura de arquivos fora do workspace; `write_file` e `edit_file` revalidam caminho e snapshot após aprovação, gravam por substituição atômica e recusam diff obsoleto.
+- `run_command` e hooks agora drenam saída de subprocesso com captura limitada; cancelamento por timeout encerra o grupo do processo em POSIX. A confirmação sem `prompt_toolkit` aceita somente `Y`, igual à TUI principal.
+- Novo `zc doctor`: configurações, diretórios, skills, hooks, plugins, MCP, saúde do llama-server, `/props`, slots, contexto, `/tokenize`, `/apply-template` e suporte a effort. A execução não envia prompt de geração.
+- M7.1: integração TUI→agente→escrita aprovada/recusada, aprovação por Y/Esc/Enter/texto/Ctrl+C, cancelamento no turno, ciclo PTY, comandos de sessão e preservação de extensão em `/new` e `/resume`; `zc doctor` usa endpoints e MCP simulados. Workflow Python em `.github/workflows/python-tests.yml`.
+- M7.2: `scripts/m7_bench.py` contém 15 tarefas com verificadores independentes, 5 repetições por padrão, seeds registradas e métricas por tentativa. O benchmark local não foi executado.
+- M7.3: `/apply-template` + `/tokenize` contam mensagens e schemas no template ativo; cache e fallback heurístico; `fit_messages` remove turnos antigos em conjunto, mantém chamadas/resultados pareados e não trunca o pedido atual. A meta ≤3% ainda precisa de medição contra o servidor.
+- M7.4: streaming SSE opcional no provider/TUI, montagem de tool calls fragmentadas, TTFT, fechamento da resposta no cancelamento e fallback para chat bufferizado. `streaming_enabled` fica falso por padrão até avaliação de qualidade e latência.
+- M7.9: `config/default.yaml` e `skills/` são incluídos como recursos do pacote; carregadores usam `importlib.resources`; `INSTALL.md` atualizado. Teste copia o pacote para caminho isolado, pois setuptools/wheel não estão instalados no ambiente atual; wheel e versão de release ainda não validados.
+- Validação automatizada atual: `203 passed, 5 subtests passed` com `.venv/bin/python -m pytest -q`; `git diff --check` e `compileall` passaram. Nenhum teste ou benchmark fez geração local. M7.2–M7.4 ainda dependem da avaliação real; M7.5 depende do benchmark; M7.6–M7.8 seguem condicionais.
 
 ### M5 — avaliação (executada em 2026-10-16 só para o Ornith)
 

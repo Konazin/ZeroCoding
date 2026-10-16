@@ -25,6 +25,12 @@ Send a one-shot prompt:
 uv run zc -m "Explique este projeto em poucas linhas"
 ```
 
+Check the provider, server settings and configured extensions without generating a model response:
+
+```bash
+uv run zc doctor
+```
+
 ## M1 UI prototypes
 
 To compare the Rich + prompt_toolkit scrollback prototype with the persistent Textual prototype, follow the shared scenarios in [the stack comparison guide](docs/m1-stack-comparison.md):
@@ -108,6 +114,7 @@ mode: code
 max_input_tokens: 4096
 max_output_tokens: 1024
 max_tool_rounds: 6
+streaming_enabled: false
 
 providers:
   llama_cpp_local:
@@ -124,7 +131,9 @@ modes:
 
 The built-in `code`, `fast`, `reason` and `smart` modes use the same Ornith model; they adjust the output-token and tool-round budgets, not the model. ZeroCoding also sends the `reasoning_effort` request field, but the tested Ornith chat template reports that it does not support native effort control. Treat that field as ineffective for this model unless a later runtime/template check confirms otherwise. The model alias must match the `--alias` passed to `llama-server`. The GGUF path belongs to the server launch command and is not stored in ZeroCoding's shared config.
 
-The llama.cpp server context (`-c`) must be at least the combined input and output budgets; the documented default is 5,120 estimated tokens, so the launch example uses 8,192. The input budget includes conversation messages and tool schemas; older session turns are dropped first when the budget is exceeded. Legacy SQLite memory is preserved but is not appended to prompts, so unrelated sessions cannot inflate context.
+The llama.cpp server context (`-c`) must be at least the combined input and output budgets; the documented default is 5,120 tokens, so the launch example uses 8,192. When available, ZeroCoding counts the active chat template and tool schemas with llama.cpp `/apply-template` and `/tokenize`. Older conversation turns are dropped first when the input budget is exceeded. Legacy SQLite memory is preserved but is not appended to prompts, so unrelated sessions cannot inflate context.
+
+Streaming is opt-in with `streaming_enabled: true`. The buffered response remains the default until the M7 task benchmark confirms comparable quality.
 
 You can also use environment variables from `.env.example`.
 
@@ -164,7 +173,7 @@ You can also use environment variables from `.env.example`.
 - `/read src/main.py` prints a file and adds it to context.
 - `/tree` lists project files, ignoring generated and dependency folders.
 - `/grep pattern` searches project files.
-- `/metrics` summarizes local per-turn metrics (tokens, latency, tool errors, trimmed history).
+- `/metrics` summarizes local per-turn metrics (tokens, latency/TTFT when streaming is enabled, tool errors, trimmed history).
 - `/mcp`, `/hooks` and `/plugins` show the configured extensions and their status.
 - `/clear` clears the screen.
 - `/exit` exits.
@@ -236,7 +245,7 @@ Activate a skill in the TUI:
 - `core/config.py` loads defaults, user config and environment overrides.
 - `core/sessions.py` stores local JSON sessions.
 - `core/project_context.py` manages explicit project context, tree and grep.
-- `providers/base.py` defines `generate`, `chat`, `chat_stream`, `healthcheck` and `list_models`.
+- `providers/base.py` defines `generate`, `chat`, health checks and model listing. The OpenAI-compatible provider also exposes the optional streaming turn used when `streaming_enabled` is set.
 - `providers/llama_cpp.py` adapts llama.cpp's OpenAI-compatible server, including native effort requests.
 - `providers/ollama.py` is a **legacy** adapter for native Ollama endpoints (`/api/generate`, `/api/chat`, `/api/tags`). It is kept for existing configurations, is not validated against a real Ollama server, and receives no new features; llama.cpp is the supported runtime.
 - `providers/openai_compatible.py` supports `/chat/completions` and `/models`.

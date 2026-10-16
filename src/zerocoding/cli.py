@@ -25,6 +25,7 @@ def main(argv=None):
     load_env()
 
     parser = argparse.ArgumentParser(prog="zerocoding")
+    parser.add_argument("command", nargs="?", choices={"doctor"}, help="Run environment diagnostics")
     parser.add_argument("-m", "--message", help="Prompt to send")
     parser.add_argument("--provider", help="Configured provider to use")
     parser.add_argument("--list-skills", action="store_true")
@@ -34,6 +35,19 @@ def main(argv=None):
     manager = ConfigManager()
     try:
         config = manager.load(override_provider=args.provider)
+    except Exception as exc:
+        if args.command == "doctor":
+            from .core.doctor import Check, print_report
+            return print_report([Check("Config", "fail", str(exc),
+                                       "Fix ~/.zerocoding/config.yaml and run zc doctor again.")])
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    if args.command == "doctor":
+        from .core.doctor import print_report, run_doctor
+        return print_report(run_doctor(config, manager, Path.cwd()))
+
+    try:
         provider = build_provider(config)
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -53,6 +67,7 @@ def main(argv=None):
         max_tool_rounds=config.max_tool_rounds,
         effort_profiles=config.effort_profiles,
         dynamic_context=config.dynamic_context,
+        streaming_enabled=config.streaming_enabled,
     )
     console = Console(force_terminal=True, color_system="truecolor")
 

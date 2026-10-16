@@ -1,4 +1,5 @@
 import os
+from importlib import resources
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -118,6 +119,7 @@ class Config:
     max_output_tokens: int = 1024
     max_tool_rounds: int = 6
     dynamic_context: bool = False
+    streaming_enabled: bool = False
     metrics_enabled: bool = True
     hooks: list = field(default_factory=list)
     mcp: dict = field(default_factory=dict)
@@ -171,6 +173,7 @@ class Config:
             "max_output_tokens": self.max_output_tokens,
             "max_tool_rounds": self.max_tool_rounds,
             "dynamic_context": self.dynamic_context,
+            "streaming_enabled": self.streaming_enabled,
             "metrics_enabled": self.metrics_enabled,
             "hooks": list(self.hooks),
             "mcp": dict(self.mcp),
@@ -226,6 +229,7 @@ class ConfigManager:
             max_output_tokens=medium.max_output_tokens,
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
+            streaming_enabled=self._as_bool(data.get("streaming_enabled", False)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
             hooks=list(data.get("hooks") or []),
             mcp=dict(data.get("mcp") or {}),
@@ -261,8 +265,14 @@ class ConfigManager:
         self._write_yaml(self.user_config_path, config.to_dict())
 
     def _default_data(self) -> dict[str, Any]:
-        project_root = Path(__file__).resolve().parents[3]
-        data = self._read_yaml(project_root / "config" / "default.yaml")
+        resource = resources.files("zerocoding").joinpath("data").joinpath("default.yaml")
+        try:
+            raw = resource.read_text(encoding="utf-8")
+        except (FileNotFoundError, ModuleNotFoundError, OSError):
+            project_root = Path(__file__).resolve().parents[3]
+            data = self._read_yaml(project_root / "config" / "default.yaml")
+        else:
+            data = self._parse_yaml(raw)
         if data.get("providers"):
             return data
 
@@ -357,9 +367,13 @@ class ConfigManager:
         if not path.exists():
             return {}
         raw = path.read_text(encoding="utf-8")
+        return self._parse_yaml(raw)
+
+    @staticmethod
+    def _parse_yaml(raw: str) -> dict[str, Any]:
         if yaml:
             return yaml.safe_load(raw) or {}
-        return self._read_simple_yaml(raw)
+        return ConfigManager._read_simple_yaml(raw)
 
     def _write_yaml(self, path: Path, data: dict[str, Any]) -> None:
         if yaml:

@@ -1,6 +1,8 @@
-# M7 — Confiabilidade em uso real e qualidade medida (plano; não iniciado)
+# M7 — Confiabilidade em uso real e qualidade medida (implementação em andamento)
 
 O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta não é mais recurso, é confiança**: os dois defeitos mais graves encontrados (aprovação que nunca funcionava e aprovação por qualquer texto) estavam na TUI, passaram por revisão e pelos 100+ testes, e só apareceram ao dirigir a TUI de verdade. Além disso, a contagem de tokens está errada justamente no caso mais comum (com ferramentas) e não há como saber se uma mudança de prompt ou modelo melhora a qualidade. O M7 corrige isso **antes** de acrescentar mais capacidade.
+
+**Andamento em 2026-10-16:** M7.1 agora cobre aprovação/recusa na TUI, cancelamento do turno, retomada de sessão com extensões, `zc doctor` e fluxo de escrita também por PTY. O harness M7.2 foi implementado com 15 tarefas verificáveis, repetição/seeds e métricas; ainda não foi executado contra o Ornith. M7.3 conta o prompt renderizado por `/apply-template` + `/tokenize` e preserva chamadas/resultados de ferramentas ao ajustar o histórico. M7.4 adiciona SSE, TTFT, cancelamento e fallback, desligado por padrão até comparação de qualidade. M7.9 empacota defaults e skills e atualiza `INSTALL.md`; o teste de instalação fora do checkout usa cópia isolada porque setuptools/wheel não estão disponíveis neste ambiente. A suíte automatizada usa providers/servidores falsos: nenhuma chamada de geração ao modelo local foi feita. Precisão ≤3%, paridade de qualidade/latência e publicação continuam como gates do mega teste; detalhes em [`IMPLEMENTATION-PLAN-m7.md`](IMPLEMENTATION-PLAN-m7.md).
 
 ## Evidências que motivam o plano
 
@@ -26,6 +28,8 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.1 — Testes de integração da TUI e `zc doctor` (primeiro)
 
+**Implementação automatizada concluída;** aprovação/recusa, Esc/Enter/texto, Ctrl+C na aprovação e no turno, integração por pipe/PTy, comandos de sessão e retomada de extensões são exercitados sem servidor local. `zc doctor` também é validado com respostas HTTP e MCP simulados. A suíte principal mantém o CI sem modelo.
+
 - **Por quê:** a TUI aprova escrita e comando e nunca foi testada de ponta a ponta.
 - **O quê:**
   - Suíte de integração que dirige a TUI com entrada simulada (`prompt_toolkit` pipe input + `DummyOutput`, e um teste por pseudo-terminal para o fluxo completo) cobrindo: aprovar/recusar/Esc/Enter/texto, `Ctrl+C` no turno e no prompt de aprovação, abertura com extensões, cada slash command, `/resume`, `/new`, retomada com extensões.
@@ -34,17 +38,23 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 
 ### M7.2 — Benchmark de tarefas reais pequenas (a régua do resto)
 
+**Harness implementado em `scripts/m7_bench.py` (15 tarefas; padrão de 5 repetições).** O relatório inclui sucesso, mediana/pior caso/intervalo, tokens, tempo, tool calls inválidas e aprovações. Rodar e publicar a baseline Ornith está deliberadamente adiado para o mega teste.
+
 - **Por quê:** sem isso, M7.3–M7.7 são opinião.
 - **O quê:** `scripts/m7_bench.py` com 12–15 tarefas em mini-repositórios gerados (nada baixado), cada uma verificada **executando os testes**: corrigir teste que falha, renomear em vários arquivos, adicionar função com teste, mudar assinatura e atualizar chamadores, localizar a origem de um erro, explicar um fluxo (verificação por fatos), recusar uma ação destrutiva pedida. Métricas: sucesso pass@1, rodadas, tokens, tempo, chamadas de ferramenta inválidas, aprovações pedidas. 5 repetições por tarefa (as 3 do M5 não separaram variância).
 - **Saída:** baseline numérico do Ornith publicado em `docs/`, com intervalo (mediana e pior caso) e a taxa de variação entre repetições; script reproduzível contra qualquer `llama-server`.
 
 ### M7.3 — Contagem exata do prompt (`/apply-template` + `/tokenize`)
 
+**Implementação e testes simulados concluídos; validação contra o servidor real pendente.** O contador inclui schemas e usa cache; o fallback conserva o caminho heurístico. O histórico remove turnos antigos como unidade, preserva pares de tool call/result e retorna erro explícito se o pedido atual não couber. O orçamento continua em 4.096 até medição real.
+
 - **Por quê:** erro de −26% com ferramentas; o orçamento de entrada é o limite central do produto.
 - **O quê:** `TokenCounter` passa a renderizar `messages + tools` com `/apply-template` e contar com `/tokenize` (com cache e **fallback** para o estimador atual, hoje inalterado), e o orçamento reserva o custo real do bloco de ferramentas. Calibrar a heurística de fallback com um fator medido para o caso com ferramentas. Reavaliar com dado se o orçamento de entrada de 4 096 deve mudar, já que o servidor tem janela de 8 192 e margem de VRAM de ~1 GB.
 - **Saída:** erro ≤ 3% nas três classes medidas (curto/longo, com e sem ferramentas); `m5_eval` 21/21; o benchmark do M7.2 sem regressão. Qualquer mudança de orçamento só entra com A/B no M7.2.
 
 ### M7.4 — Streaming real e TTFT
+
+**SSE e testes simulados implementados; validação/paridade real pendente.** Tool calls fragmentadas são remontadas, conteúdo de raciocínio não é emitido, `Ctrl+C` fecha a resposta e falha de stream limpa texto parcial antes do fallback. Streaming fica `streaming_enabled: false` até passar no benchmark.
 
 - **Por quê:** turnos de até 45 s sem sinal; TTFT não medido; o M1 já permitia streaming real desde que não fosse simulado.
 - **O quê:** `stream: true` (SSE) no `LlamaCppProvider`, montando texto e deltas de chamada de ferramenta; a TUI mostra o texto à medida que chega **depois** do estado de trabalho; o conteúdo de raciocínio nunca é exibido nem salvo (regra existente). `Ctrl+C` fecha o socket e confirma-se que o servidor parou de gerar. Fallback automático para o modo atual se o stream falhar. TTFT passa a entrar em `m5_eval` e nas métricas.
@@ -76,6 +86,8 @@ O M1–M6 entregaram a funcionalidade. O que o M6 mostrou é que **o que falta n
 - **Se acionado:** primeiro compactação **determinística** (remover saídas de ferramenta antigas, manter caminhos e decisões), só depois resumo por modelo; mesmo critério de medição no benchmark. Reavaliar o último recurso agressivo do `fit_messages`.
 
 ### M7.9 — Empacotamento e liberação
+
+**Recursos instalados e instruções atualizadas; artefato wheel e liberação ainda pendentes.** Defaults e skills estão incluídos no package-data e são carregados fora do checkout. O ambiente atual não tem `setuptools`/`wheel`, então a automação cobre uma cópia isolada do pacote, sem declarar que o wheel foi validado.
 
 - Versão e `CHANGELOG`, instalação por `uv tool install`, `INSTALL.md` atualizado, CI que roda a suíte sem servidor (a suíte de integração do M7.1 usa modelo simulado), e checagem de que o pacote instalado enxerga `config/default.yaml` e `skills/` fora do diretório do repositório (hoje o carregamento usa o caminho relativo ao fonte).
 - **Saída:** instalação limpa em um diretório novo roda `zc doctor` e um turno.

@@ -1,0 +1,101 @@
+provider: llama_cpp_local
+mode: code
+
+providers:
+  llama_cpp_local:
+    type: llama_cpp
+    base_url: "http://127.0.0.1:8080/v1"
+    model: "ornith-1.5-9b-q5-k-m"
+
+modes:
+  code:
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
+    skills: []
+
+  reason:
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
+    skills: []
+
+  fast:
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
+    skills: []
+
+  smart:
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
+    skills: []
+
+memory_path: ".zerocoding/memory.db"
+skills_path: "skills"
+theme: "purple"
+auto_save: true
+max_input_tokens: 4096
+max_output_tokens: 1024
+max_tool_rounds: 6
+# Local per-turn numbers (tokens, latency, tool errors) in .zerocoding/metrics/turns.jsonl; never prompts or answers.
+metrics_enabled: true
+# Opt-in: send only the tool schemas and skills relevant to each request.
+dynamic_context: false
+streaming_enabled: false # Opt-in until latency and task quality are compared against the buffered path.
+
+# run_command: always needs approval; this policy decides what may even be offered for approval.
+# deny/allow are executable names (a denied list is always merged with built-in defaults such as sudo, dd, mkfs).
+command_policy:
+  deny: []
+  allow: []            # empty = any executable that is not denied
+  env_passthrough: []  # extra environment variables passed to commands (default: PATH, HOME, LANG, ...)
+  timeout: 60
+  max_output_chars: 8000
+
+effort_profiles:
+  low:
+    max_output_tokens: 512
+    max_tool_rounds: 3
+  medium:
+    max_output_tokens: 1024
+    max_tool_rounds: 6
+  high:
+    max_output_tokens: 2048
+    max_tool_rounds: 8
+
+# --- Extensions (all opt-in; see docs/ROADMAP-m6.md) ---------------------------------------------
+
+# Hooks run YOUR commands around tool calls, under command_policy. Zero prompt cost. Example:
+# hooks:
+#   - name: lint-python
+#     event: post_tool            # pre_tool | post_tool | turn_end
+#     match: [edit_file, write_file]
+#     path: "*.py"                # optional glob over the tool target
+#     command: "python3 -m py_compile ."   # stdin gets a JSON payload; env has ZC_HOOK_EVENT/ZC_TOOL_NAME/ZC_TOOL_TARGET
+#   - event: pre_tool
+#     blocking: true              # a failing blocking hook refuses the call (it can never approve anything)
+#     match: run_command
+#     command: "./scripts/check-command.sh"
+hooks: []
+
+# MCP servers (stdio). Nothing is exposed unless allowlisted under `tools`; non-read-only tools ask approval.
+# mcp:
+#   max_tools: 4
+#   max_schema_tokens: 400        # ~65 tokens per tool are added to EVERY request
+#   servers:
+#     files:
+#       command: ["python3", "server.py"]
+#       env: {EXAMPLE: "1"}       # only these (plus PATH, HOME, ...) reach the server
+#       tools:
+#         read_note: {read_only: true}
+mcp:
+  max_tools: 4
+  max_schema_tokens: 400
+  servers: {}
+
+# Read-only "explore" helper with its own context (sequential: saves context, not time).
+subagents:
+  enabled: false
+
+# Declarative plugins (skills + hooks + MCP config, no Python). Enabling one trusts its hooks and servers.
+plugins:
+  path: "~/.zerocoding/plugins"
+  enabled: []
