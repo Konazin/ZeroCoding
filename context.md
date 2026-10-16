@@ -35,6 +35,12 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - M2, sobre prompt/contexto, foi declarado concluído pelo usuário em 2026-10-14. Os relatórios em `docs/` ficam como referência; o prompt de produção segue inalterado até uma decisão explícita.
 - M3 está liberado, mas só deve começar quando o usuário pedir. Ver `docs/ROADMAP-extension.md` para os itens de revisão e sub-marcos adicionais.
 
+### M2.5 — base estável (concluído em 2026-10-16)
+
+- Grupo `dev` (pytest) em `pyproject.toml`/`uv.lock`; `uv run pytest -q` e `unittest` passam 81 testes em ambiente limpo.
+- `test_qwen35_study` agora garante um `python` no PATH do teste (sistemas só com `python3`).
+- Trabalho segue na branch `development`, sincronizada com `origin/main`.
+
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
 - Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.

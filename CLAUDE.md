@@ -12,7 +12,8 @@ ZeroCoding is a local terminal coding agent (Python ≥3.10, package `zerocoding
 uv sync --locked                      # install from uv.lock into .venv
 uv run zc                             # interactive TUI
 uv run zc -m "prompt"                 # one-shot; no tools, cannot execute changes
-uv run python -m unittest discover -s tests -p 'test_*.py'   # full suite (unittest; pytest is not a dependency)
+uv run python -m unittest discover -s tests -p 'test_*.py'   # full suite (unittest is the reference runner)
+uv run pytest -q                      # same suite via pytest (dev dependency group; `uv sync` installs it)
 uv run python -m unittest tests.test_agent_tools.<Class>.<test>   # single test
 uv run python -m py_compile src/zerocoding/**/*.py
 uv sync --locked --extra prototype && uv run python -m zerocoding.tui.demo textual   # optional Textual prototype

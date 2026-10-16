@@ -1,7 +1,11 @@
 import json
+import os
+import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts.qwen35_thinking_effort_study import (
     DEFAULT_REPETITIONS,
@@ -88,7 +92,12 @@ class TestQwenThinkingEffortStudy(unittest.TestCase):
             "scenario": "edit_test", "thinking": False, "effort": "low",
             "repetition": 1, "plan_mode": False, "ultrathink": False,
         }
-        result = run_trial(row, "unused", "fake", EmptySampler(), provider_factory=FakeProvider)
+        # TEST_COMMAND starts with `python`; some systems only ship `python3`.
+        with tempfile.TemporaryDirectory() as shim_dir:
+            if shutil.which("python") is None:
+                Path(shim_dir, "python").symlink_to(sys.executable)
+            with mock.patch.dict(os.environ, {"PATH": shim_dir + os.pathsep + os.environ.get("PATH", "")}):
+                result = run_trial(row, "unused", "fake", EmptySampler(), provider_factory=FakeProvider)
         self.assertTrue(result["evaluation"]["passed"])
         self.assertTrue(result["expected_edit_applied"])
         self.assertTrue(any(item["approved"] and item["command"] == TEST_COMMAND for item in result["approvals"]))
