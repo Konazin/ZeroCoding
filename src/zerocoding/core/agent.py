@@ -5,6 +5,7 @@ import uuid
 from typing import Generator
 
 from .budget import fit_messages
+from .cancel import TurnCancelled
 from .context import ConversationContext
 from .events import AgentEvent
 from .prompt import build_messages
@@ -24,6 +25,10 @@ class Agent:
                  dynamic_context=False):
         self.provider = provider
         self.token_counter = TokenCounter(provider)
+        self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
+        self.last_turn: dict = {}
+        self.extensions = None  # core.extensions.Extensions, set by the CLI
+        self._stats: dict = self._new_stats()
         self.dynamic_context = bool(dynamic_context)
         self.memory = memory  # retained for API compatibility; global history is never injected.
         self.skills = skills or []
@@ -121,7 +126,12 @@ class Agent:
             system_prompt = base_prompt + "\n\n" + "\n".join(instructions)
         skills = select_skills(text, self.active_skills) if self.dynamic_context else self.active_skills
         messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
-        return fit_messages(messages, self.max_input_tokens, self.token_counter)
+        return self._fit(messages, self.max_input_tokens)
+
+    def _fit(self, messages, budget):
+        fitted = fit_messages(messages, budget, self.token_counter)
+        self._stats["trimmed_messages"] += max(0, len(messages) - len(fitted))
+        return fitted
 
     @staticmethod
     def _kwargs(output_tokens):
@@ -137,7 +147,17 @@ class Agent:
 
     def _chat(self, messages, tool_schemas, output_tokens, state, on_event):
         """One provider call; drops native tools for the rest of the ask if the server rejects them."""
+        if state.get("cancel"):
+            state["cancel"].check()
         emit_event(on_event, AgentEvent("thinking"))
+        turn = self._chat_once(messages, tool_schemas, output_tokens, state)
+        usage = turn.usage or {}
+        self._stats["llm_calls"] += 1
+        self._stats["prompt_tokens"] += int(usage.get("prompt_tokens", 0) or 0)
+        self._stats["completion_tokens"] += int(usage.get("completion_tokens", 0) or 0)
+        return turn
+
+    def _chat_once(self, messages, tool_schemas, output_tokens, state):
         kwargs = {"num_ctx": self.max_input_tokens + output_tokens, **self._kwargs(output_tokens)}
         effort_level = "high" if self.ultrathink else self.effort
         native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
@@ -163,8 +183,11 @@ class Agent:
             "The model returned an empty response twice. Check the llama.cpp chat template and reasoning settings, then try again."
         )
 
-    def _run_tool_call(self, call, call_id, on_event) -> dict:
+    def _run_tool_call(self, call, call_id, on_event, cancel=None) -> dict:
         """Execute one tool call (Plan-mode guarded), emit events and return the tool message."""
+        if cancel:
+            cancel.check()
+        self._stats["tool_calls"] += 1
         started_at = time.monotonic()
         target = tool_target(call.name, call.arguments)
         emit_event(on_event, AgentEvent("tool_started", call.name, target))
@@ -184,6 +207,10 @@ class Agent:
             else:
                 result_text = str(result).lower()
                 event_kind = "tool_denied" if "denied" in result_text or "nothing was executed" in result_text else "tool_completed"
+        if event_kind == "tool_error":
+            self._stats["tool_errors"] += 1
+        elif event_kind == "tool_denied":
+            self._stats["tool_denied"] += 1
         emit_event(on_event, AgentEvent(
             event_kind, call.name, target, tool_summary(call.name, str(result)), time.monotonic() - started_at,
         ))
@@ -192,7 +219,35 @@ class Agent:
             return format_result(call_id, call.name, str(result)[:8000])
         return {"role": "tool", "tool_call_id": call_id, "name": call.name, "content": str(result)[:8000]}
 
-    def ask(self, text, system_prompt=None, use_tools=False, on_event=None):
+    @staticmethod
+    def _new_stats() -> dict:
+        return {"llm_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0,
+                "tool_errors": 0, "tool_denied": 0, "trimmed_messages": 0}
+
+    def ask(self, text, system_prompt=None, use_tools=False, on_event=None, cancel=None):
+        """Answer one request. ``cancel`` (CancelToken) is checked between provider calls and tool calls;
+        a cancelled or failed turn leaves the session history untouched."""
+        self._stats = self._new_stats()
+        started = time.monotonic()
+        outcome = "error"
+        try:
+            result = self._ask(text, system_prompt, use_tools, on_event, cancel)
+            outcome = "ok"
+            return result
+        except (KeyboardInterrupt, TurnCancelled):
+            outcome = "cancelled"
+            raise
+        finally:
+            stats = {"ts": round(time.time()), "outcome": outcome, "duration_s": round(time.monotonic() - started, 2),
+                     "effort": self.effort, "plan_mode": self.plan_mode, "ultrathink": self.ultrathink, **self._stats}
+            self.last_turn = stats
+            if self.metrics_sink:
+                try:
+                    self.metrics_sink(stats)
+                except Exception:
+                    pass
+
+    def _ask(self, text, system_prompt, use_tools, on_event, cancel):
         output_tokens, tool_round_limit = self.effective_budgets()
         messages = self._messages(text, system_prompt)
         tool_schemas = self._tool_schemas_for(text, use_tools)
@@ -201,8 +256,8 @@ class Agent:
             if messages and messages[0].get("role") == "system":
                 messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
             tool_budget = max(256, self.max_input_tokens - self.token_counter(tool_schemas))
-            messages = fit_messages(messages, tool_budget, self.token_counter)
-        state = {"native_tools": bool(tool_schemas)}
+            messages = self._fit(messages, tool_budget)
+        state = {"native_tools": bool(tool_schemas), "cancel": cancel}
 
         turn = self._chat_non_empty(messages, tool_schemas, output_tokens, state, on_event)
         rounds = 0
@@ -238,16 +293,16 @@ class Agent:
                 assistant_message["reasoning_content"] = turn.reasoning_content
             messages.append(assistant_message)
             for call, call_id in zip(calls, call_ids):
-                messages.append(self._run_tool_call(call, call_id, on_event))
+                messages.append(self._run_tool_call(call, call_id, on_event, cancel))
             rounds += 1
             tool_round_completed = True
-            messages = fit_messages(messages, tool_budget, self.token_counter)
+            messages = self._fit(messages, tool_budget)
             turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)
         return response_text
 
-    def ask_stream(self, text, system_prompt=None, use_tools=False, on_event=None) -> Generator[str, None, None]:
+    def ask_stream(self, text, system_prompt=None, use_tools=False, on_event=None, cancel=None) -> Generator[str, None, None]:
         """Compatibility wrapper that yields the complete answer as one item."""
-        response = self.ask(text, system_prompt=system_prompt, use_tools=use_tools, on_event=on_event)
+        response = self.ask(text, system_prompt=system_prompt, use_tools=use_tools, on_event=on_event, cancel=cancel)
         yield response

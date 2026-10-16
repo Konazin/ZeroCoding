@@ -111,6 +111,7 @@ COMMANDS = [
     ("/mode reason", "Reason mode · high effort"),
     ("/mode fast", "Fast mode · low effort"),
     ("/mode smart", "Smart mode · high effort"),
+    ("/metrics", "Show local per-turn metrics"),
     ("/plan", "Toggle read-only planning mode"),
     ("/ultrathink", "Toggle deeper analysis budget"),
     ("/effort", "Set low, medium, or high effort"),

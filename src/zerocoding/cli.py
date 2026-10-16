@@ -8,6 +8,9 @@ from rich.markdown import Markdown
 from .core.agent import Agent
 from .core.config import ConfigManager
 from .core.dotenv import load_env
+from .core.cancel import TurnCancelled
+from .core.extensions import Extensions
+from .core.metrics import MetricsLog
 from .core.project_context import ProjectContext
 from .core.router import build_provider
 from .core.sessions import SessionManager
@@ -64,6 +67,9 @@ def main(argv=None):
     if args.message:
         try:
             response = agent.ask(args.message)
+        except KeyboardInterrupt:
+            console.print("[yellow]Cancelled.[/yellow]")
+            return 130
         except Exception as exc:
             console.print(f"[red]Error: {exc}[/red]")
             return 1
@@ -83,6 +89,11 @@ def main(argv=None):
         agent.set_active_skills(default_mode.skills)
     session.skills = agent.active_skill_names()
     session_manager.save(session)
+
+    extensions = Extensions(metrics=MetricsLog(Path.cwd() / ".zerocoding" / "metrics" / "turns.jsonl") if config.metrics_enabled else None)
+    agent.extensions = extensions
+    if extensions.metrics:
+        agent.metrics_sink = extensions.metrics.record
 
     active_animation = [None]
     tui = ZerocodingTUI(
@@ -154,6 +165,11 @@ def main(argv=None):
             tui.display_message("assistant", response)
             tui.show_info(f"Worked for {elapsed:.0f}s")
             save_session_state(session_manager, session, config, agent, project_context)
+        except (KeyboardInterrupt, TurnCancelled):
+            elapsed = animation.stop()
+            active_animation[0] = None
+            tui.show_warning("Turn cancelled. Nothing from this turn was saved to the session.")
+            tui.show_info(f"Stopped after {elapsed:.0f}s")
         except Exception as exc:
             elapsed = animation.stop()
             active_animation[0] = None

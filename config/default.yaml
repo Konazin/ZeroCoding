@@ -35,6 +35,8 @@ auto_save: true
 max_input_tokens: 4096
 max_output_tokens: 1024
 max_tool_rounds: 6
+# Local per-turn numbers (tokens, latency, tool errors) in .zerocoding/metrics/turns.jsonl; never prompts or answers.
+metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
 

@@ -134,6 +134,9 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
     if name == "/status":
         tui.show_status()
         return False, None, session
+    if name == "/metrics":
+        handle_metrics(tui, agent)
+        return False, None, session
 
     tui.show_error(f"Comando desconhecido: {command}")
     return False, None, session
@@ -483,3 +486,28 @@ def handle_config(args, tui, config, manager):
 
     tui.show_error("Usage: /config | /config add name type base_url model | /config base_url URL | /config api_key_env ENV")
     return None
+
+
+def handle_metrics(tui, agent):
+    extensions = getattr(agent, "extensions", None)
+    log = getattr(extensions, "metrics", None)
+    if log is None:
+        tui.show_info("Metrics are disabled (metrics_enabled: false).")
+        return
+    from .core.metrics import summarize
+
+    summary = summarize(log.recent(100))
+    if not summary["turns"]:
+        tui.show_info(f"No turns recorded yet ({log.path}).")
+        return
+
+    def pair(item):
+        return f"{item['median']} / {item['worst']}" if item else "n/a"
+
+    tui.show_info(f"Last {summary['turns']} turns · {log.path}")
+    tui.show_info(f"  Outcomes: {', '.join(f'{k} {v}' for k, v in sorted(summary['outcomes'].items()))}")
+    tui.show_info(f"  Duration s (median / worst): {pair(summary['duration_s'])}")
+    tui.show_info(f"  Prompt tokens (median / worst): {pair(summary['prompt_tokens'])}")
+    tui.show_info(f"  Completion tokens (median / worst): {pair(summary['completion_tokens'])}")
+    tui.show_info(f"  Tool calls: {summary['tool_calls']} · error rate {summary['tool_error_rate']:.1%}")
+    tui.show_info(f"  Turns that trimmed history: {summary['turns_with_trimmed_history']} ({summary['trimmed_turn_rate']:.1%})")
