@@ -61,6 +61,12 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - Erros legíveis: argumentos ausentes, ferramenta desconhecida (lista as disponíveis), inteiros/regex inválidos, timeout, binário inexistente, limite de rodadas com instrução de próximo passo.
 - Testes: `tests/test_m4_workflow.py` (aprovação/recusa de diff e comando, symlink e caminhos fora do workspace, política, erros, limite de rodadas, falha do provider, isolamento de sessão e ciclo busca → leitura → edição recusada → edição aprovada com provider simulado). Smoke real com o Ornith: edição mínima aplicada com diff mostrado antes da aprovação.
 
+### M5 — avaliação (executada em 2026-10-16 só para o Ornith)
+
+- `scripts/m5_eval.py` (7 casos × 3 repetições, workspace temporário, aprovação programática): 21/21 concluídos, 35 chamadas de ferramenta com 2 erros, ~22 tokens/s, RSS ~5,0 GB, VRAM da GPU 7,6 de 8,57 GB. Relatório em `docs/model-evaluation.md`, dados em `docs/m5-ornith-1.5-9b-q5_k_m-results.json`.
+- Comparação com Qwen3-8B, Qwen3.5-9B, Gemma 4 12B e Qwen2.5-Coder-7B **não feita**: o Ornith segue como modelo único. Para comparar, atualizar este arquivo e rodar o harness com `--label` por modelo.
+- Limitações: sem TTFT real (sem streaming; `prompt_ms` sofre efeito do cache), VRAM é da GPU inteira, 2 erros de ferramenta sem causa confirmada.
+
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
 - Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.
