@@ -498,12 +498,12 @@ class ZerocodingTUI:
             bindings = KeyBindings()
 
             @bindings.add("y", eager=True)
-            @bindings.add("s-y", eager=True)
+            @bindings.add("Y", eager=True)
             def approve(event):
                 event.app.exit(result=True)
 
             @bindings.add("n", eager=True)
-            @bindings.add("s-n", eager=True)
+            @bindings.add("N", eager=True)
             @bindings.add("escape", eager=True)
             def reject(event):
                 event.app.exit(result=False)
