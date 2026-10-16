@@ -47,13 +47,17 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - 1.2 estimativa real de tokens: `core/tokens.py` (`TokenCounter`) usa `/tokenize` do llama-server via `LlamaCppProvider.count_tokens`, com cache e fallback permanente para ~4 chars/token após a primeira falha. `fit_messages` recebe o contador. Ainda não validado contra o servidor real (estava offline): falta medir o erro da heurística e confirmar o formato da resposta de `/tokenize`.
 - 1.3 decomposição: `core/agent.py` (loop em métodos `_chat`, `_chat_non_empty`, `_run_tool_call`) + `core/budget.py` (`fit_messages`) + `core/toolcalls.py` (marcador compacto, eventos, resumos); `cli.py` ficou só com `main` e os handlers de slash commands foram para `commands.py`. Correção embutida: o `fit_messages` pós-rodada de ferramentas passou a usar o contador de tokens configurado. O retry de resposta vazia (item 1.4) ficou consolidado em `_chat_non_empty`.
 - 1.5 effort: decisão registrada: effort = budgets locais (tokens de saída/rodadas). O `reasoning_effort` ainda é enviado ao llama.cpp, mas o Ornith declara `supports_reasoning_effort: false`; o `/status` agora rotula "Effort (budgets)" e descreve o campo nativo como não validado.
+- Medições contra o llama-server real (2026-10-16; Ornith, janela 8192; o `/props` mostra alias = caminho do GGUF e 4 slots, sem `--alias`/`-np 1`):
+  - `/tokenize` responde `{"tokens":[...]}` no formato esperado e o `TokenCounter` funciona de ponta a ponta. Erro da heurística de ~4 chars/token (JSON) vs. real: Python +14%, português +2%, inglês −4%, schemas de ferramentas +11%, YAML pequeno −29%. Em geral dentro de ±15%; a contagem real vale sobretudo perto do limite.
+  - Smoke do agente (resposta direta, leitura com ferramenta, Plan bloqueando escrita, escrita recusada sem criar arquivo): tudo certo, sem resposta vazia em 4 execuções, então o item 1.4 não foi reproduzido com o Ornith (o problema documentado era do Qwen3.5).
+  - A/B de `dynamic_context` (`scripts/dynamic_context_ab.py`, 8 casos × 1 repetição): economiza ~115 tokens de ~660 no prompt (~17%) e acertou 5/8 contra 7/8 com ele desligado. A amostra é pequena e ruidosa, mas não há evidência a favor: `dynamic_context` continua desligado por padrão.
 
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
 - Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.
 - Suíte: `uv run python -m unittest discover -s tests -p 'test_*.py'` com 81 testes passando.
 - Ressalvas tratadas: contexto dinâmico opcional (`dynamic_context`, desligado por padrão, não medido); testes de caracterização dos comandos do `cli.py`; `providers/ollama.py` marcado como legado.
-- Pendente de medição: ativar `dynamic_context` por padrão só depois de comparar com `scripts/prompt_study.py` usando o servidor Ornith.
+- `dynamic_context` medido (ver M3 em andamento): continua desligado.
 
 ## Regras de trabalho
 
