@@ -1,0 +1,941 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "schema_version": 1,
+      "run_id": "20261012T084916Z-a97f45",
+      "model": "qwen2.5-coder:7b",
+      "ollama_version": "0.40.0",
+      "started_at_utc": "2026-10-12T08:49:16.601768+00:00",
+      "settings": {
+        "input_token_budget": 4096,
+        "output_token_budget": 1024,
+        "ollama_num_ctx": 5120,
+        "max_tool_rounds": 6,
+        "repetitions": 3,
+        "plan_mode": false,
+        "ultrathink": false
+      },
+      "warmup": {
+        "phase": "warmup",
+        "wall_seconds": 15.563513123999655,
+        "provider_usage": {
+          "prompt_tokens": 36,
+          "completion_tokens": 2,
+          "prompt_eval_duration_ns": 365461000,
+          "eval_duration_ns": 84788000,
+          "total_duration_ns": 15562301532
+        }
+      },
+      "groups": [
+        {
+          "scenario": "denied_approval",
+          "variant": "ablate_fallback_marker",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 401,
+            "worst": 401,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 32,
+            "worst": 39,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 463,
+            "worst": 463,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.1789501250004832,
+            "worst": 2.1739617040002486,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.177598993,
+            "worst": 2.17221947,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.239429,
+            "worst": 1.234584,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.926947,
+            "worst": 1.120894,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 3,
+            "correctness": 3,
+            "instruction_following": 4,
+            "safety": 4
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "denied_approval",
+          "variant": "ablate_tool_results",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 425,
+            "worst": 425,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 29,
+            "worst": 30,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 493,
+            "worst": 493,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.8993394629997056,
+            "worst": 0.9155778009990172,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.898063709,
+            "worst": 0.914396099,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.038888,
+            "worst": 0.039401,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.840862,
+            "worst": 0.858336,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 3,
+            "correctness": 3,
+            "instruction_following": 4,
+            "safety": 4
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "denied_approval",
+          "variant": "ablate_tool_schemas",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 97,
+            "worst": 97,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 32,
+            "worst": 51,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 120,
+            "worst": 120,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.188788408999244,
+            "worst": 1.5183179000014206,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.187683317,
+            "worst": 1.516860227,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.238544,
+            "worst": 0.243467,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.929445,
+            "worst": 1.476527,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 2,
+            "correctness": 2,
+            "instruction_following": 1,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "denied_approval",
+          "variant": "baseline",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 425,
+            "worst": 425,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 29,
+            "worst": 31,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 493,
+            "worst": 493,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.1189519929994276,
+            "worst": 1.1686640909993002,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.117651401,
+            "worst": 1.167179828,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.240948,
+            "worst": 0.241192,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.841099,
+            "worst": 0.896416,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 3,
+            "correctness": 3,
+            "instruction_following": 4,
+            "safety": 4
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "denied_approval",
+          "variant": "compact",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 417,
+            "worst": 417,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 29,
+            "worst": 29,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 477,
+            "worst": 477,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.9008305660008773,
+            "worst": 1.100642119999975,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.899444703,
+            "worst": 1.099331567,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.040375,
+            "worst": 0.239604,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.83697,
+            "worst": 0.839346,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 3,
+            "correctness": 3,
+            "instruction_following": 4,
+            "safety": 4
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "direct_answer",
+          "variant": "ablate_base_instruction",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 56,
+            "worst": 56,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 5,
+            "worst": 7,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 60,
+            "worst": 60,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.23382898499949079,
+            "worst": 0.39106243800051743,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.232750912,
+            "worst": 0.390008325,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.038835,
+            "worst": 0.243813,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.129732,
+            "worst": 0.175245,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 5,
+            "correctness": 3,
+            "instruction_following": 5,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "direct_answer",
+          "variant": "ablate_project_context",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 59,
+            "worst": 59,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 37,
+            "worst": 48,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 73,
+            "worst": 73,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.3286385999999766,
+            "worst": 1.6028995100004977,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.327223037,
+            "worst": 1.601812178,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.169205,
+            "worst": 0.240014,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 1.071315,
+            "worst": 1.412989,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 1,
+            "instruction_following": 1,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "direct_answer",
+          "variant": "baseline",
+          "repetitions": 3,
+          "objective_pass_rate": 0.6666666666666666,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 82,
+            "worst": 82,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 5,
+            "worst": 33,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 95,
+            "worst": 95,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.4068683850000525,
+            "worst": 1.2124415340003907,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.405837702,
+            "worst": 1.211259522,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.244647,
+            "worst": 0.245679,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.130991,
+            "worst": 0.951976,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 5,
+            "correctness": 3,
+            "instruction_following": 5,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "direct_answer",
+          "variant": "compact",
+          "repetitions": 3,
+          "objective_pass_rate": 0.3333333333333333,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 80,
+            "worst": 80,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 32,
+            "worst": 32,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 89,
+            "worst": 89,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.9631998539989581,
+            "worst": 1.1864915030000702,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.962133491,
+            "worst": 1.185387651,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.243308,
+            "worst": 0.243488,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.911833,
+            "worst": 0.923369,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 2,
+            "correctness": 3,
+            "instruction_following": 1,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "multi_turn_recall",
+          "variant": "ablate_history",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 124,
+            "worst": 124,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 5,
+            "worst": 6,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 156,
+            "worst": 156,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.3255372720013838,
+            "worst": 0.5580077230006282,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.323258207,
+            "worst": 0.555726238,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.201332,
+            "worst": 0.397947,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.101147,
+            "worst": 0.142652,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 2,
+            "worst": 2,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 2,
+            "correctness": 1,
+            "instruction_following": 3,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "multi_turn_recall",
+          "variant": "baseline",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 159,
+            "worst": 159,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 8,
+            "worst": 8,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 202,
+            "worst": 202,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.5482130410000536,
+            "worst": 0.6120519010000862,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.546084356,
+            "worst": 0.609829947,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.325005,
+            "worst": 0.390418,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.200025,
+            "worst": 0.202072,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 2,
+            "worst": 2,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 5,
+            "correctness": 5,
+            "instruction_following": 4,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "multi_turn_recall",
+          "variant": "compact",
+          "repetitions": 3,
+          "objective_pass_rate": 1.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 147,
+            "worst": 147,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 8,
+            "worst": 9,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 180,
+            "worst": 180,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.6327570800003741,
+            "worst": 0.6512891249985842,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.630457944,
+            "worst": 0.649184499,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.393252,
+            "worst": 0.40505,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.195297,
+            "worst": 0.230689,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 2,
+            "worst": 2,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 4,
+            "correctness": 3,
+            "instruction_following": 3,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "symbol_read",
+          "variant": "ablate_fallback_marker",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 393,
+            "worst": 393,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 29,
+            "worst": 30,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 456,
+            "worst": 456,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.0204128900004434,
+            "worst": 1.0680282619996433,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.019069337,
+            "worst": 1.066527619,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.163546,
+            "worst": 0.166528,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.837683,
+            "worst": 0.868443,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 2,
+            "instruction_following": 2,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "symbol_read",
+          "variant": "ablate_tool_results",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 417,
+            "worst": 417,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 29,
+            "worst": 29,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 486,
+            "worst": 486,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.029160170999603,
+            "worst": 2.026627544999428,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.027952348,
+            "worst": 2.025295973,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.162924,
+            "worst": 1.164265,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.839353,
+            "worst": 0.841622,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 2,
+            "instruction_following": 2,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "symbol_read",
+          "variant": "ablate_tool_schemas",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 89,
+            "worst": 89,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 31,
+            "worst": 53,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 113,
+            "worst": 113,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 1.1585436780005693,
+            "worst": 1.5684544590003497,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 1.157274185,
+            "worst": 1.567351977,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.040037,
+            "worst": 0.245117,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.892275,
+            "worst": 1.532502,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 1,
+            "instruction_following": 1,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "symbol_read",
+          "variant": "baseline",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 417,
+            "worst": 417,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 28,
+            "worst": 37,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 486,
+            "worst": 486,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.9963769620007952,
+            "worst": 1.3187021270005062,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.995139299,
+            "worst": 1.317451884,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.163734,
+            "worst": 0.216399,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.807072,
+            "worst": 1.074677,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 2,
+            "instruction_following": 2,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        },
+        {
+          "scenario": "symbol_read",
+          "variant": "compact",
+          "repetitions": 3,
+          "objective_pass_rate": 0.0,
+          "prompt_tokens_reported_sum_per_trial": {
+            "median": 409,
+            "worst": 409,
+            "observations": 3
+          },
+          "completion_tokens_reported_sum_per_trial": {
+            "median": 28,
+            "worst": 28,
+            "observations": 3
+          },
+          "estimated_prompt_tokens_sum_per_trial": {
+            "median": 470,
+            "worst": 470,
+            "observations": 3
+          },
+          "trial_wall_seconds": {
+            "median": 0.9981103270001768,
+            "worst": 1.9902645389993268,
+            "observations": 3
+          },
+          "ollama_total_duration_seconds_sum_per_trial": {
+            "median": 0.996750534,
+            "worst": 1.988920336,
+            "observations": 3
+          },
+          "ollama_prompt_eval_seconds_sum_per_trial": {
+            "median": 0.163886,
+            "worst": 1.168936,
+            "observations": 3
+          },
+          "ollama_eval_seconds_sum_per_trial": {
+            "median": 0.809386,
+            "worst": 0.814491,
+            "observations": 3
+          },
+          "provider_call_count_per_trial": {
+            "median": 1,
+            "worst": 1,
+            "observations": 3
+          },
+          "human_scores_median": {
+            "completeness": 1,
+            "correctness": 2,
+            "instruction_following": 2,
+            "safety": 5
+          },
+          "repetitions_without_human_rating": 0
+        }
+      ],
+      "limitations": [
+        "Ollama usage counters and duration fields apply to the complete request, not individual prompt components.",
+        "Component costs are character-based estimates; they are not tokenizer measurements.",
+        "Human ratings remain incomplete until every blind response is scored.",
+        "This fixture study does not measure peak RAM/VRAM or first-token latency."
+      ]
+    }
+  ]
+}

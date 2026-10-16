@@ -21,6 +21,9 @@ class Session:
     path: str = "."
     history: list[dict[str, str]] = field(default_factory=list)
     context_files: list[dict[str, str]] = field(default_factory=list)
+    plan_mode: bool = False
+    ultrathink: bool = False
+    effort: str = "medium"
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
 
@@ -39,6 +42,11 @@ class Session:
             path=str(data.get("path", ".")),
             history=list(data.get("history") or []),
             context_files=list(data.get("context_files") or []),
+            plan_mode=bool(data.get("plan_mode", False)),
+            ultrathink=bool(data.get("ultrathink", False)),
+            effort=str(data.get("effort", "medium")).lower()
+            if str(data.get("effort", "medium")).lower() in {"low", "medium", "high"}
+            else "medium",
             created_at=float(data.get("created_at", time.time())),
             updated_at=float(data.get("updated_at", time.time())),
         )
@@ -53,6 +61,9 @@ class Session:
             "path": self.path,
             "history": list(self.history),
             "context_files": list(self.context_files),
+            "plan_mode": self.plan_mode,
+            "ultrathink": self.ultrathink,
+            "effort": self.effort,
             "created_at": self.created_at,
             "updated_at": self.updated_at,
         }

@@ -45,7 +45,7 @@ ZEROCODING_PROVIDER=openai
 OPENAI_API_KEY=sk-seu-chave-aqui
 ```
 
-**Para Ollama (local):**
+**Para Ollama (local, legado — sem suporte ativo; o runtime suportado é o llama.cpp):**
 ```bash
 ZEROCODING_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434

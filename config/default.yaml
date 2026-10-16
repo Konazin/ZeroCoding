@@ -1,45 +1,50 @@
-provider: ollama_local
+provider: llama_cpp_local
 mode: code
 
 providers:
-  ollama_local:
-    type: ollama
-    base_url: "http://localhost:11434"
-    model: "deepseek-coder-v2"
-
-  ollama_lan:
-    type: ollama
-    base_url: "http://192.168.0.50:11434"
-    model: "deepseek-coder-v2"
-
-  openai_default:
-    type: openai_compatible
-    base_url: "https://api.openai.com/v1"
-    api_key_env: "OPENAI_API_KEY"
-    model: "gpt-4o-mini"
+  llama_cpp_local:
+    type: llama_cpp
+    base_url: "http://127.0.0.1:8080/v1"
+    model: "ornith-1.5-9b-q5-k-m"
 
 modes:
   code:
-    provider: ollama_local
-    model: "deepseek-coder-v2"
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
     skills: []
 
   reason:
-    provider: ollama_local
-    model: "deepseek-r1:8b"
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
     skills: []
 
   fast:
-    provider: ollama_local
-    model: "qwen2.5-coder:7b"
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
     skills: []
 
   smart:
-    provider: ollama_local
-    model: "qwen2.5-coder:14b"
+    provider: llama_cpp_local
+    model: "ornith-1.5-9b-q5-k-m"
     skills: []
 
 memory_path: ".zerocoding/memory.db"
 skills_path: "skills"
 theme: "purple"
 auto_save: true
+max_input_tokens: 4096
+max_output_tokens: 1024
+max_tool_rounds: 6
+# Opt-in: send only the tool schemas and skills relevant to each request.
+dynamic_context: false
+
+effort_profiles:
+  low:
+    max_output_tokens: 512
+    max_tool_rounds: 3
+  medium:
+    max_output_tokens: 1024
+    max_tool_rounds: 6
+  high:
+    max_output_tokens: 2048
+    max_tool_rounds: 8

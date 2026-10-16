@@ -14,14 +14,24 @@ class TestConfigLoad(unittest.TestCase):
         config = Config.load()
         self.assertIn('code', config.modes)
         self.assertIn('reason', config.modes)
-        self.assertEqual(config.modes['code'].provider, 'ollama_local')
+        self.assertEqual(config.provider, 'llama_cpp_local')
+        self.assertEqual(config.active_provider.type, 'llama_cpp')
+        self.assertEqual(config.modes['code'].provider, 'llama_cpp_local')
+        self.assertEqual(config.modes['fast'].model, config.modes['reason'].model)
+        self.assertEqual(config.modes['smart'].model, config.model)
 
     def test_provider_and_model_switch_state(self):
         config = Config.load()
-        config.provider = 'ollama_local'
-        config.model = 'deepseek-coder-v2'
-        self.assertEqual(config.provider, 'ollama_local')
-        self.assertEqual(config.model, 'deepseek-coder-v2')
+        config.provider = 'llama_cpp_local'
+        config.model = 'ornith-1.5-9b-q5-k-m'
+        self.assertEqual(config.provider, 'llama_cpp_local')
+        self.assertEqual(config.model, 'ornith-1.5-9b-q5-k-m')
+
+    def test_lightweight_agent_budgets(self):
+        config = Config.load()
+        self.assertEqual(config.max_input_tokens, 4096)
+        self.assertEqual(config.max_output_tokens, 1024)
+        self.assertEqual(config.max_tool_rounds, 6)
 
 
 if __name__ == '__main__':

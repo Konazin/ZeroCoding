@@ -5,13 +5,15 @@ import urllib.request
 from urllib.parse import urljoin
 
 from .base import BaseProvider
+from .base import ProviderTurn, ToolCall
 
 
 class OpenAICompatibleProvider(BaseProvider):
-    def __init__(self, api_key: str, api_url: str, model: str):
+    def __init__(self, api_key: str, api_url: str, model: str, timeout: int = 30):
         self.api_key = api_key
         self.api_url = api_url.rstrip("/")
         self.model = model
+        self.timeout = timeout
 
     def _post(self, endpoint, payload):
         headers = {
@@ -26,7 +28,7 @@ class OpenAICompatibleProvider(BaseProvider):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 body = response.read().decode("utf-8")
                 return json.loads(body)
         except urllib.error.HTTPError as exc:
@@ -51,20 +53,48 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def generate(self, prompt: str, **kwargs) -> str:
         messages = [{"role": "user", "content": prompt}]
-        return self.chat(messages, **kwargs)
+        result = self.chat(messages, **kwargs)
+        return result.content if isinstance(result, ProviderTurn) else result
 
     def chat(self, messages, **kwargs):
         endpoint = urljoin(self.api_url + "/", "chat/completions")
         payload = {
             "model": self.model,
             "messages": messages,
-            **kwargs,
         }
+        if kwargs.get("tools"):
+            payload["tools"] = kwargs["tools"]
+            payload["tool_choice"] = "auto"
+        if kwargs.get("max_tokens"):
+            payload["max_tokens"] = kwargs["max_tokens"]
+        payload.update(self._request_parameters(kwargs))
         response = self._post(endpoint, payload)
         choice = response.get("choices", [{}])[0]
         if "message" in choice:
-            return choice["message"].get("content", "")
+            message = choice["message"]
+            calls = []
+            for item in message.get("tool_calls", []) or []:
+                fn = item.get("function", {})
+                args = fn.get("arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except ValueError:
+                        args = {}
+                calls.append(ToolCall(fn.get("name", ""), args if isinstance(args, dict) else {}, item.get("id", "")))
+            reasoning_content = str(message.get("reasoning_content", "") or "")
+            return ProviderTurn(
+                content=message.get("content", "") or "",
+                tool_calls=calls,
+                usage=response.get("usage", {}),
+                thinking_present=bool(reasoning_content),
+                reasoning_content=reasoning_content,
+            )
         return choice.get("text", "")
+
+    def _request_parameters(self, kwargs) -> dict:
+        """Provider-specific fields for compatible chat-completion APIs."""
+        return {}
 
     def healthcheck(self) -> bool:
         try:
