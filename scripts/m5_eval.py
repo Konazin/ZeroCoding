@@ -5,13 +5,15 @@ conclusão objetiva da tarefa, validade das chamadas de ferramenta, tokens de en
 tempo de processamento do prompt (proxy de TTFT; o provider não faz streaming), tokens/s de geração (timings do
 llama.cpp), duração total e RAM/VRAM de pico. Agrega mediana e pior caso.
 
-Uso: uv run python scripts/m5_eval.py --label ornith-1.5-9b-q5_k_m [--repetitions 3] [--output docs/m5-<label>-results.json]
+Uso: uv run python scripts/m5_eval.py --label ornith-1.5-9b-q5_k_m [--repetitions 3] [--extensions] [--output docs/m5-<label>-results.json]
+--extensions liga, sem uso previsto, um servidor MCP de teste (2 ferramentas) e o subagente explore, para medir o custo ocioso (M6).
 Não baixa nem troca modelos: mede o que estiver servido em --base-url.
 """
 from __future__ import annotations
 
 import argparse
 import glob
+import sys
 import json
 import statistics
 import subprocess
@@ -22,6 +24,8 @@ import urllib.request
 from pathlib import Path
 
 from zerocoding.core.agent import Agent
+from zerocoding.core.subagent import make_explorer_tool
+from zerocoding.mcp.manager import McpManager
 from zerocoding.core.tools import ToolRegistry
 from zerocoding.providers.llama_cpp import LlamaCppProvider
 
@@ -116,6 +120,10 @@ class MemorySampler:
         self._thread.join()
 
 
+EXTENSION_TOOLS: list = []  # filled by --extensions (shared MCP server across trials)
+USE_EXPLORER = False
+
+
 def run_trial(case, base_url, model, pid, timeout):
     root = Path(tempfile.mkdtemp(prefix=f"zc_m5_{case['id']}_"))
     (root / "calc.py").write_text(case["calc"], encoding="utf-8")
@@ -127,7 +135,12 @@ def run_trial(case, base_url, model, pid, timeout):
         return case["approve"]
 
     provider = RecordingProvider("", base_url, model, timeout=timeout)
-    agent = Agent(provider, tools=ToolRegistry(root, approve=approve), plan_mode=case["plan"])
+    registry = ToolRegistry(root, approve=approve)
+    for tool in EXTENSION_TOOLS:
+        registry.register_external(tool)
+    agent = Agent(provider, tools=registry, plan_mode=case["plan"])
+    if USE_EXPLORER:
+        registry.register_external(make_explorer_tool(agent))
     events = []
     error = None
     answer = ""
@@ -220,7 +233,17 @@ def main(argv=None):
     parser.add_argument("--repetitions", type=int, default=3)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--extensions", action="store_true", help="liga MCP de teste + explore (custo ocioso)")
     args = parser.parse_args(argv)
+    global USE_EXPLORER
+    manager = None
+    if args.extensions:
+        fake = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "fake_mcp_server.py"
+        manager = McpManager({"servers": {"fake": {"command": [sys.executable, str(fake)],
+                                                   "tools": {"echo": {"read_only": True}, "add": {}}}}}, Path.cwd())
+        EXTENSION_TOOLS.extend(manager.start_all())
+        USE_EXPLORER = True
+        print("extensões:", [t.name for t in EXTENSION_TOOLS] + ["explore"], {n: s.status for n, s in manager.states.items()})
     pid = _server_pid()
     idle = dict(rss_mb=round(_rss_mb(pid)), vram_mb=round(_vram_mb()))
     trials = []
@@ -233,7 +256,10 @@ def main(argv=None):
                   f"{trial['duration_s']:6.1f}s  in={trial['prompt_tokens']:5} out={trial['completion_tokens']:4} "
                   f"gen={trial['gen_tokens_per_s']} tok/s  tool_err={trial['tool_errors']}"
                   + (f"  ERROR {trial['error']}" if trial["error"] else ""), flush=True)
+    if manager:
+        manager.close()
     report = dict(label=args.label, date=time.strftime("%Y-%m-%d"), server=server_info(args.base_url),
+                  extensions=([t.name for t in EXTENSION_TOOLS] + ["explore"]) if args.extensions else None,
                   idle_memory=idle, repetitions=args.repetitions, summary=summarize(trials), trials=trials)
     output = args.output or Path("docs") / f"m5-{args.label}-results.json"
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

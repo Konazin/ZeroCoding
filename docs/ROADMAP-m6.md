@@ -1,4 +1,6 @@
-# M6 — Extensibilidade (plano; não iniciado)
+# M6 — Extensibilidade (implementado em 2026-10-16)
+
+**Estado:** os pré-requisitos e os quatro itens (M6.1–M6.4) estão implementados, todos desligados por padrão. Resultados medidos na seção "Resultado da implementação" ao final. O texto abaixo é o plano original, mantido como registro das decisões.
 
 Este plano detalha o M6 de [`ROADMAP-extension.md`](ROADMAP-extension.md): hooks, MCP, subagentes e plugins. O `ROADMAP.md` os deixa **fora do núcleo** e só admite entrada com necessidade comprovada e custo aceitável. Este documento define o que significa "comprovada" e "aceitável" com os números medidos no M3–M5, e a ordem de entrada.
 
@@ -104,3 +106,44 @@ Não implementados hoje e necessários antes de ferramentas externas lentas:
 | M6.4 Plugins declarativos | M6.1, M6.2 | pequeno, condicional |
 
 Cada etapa termina com: suíte verde, `scripts/m5_eval.py` em 21/21, custo de prompt medido, `context.md` atualizado e o usuário revisando antes da seguinte.
+
+## Resultado da implementação (2026-10-16)
+
+| Item | Entregue | Arquivos principais |
+|---|---|---|
+| Cancelamento | `Ctrl+C` na TUI e `CancelToken` cooperativo; turno cancelado ou com erro não grava histórico | `core/cancel.py`, `core/agent.py`, `cli.py` |
+| Métricas por turno | JSONL só com números; `/metrics`; conta histórico cortado (gatilho do M6.3) | `core/metrics.py`, `commands.py` |
+| M6.1 Hooks | `pre_tool` (bloqueante opcional), `post_tool` (só falha chega ao modelo), `turn_end`; sob `CommandPolicy`, ambiente mínimo, stdin JSON | `core/hooks.py` |
+| M6.2 MCP stdio | cliente próprio (~200 linhas, sem SDK), allowlist obrigatória, `max_tools`/`max_schema_tokens`, schemas compactados, aprovação por padrão, saída truncada e rotulada como dado externo, Plan só com `read_only` | `mcp/client.py`, `mcp/manager.py`, `core/tools.py` |
+| M6.3 Subagente | `explore` somente leitura, contexto novo, 4 rodadas, resumo ≤ 1 200 caracteres, sem aninhamento; tokens somados ao turno pai; **desligado por padrão** | `core/subagent.py` |
+| M6.4 Plugins | pastas declarativas (skills + hooks + MCP), habilitação explícita, `{plugin_dir}`, nenhum Python executado | `core/plugins.py`, `core/bootstrap.py` |
+
+### Medições (Ornith, mesma máquina e harness do M5)
+
+| Critério de entrada | Resultado |
+|---|---|
+| Custo ocioso ≤ ~410 tokens | **+228 tokens por chamada** com 2 ferramentas MCP + `explore` ligados (caso `direct`: 771 → 999) |
+| Sem regressão no M5 | **21/21** com extensões ligadas e ociosas; 40 chamadas de ferramenta, 0 erros (`docs/m5-ornith-1.5-9b-q5_k_m-extensions-results.json`) |
+| Desligado por padrão | sim; sem configuração, o agente expõe só as 6 ferramentas nativas e não carrega nada |
+| Segurança testada | recusa, bloqueio no Plan, ambiente mínimo, allowlist, tetos, injeção em saída MCP, servidor que morre, hooks que falham/estouram o tempo |
+
+O custo é por chamada: um turno com 4 chamadas ao modelo paga ~4 × 228 tokens a mais. As durações do caso `plan_blocks_write` (26 s → 43 s) e do comando aprovado (14,7 s → 20,6 s) subiram; com 3 repetições e um modelo que escolhe caminhos diferentes a cada vez, não dá para separar o efeito do custo extra de prompt da variância. Os demais casos ficaram dentro de ~1 s.
+
+### Verificado de ponta a ponta na TUI real (pty, Ornith, HOME isolado)
+
+`/mcp`, `/hooks` e `/plugins` listam o estado; o modelo chamou `mcp__fake__echo` e devolveu o resultado exato; `explore` achou a definição e o chamador de uma função e o turno registrou `subagent_runs: 1` com tokens somados; edição aprovada com `Y` aplicou o diff e disparou o hook `post_tool`; `rm -rf build` foi barrado pelo hook `pre_tool` bloqueante sem pedir aprovação; `Ctrl+C` cancelou o turno e o `/metrics` registrou o cancelamento.
+
+### Defeitos antigos encontrados e corrigidos no caminho
+
+Os testes ponta a ponta na TUI real revelaram dois problemas do M1, ambos fora do M6:
+
+1. **Toda aprovação falhava.** `confirm_action` registrava as teclas `s-y`/`s-n`, inválidas no prompt_toolkit 3.0.53 (o do `uv.lock`); o `ValueError` virava "Tool error" e nenhuma escrita ou comando podia ser aprovado na TUI.
+2. **Qualquer texto aprovava.** O resultado era `bool(texto)`, então digitar algo e dar Enter (por exemplo o `/exit` seguinte) aprovava a ação. Agora só `Y` aprova; Enter ou outro texto recusa, como o roadmap do M1 já previa. `tests/test_tui_confirm.py` cobre os dois casos e falha no código antigo.
+
+### Limites conhecidos
+
+- A confiança em plugins e hooks é do usuário: habilitar um plugin executa os hooks e servidores dele sem aprovação por evento. Um hook ou servidor MCP vem de arquivo de configuração; se o agente puder gravar nesse arquivo (config dentro do workspace), a gravação passa pela aprovação normal de `write_file`/`edit_file`.
+- O subagente não tem o gatilho de uso real do plano (>10% dos turnos cortando histórico): foi implementado por decisão do usuário, mas segue desligado por padrão e `/metrics` mostra `turns_with_trimmed_history` para avaliar quando ligar.
+- Só servidores MCP stdio locais; sem HTTP/SSE nem OAuth. O cliente anuncia nenhuma capacidade (sem sampling, roots ou elicitation).
+- Os testes de MCP usam um servidor falso em `tests/fixtures`; um servidor MCP de terceiros real não foi exercitado.
+- O custo de +228 tokens foi medido com 3 ferramentas; ele cresce ~65 tokens por ferramenta adicional, até o teto de 400 tokens de schema de MCP.

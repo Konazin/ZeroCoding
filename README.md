@@ -164,10 +164,22 @@ You can also use environment variables from `.env.example`.
 - `/read src/main.py` prints a file and adds it to context.
 - `/tree` lists project files, ignoring generated and dependency folders.
 - `/grep pattern` searches project files.
+- `/metrics` summarizes local per-turn metrics (tokens, latency, tool errors, trimmed history).
+- `/mcp`, `/hooks` and `/plugins` show the configured extensions and their status.
 - `/clear` clears the screen.
 - `/exit` exits.
 
-The interactive TUI clears the visible terminal on startup. Its prompt is framed by full-width rules, starts at one row and grows to six; it shows only Effort below the prompt, while `/status` lists the full session state. `Enter` submits; `Ctrl+J` inserts a newline. During a turn, the ghost animates beside a short status; the complete response is displayed when the turn finishes. Approval previews show the complete diff or command. Press `Y` to approve, `N` or `Esc` to deny. One-shot `-m` requests do not receive tools and cannot execute changes.
+The interactive TUI clears the visible terminal on startup. Its prompt is framed by full-width rules, starts at one row and grows to six; it shows only Effort below the prompt, while `/status` lists the full session state. `Enter` submits; `Ctrl+J` inserts a newline. During a turn, the ghost animates beside a short status; the complete response is displayed when the turn finishes. Approval previews show the complete diff or command. Press `Y` to approve, `N` or `Esc` to deny; `Enter` or any other text denies. `Ctrl+C` cancels the running turn (nothing from it is saved to the session). One-shot `-m` requests do not receive tools and cannot execute changes.
+
+## Extensions (all opt-in)
+
+Configured in `~/.zerocoding/config.yaml` (commented examples in `config/default.yaml`). Details and cost limits: [docs/ROADMAP-m6.md](docs/ROADMAP-m6.md).
+
+- **Hooks** run your own commands before/after tool calls or at turn end, under `command_policy`, with zero prompt cost. A failing `blocking: true` `pre_tool` hook refuses the call; no hook can approve anything. Failures of `post_tool` hooks are reported to the model; successes are silent.
+- **MCP servers (stdio)** expose only allowlisted tools (`mcp__<server>__<tool>`), capped by `mcp.max_tools` (4) and `mcp.max_schema_tokens` (400), because every tool schema is sent with every request (~65 tokens each). Tools ask for approval unless marked `read_only: true`; read-only ones stay available in Plan mode. Their output is labeled as external data, truncated, and never treated as instructions. Servers get a minimal environment.
+- **Subagent** (`subagents.enabled: true`): an `explore` tool that runs a read-only helper with its own context and returns a short summary. Sequential; saves context, not time.
+- **Plugins**: folders in `~/.zerocoding/plugins/<name>/` with `skills/*.md`, `hooks.yaml` and `mcp.yaml`, activated by listing them under `plugins.enabled`. No plugin Python is executed; enabling a plugin trusts its hooks and MCP servers like your own config.
+- **Metrics**: per-turn numbers (never prompts or answers) in `.zerocoding/metrics/turns.jsonl`; disable with `metrics_enabled: false`.
 
 ## Sessions
 
@@ -229,7 +241,8 @@ Activate a skill in the TUI:
 - `providers/ollama.py` is a **legacy** adapter for native Ollama endpoints (`/api/generate`, `/api/chat`, `/api/tags`). It is kept for existing configurations, is not validated against a real Ollama server, and receives no new features; llama.cpp is the supported runtime.
 - `providers/openai_compatible.py` supports `/chat/completions` and `/models`.
 - `core/agent.py` budgets prompts, runs bounded structured tool-call loops and tracks active skills.
-- `core/tools.py` provides workspace-scoped file reading/search and approval-gated writes/commands.
+- `core/tools.py` provides workspace-scoped file reading/search and approval-gated `write_file`, `edit_file` and `run_command` (filtered by `core/command_policy.py`), and hosts extension tools.
+- `core/hooks.py`, `mcp/` (client + manager), `core/subagent.py`, `core/plugins.py` and `core/bootstrap.py` implement the opt-in extensions; `core/metrics.py` and `core/cancel.py` provide per-turn metrics and turn cancellation.
 - `tui/app.py` provides the purple Rich-based terminal interface.
 - `tui/textual_app.py` is a prepared Textual prototype for future expansion.
 

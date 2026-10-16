@@ -31,7 +31,7 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 
 ## Estado do roadmap
 
-- **M3 concluído e M4 implementado em 2026-10-16** (detalhes abaixo). M5 em andamento; M6 apenas planejado em `docs/ROADMAP-m6.md`.
+- **M3, M4, M5 (só Ornith) e M6 concluídos em 2026-10-16** (detalhes abaixo). M7 apenas planejado em `docs/ROADMAP-m7.md`.
 
 - M1 visual/fluxo foi concluído e revisado pelo usuário.
 - M2, sobre prompt/contexto, foi declarado concluído pelo usuário em 2026-10-14. Os relatórios em `docs/` ficam como referência; o prompt de produção segue inalterado até uma decisão explícita.
@@ -60,6 +60,14 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - `core/command_policy.py` + bloco `command_policy` no YAML: executáveis negados (sudo, dd, mkfs…) e `allow` opcional, `rm` recursivo só dentro do projeto e nunca na raiz, ambiente mínimo (PATH, HOME, LANG… + `env_passthrough`), timeout e limite de saída configuráveis. Comando bloqueado nem chega ao prompt de aprovação. A aprovação continua obrigatória.
 - Erros legíveis: argumentos ausentes, ferramenta desconhecida (lista as disponíveis), inteiros/regex inválidos, timeout, binário inexistente, limite de rodadas com instrução de próximo passo.
 - Testes: `tests/test_m4_workflow.py` (aprovação/recusa de diff e comando, symlink e caminhos fora do workspace, política, erros, limite de rodadas, falha do provider, isolamento de sessão e ciclo busca → leitura → edição recusada → edição aprovada com provider simulado). Smoke real com o Ornith: edição mínima aplicada com diff mostrado antes da aprovação.
+
+### M6 — extensibilidade (implementado em 2026-10-16; tudo opt-in e desligado por padrão)
+
+- Pré-requisitos: cancelamento (Ctrl+C / `CancelToken`) e métricas locais por turno (`/metrics`, `.zerocoding/metrics/turns.jsonl`, só números).
+- M6.1 hooks (`core/hooks.py`), M6.2 MCP stdio (`mcp/`, allowlist + tetos de tokens, saída rotulada como dado externo), M6.3 subagente `explore` somente leitura (`core/subagent.py`), M6.4 plugins declarativos (`core/plugins.py`, nenhum Python executado), ligados por `core/bootstrap.py`. Config e exemplos em `config/default.yaml`; resultados em `docs/ROADMAP-m6.md`.
+- Medido: +228 tokens por chamada com MCP+explore ociosos (limite do plano: ~410); `scripts/m5_eval.py --extensions` 21/21, 0 erros em 40 chamadas.
+- Corrigido (vinha do M1): a aprovação na TUI falhava sempre (teclas `s-y`/`s-n` inválidas) e aceitava qualquer texto + Enter como "sim". Só `Y` aprova agora; `tests/test_tui_confirm.py`.
+- Decisão: o subagente foi implementado mesmo sem o gatilho de uso real do plano; segue desligado.
 
 ### M5 — avaliação (executada em 2026-10-16 só para o Ornith)
 
