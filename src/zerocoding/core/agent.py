@@ -1,55 +1,20 @@
 from __future__ import annotations
 
-import json
-import re
 import time
 import uuid
 from typing import Generator
 
+from .budget import fit_messages
 from .context import ConversationContext
 from .events import AgentEvent
 from .prompt import build_messages
 from .relevance import select_skills, select_tool_schemas
-from .tokens import TokenCounter, estimate_tokens
+from .tokens import TokenCounter
+from .toolcalls import emit_event, parse_compact_call, tool_summary, tool_target
 from .tools import READ_ONLY_TOOL_NAMES
-from ..providers.base import ProviderTurn, ToolCall, normalize_turn
+from ..providers.base import normalize_turn
 
-
-COMPACT_CALL = re.compile(r"<tool_call>\s*(\{.*\})\s*</tool_call>", re.DOTALL)
-
-
-def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens) -> list[dict]:
-    """Fit a prompt while keeping the current request and its tool results.
-
-    ``count`` maps a message list to a token count (heuristic by default).
-    """
-    result = [dict(message) for message in messages]
-    while count(result) > max_tokens:
-        latest_user = max((i for i, msg in enumerate(result) if msg.get("role") == "user"), default=-1)
-        removable = next((i for i, msg in enumerate(result)
-                          if msg.get("role") != "system" and i != latest_user and i < latest_user), None)
-        if removable is None:
-            break
-        result.pop(removable)
-    if count(result) > max_tokens:
-        # Tool outputs are expendable once they have been returned to the model.
-        outputs = [msg for msg in result if msg.get("role") == "tool"]
-        while outputs and count(result) > max_tokens:
-            largest = max(outputs, key=lambda msg: len(str(msg.get("content", ""))))
-            content = str(largest.get("content", ""))
-            if len(content) <= 80:
-                outputs.remove(largest)
-                result.remove(largest)
-            else:
-                largest["content"] = content[: max(80, len(content) // 2)]
-    if count(result) > max_tokens and result:
-        system = next((m for m in result if m.get("role") == "system"), {"role": "system", "content": ""})
-        current = next((m for m in reversed(result) if m.get("role") == "user"), result[-1])
-        available_chars = max(80, (max_tokens - 80) * 3)
-        current["content"] = str(current.get("content", ""))[-max(80, available_chars // 2):]
-        system["content"] = str(system.get("content", ""))[:available_chars // 2]
-        result = [system, current]
-    return result
+__all__ = ["Agent", "fit_messages"]
 
 
 class Agent:
@@ -162,52 +127,88 @@ class Agent:
     def _kwargs(output_tokens):
         return {"max_tokens": output_tokens}
 
+    def _tool_schemas_for(self, text, use_tools):
+        if not (use_tools and self.tools):
+            return None
+        schemas = self.tools.read_only_schemas if self.plan_mode else self.tools.schemas
+        if self.dynamic_context and not self.plan_mode:
+            schemas = select_tool_schemas(text, schemas)
+        return schemas
+
+    def _chat(self, messages, tool_schemas, output_tokens, state, on_event):
+        """One provider call; drops native tools for the rest of the ask if the server rejects them."""
+        emit_event(on_event, AgentEvent("thinking"))
+        kwargs = {"num_ctx": self.max_input_tokens + output_tokens, **self._kwargs(output_tokens)}
+        effort_level = "high" if self.ultrathink else self.effort
+        native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
+        if native_effort:
+            kwargs.update(native_effort)
+        if state["native_tools"]:
+            try:
+                return normalize_turn(self.provider.chat(messages=messages, tools=tool_schemas, **kwargs))
+            except RuntimeError as exc:
+                reason = str(exc).lower()
+                if not any(term in reason for term in ("tool", "unsupported", "not support")):
+                    raise
+                state["native_tools"] = False
+        return normalize_turn(self.provider.chat(messages=messages, tools=None, **kwargs))
+
+    def _chat_non_empty(self, *args):
+        """Ask once more if the first turn is empty; raise a clear error if it stays empty."""
+        for _attempt in range(2):
+            turn = self._chat(*args)
+            if turn.tool_calls or turn.content.strip():
+                return turn
+        raise RuntimeError(
+            "The model returned an empty response twice. Check the llama.cpp chat template and reasoning settings, then try again."
+        )
+
+    def _run_tool_call(self, call, call_id, on_event) -> dict:
+        """Execute one tool call (Plan-mode guarded), emit events and return the tool message."""
+        started_at = time.monotonic()
+        target = tool_target(call.name, call.arguments)
+        emit_event(on_event, AgentEvent("tool_started", call.name, target))
+        if self.plan_mode and call.name not in READ_ONLY_TOOL_NAMES:
+            result = f"Tool '{call.name}' is blocked in Plan mode. No action was taken."
+            event_kind = "tool_denied"
+        else:
+            try:
+                execute_with_events = getattr(self.tools, "execute_with_events", None)
+                if on_event and callable(execute_with_events):
+                    result = execute_with_events(call.name, call.arguments, on_event, plan_mode=self.plan_mode)
+                else:
+                    result = self.tools.execute(call.name, call.arguments, plan_mode=self.plan_mode)
+            except Exception as exc:
+                result = f"Tool error: {exc}"
+                event_kind = "tool_error"
+            else:
+                result_text = str(result).lower()
+                event_kind = "tool_denied" if "denied" in result_text or "nothing was executed" in result_text else "tool_completed"
+        emit_event(on_event, AgentEvent(
+            event_kind, call.name, target, tool_summary(call.name, str(result)), time.monotonic() - started_at,
+        ))
+        format_result = getattr(self.provider, "tool_result_message", None)
+        if format_result:
+            return format_result(call_id, call.name, str(result)[:8000])
+        return {"role": "tool", "tool_call_id": call_id, "name": call.name, "content": str(result)[:8000]}
+
     def ask(self, text, system_prompt=None, use_tools=False, on_event=None):
         output_tokens, tool_round_limit = self.effective_budgets()
         messages = self._messages(text, system_prompt)
-        if use_tools and self.tools:
-            tool_schemas = self.tools.read_only_schemas if self.plan_mode else self.tools.schemas
-            if self.dynamic_context and not self.plan_mode:
-                tool_schemas = select_tool_schemas(text, tool_schemas)
-        else:
-            tool_schemas = None
+        tool_schemas = self._tool_schemas_for(text, use_tools)
         tool_budget = self.max_input_tokens
         if tool_schemas:
             if messages and messages[0].get("role") == "system":
                 messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
             tool_budget = max(256, self.max_input_tokens - self.token_counter(tool_schemas))
             messages = fit_messages(messages, tool_budget, self.token_counter)
-        native_tools = bool(tool_schemas)
+        state = {"native_tools": bool(tool_schemas)}
 
-        def request_turn():
-            nonlocal native_tools
-            self._emit(on_event, AgentEvent("thinking"))
-            kwargs = {"num_ctx": self.max_input_tokens + output_tokens, **self._kwargs(output_tokens)}
-            effort_level = "high" if self.ultrathink else self.effort
-            native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
-            if native_effort:
-                kwargs.update(native_effort)
-            if native_tools:
-                try:
-                    return normalize_turn(self.provider.chat(messages=messages, tools=tool_schemas, **kwargs))
-                except RuntimeError as exc:
-                    reason = str(exc).lower()
-                    if not any(term in reason for term in ("tool", "unsupported", "not support")):
-                        raise
-                    native_tools = False
-            return normalize_turn(self.provider.chat(messages=messages, tools=None, **kwargs))
-
-        turn = request_turn()
-        if not turn.tool_calls and not turn.content.strip():
-            turn = request_turn()
-            if not turn.tool_calls and not turn.content.strip():
-                raise RuntimeError(
-                    "The model returned an empty response twice. Check the llama.cpp chat template and reasoning settings, then try again."
-                )
+        turn = self._chat_non_empty(messages, tool_schemas, output_tokens, state, on_event)
         rounds = 0
         tool_round_completed = False
         while True:
-            turn = self._parse_compact(turn)
+            turn = parse_compact_call(turn)
             if not turn.tool_calls or not tool_schemas or rounds >= tool_round_limit:
                 response_text = turn.content or ("Tool round limit reached." if turn.tool_calls else "")
                 if tool_round_completed and not response_text.strip():
@@ -226,11 +227,7 @@ class Agent:
                 "role": "assistant",
                 "content": turn.content or "",
                 "tool_calls": [
-                    {
-                        "id": call_id,
-                        "type": "function",
-                        "function": {"name": call.name, "arguments": call.arguments},
-                    }
+                    {"id": call_id, "type": "function", "function": {"name": call.name, "arguments": call.arguments}}
                     for call, call_id in zip(calls, call_ids)
                 ],
             }
@@ -238,117 +235,14 @@ class Agent:
                 assistant_message["reasoning_content"] = turn.reasoning_content
             messages.append(assistant_message)
             for call, call_id in zip(calls, call_ids):
-                started_at = time.monotonic()
-                target = self._tool_target(call.name, call.arguments)
-                self._emit(on_event, AgentEvent("tool_started", call.name, target))
-                if self.plan_mode and call.name not in READ_ONLY_TOOL_NAMES:
-                    result = f"Tool '{call.name}' is blocked in Plan mode. No action was taken."
-                    event_kind = "tool_denied"
-                else:
-                    try:
-                        execute_with_events = getattr(self.tools, "execute_with_events", None)
-                        if on_event and callable(execute_with_events):
-                            result = execute_with_events(
-                                call.name, call.arguments, on_event, plan_mode=self.plan_mode
-                            )
-                        else:
-                            result = self.tools.execute(call.name, call.arguments, plan_mode=self.plan_mode)
-                    except Exception as exc:
-                        result = f"Tool error: {exc}"
-                        event_kind = "tool_error"
-                    else:
-                        result_text = str(result)
-                        event_kind = "tool_denied" if "denied" in result_text.lower() or "nothing was executed" in result_text.lower() else "tool_completed"
-                self._emit(on_event, AgentEvent(
-                    event_kind,
-                    call.name,
-                    target,
-                    self._tool_summary(call.name, str(result)),
-                    time.monotonic() - started_at,
-                ))
-                format_result = getattr(self.provider, "tool_result_message", None)
-                if format_result:
-                    tool_message = format_result(call_id, call.name, str(result)[:8000])
-                else:
-                    tool_message = {"role": "tool", "tool_call_id": call_id,
-                                    "name": call.name, "content": str(result)[:8000]}
-                messages.append(tool_message)
+                messages.append(self._run_tool_call(call, call_id, on_event))
             rounds += 1
             tool_round_completed = True
-            messages = fit_messages(messages, tool_budget)
-            turn = request_turn()
+            messages = fit_messages(messages, tool_budget, self.token_counter)
+            turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)
         return response_text
-
-    @staticmethod
-    def _emit(callback, event: AgentEvent) -> None:
-        if callback is None:
-            return
-        try:
-            callback(event)
-        except Exception:
-            # A presentation callback must never break the agent's tool loop.
-            return
-
-    @staticmethod
-    def _tool_target(name: str, arguments: dict) -> str:
-        value = arguments.get("path") or arguments.get("pattern") or arguments.get("command") or ""
-        target = " ".join(str(value).split())
-        return target if len(target) <= 96 else target[:93] + "…"
-
-    @staticmethod
-    def _tool_summary(name: str, result: str) -> str:
-        value = result.strip()
-        lower = value.lower()
-        if "denied by user" in lower or "nothing was executed" in lower:
-            return "Denied · no action taken"
-        if value.startswith("Tool error:"):
-            return "Tool error"
-        lines = [line for line in value.splitlines() if line.strip()]
-        if name == "read_file":
-            return f"{len(lines)} lines read"
-        if name == "list_files":
-            if lower == "no files found.":
-                return "0 files"
-            return f"{len(lines)} files listed"
-        if name == "search_files":
-            if lower == "no matches found.":
-                return "0 matches"
-            return f"{len(lines)} matches"
-        if name == "run_command":
-            exit_code = next((line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("exit code:")), "unknown")
-            output_lines = max(0, len(lines) - 1)
-            return f"exit {exit_code} · {output_lines} output lines"
-        if name == "write_file":
-            return "File written" if value.lower().startswith("wrote ") else "Completed"
-        if len(lines) > 1:
-            return f"Completed · {len(lines)} lines"
-        return f"Completed · {len(value)} characters" if value else "Completed"
-
-    @staticmethod
-    def _parse_compact(turn: ProviderTurn) -> ProviderTurn:
-        if turn.tool_calls:
-            return turn
-        match = COMPACT_CALL.search(turn.content)
-        if not match:
-            return turn
-        try:
-            payload = json.loads(match.group(1))
-            name = payload.get("name") or payload.get("tool")
-            args = payload.get("arguments", payload.get("parameters", {}))
-            if name and isinstance(args, dict):
-                content = (turn.content[:match.start()] + turn.content[match.end():]).strip()
-                return ProviderTurn(
-                    content=content,
-                    tool_calls=[ToolCall(str(name), args)],
-                    usage=turn.usage,
-                    thinking_present=turn.thinking_present,
-                    reasoning_content=turn.reasoning_content,
-                )
-        except (ValueError, TypeError):
-            pass
-        return turn
 
     def ask_stream(self, text, system_prompt=None, use_tools=False, on_event=None) -> Generator[str, None, None]:
         """Compatibility wrapper that yields the complete answer as one item."""

@@ -29,7 +29,8 @@ for import_root in (ROOT / "src", ROOT):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
 
-from zerocoding.core.agent import Agent, estimate_tokens
+from zerocoding.core.agent import Agent
+from zerocoding.core.tokens import estimate_tokens
 from zerocoding.core.project_context import ProjectContext
 from zerocoding.core.tools import ToolRegistry
 from zerocoding.providers.base import ProviderTurn, ToolCall, normalize_turn

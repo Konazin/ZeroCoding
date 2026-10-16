@@ -2,7 +2,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from zerocoding.core.agent import Agent, fit_messages
+from zerocoding.core.agent import Agent
+from zerocoding.core.budget import fit_messages
+from zerocoding.core.toolcalls import parse_compact_call
 from zerocoding.core.tools import ToolRegistry
 from zerocoding.providers.base import ProviderTurn, ToolCall
 
@@ -113,7 +115,7 @@ class TestAgentTools(unittest.TestCase):
                 registry.execute("read_file", {"path": "../outside.txt"})
 
     def test_compact_marker_is_a_tool_call(self):
-        turn = Agent._parse_compact(ProviderTurn(content='<tool_call>{"name":"list_files","arguments":{}}</tool_call>'))
+        turn = parse_compact_call(ProviderTurn(content='<tool_call>{"name":"list_files","arguments":{}}</tool_call>'))
         self.assertEqual(turn.tool_calls[0].name, "list_files")
 
     def test_native_rejection_uses_compact_fallback(self):
