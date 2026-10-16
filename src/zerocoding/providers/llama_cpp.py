@@ -17,7 +17,7 @@ class LlamaCppProvider(OpenAICompatibleProvider):
 
     def native_effort_status(self, level: str) -> str:
         if self.native_effort_kwargs(level):
-            return "llama.cpp API; model template-dependent"
+            return "reasoning_effort sent; template-dependent, not validated (budgets are the real control)"
         return "budget only"
 
     def _request_parameters(self, kwargs) -> dict:

@@ -610,7 +610,7 @@ class ZerocodingTUI:
         self.console.print(Text(f"  Mode profile             {self.mode}", style=ZERO_LIGHT))
         self.console.print(Text(f"  Plan                     {'On' if self.plan_mode else 'Off'}", style=ZERO_LIGHT))
         self.console.print(Text(f"  Ultrathink               {'On' if self.ultrathink else 'Off'}", style=ZERO_LIGHT))
-        self.console.print(Text(f"  Effort                   {self.effort.title()}", style=ZERO_LIGHT))
+        self.console.print(Text(f"  Effort (budgets)         {self.effort.title()}", style=ZERO_LIGHT))
         self.console.print(Text(f"  Effective output budget  {self.max_output_tokens} tokens", style=ZERO_LIGHT))
         self.console.print(Text(f"  Tool round limit         {self.max_tool_rounds}", style=ZERO_LIGHT))
         self.console.print(Text(f"  Provider native effort   {self.native_effort_status}", style=ZERO_LIGHT))
