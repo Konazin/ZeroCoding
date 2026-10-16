@@ -192,7 +192,8 @@ class Agent:
         started_at = time.monotonic()
         target = tool_target(call.name, call.arguments)
         emit_event(on_event, AgentEvent("tool_started", call.name, target))
-        plan_blocked = self.plan_mode and call.name not in READ_ONLY_TOOL_NAMES
+        is_read_only = getattr(self.tools, "is_read_only", lambda n: n in READ_ONLY_TOOL_NAMES)
+        plan_blocked = self.plan_mode and not is_read_only(call.name)
         blocked_by_hook = self.hooks.pre_tool(call.name, target, call.arguments) if self.hooks and not plan_blocked else None
         if plan_blocked:
             result = f"Tool '{call.name}' is blocked in Plan mode. No action was taken."

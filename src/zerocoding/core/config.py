@@ -119,6 +119,11 @@ class Config:
     max_tool_rounds: int = 6
     dynamic_context: bool = False
     metrics_enabled: bool = True
+    hooks: list = field(default_factory=list)
+    mcp: dict = field(default_factory=dict)
+    subagents_enabled: bool = False
+    plugins_path: str = "~/.zerocoding/plugins"
+    plugins_enabled: list = field(default_factory=list)
     command_policy: CommandPolicy = field(default_factory=CommandPolicy)
     effort_profiles: dict[str, EffortProfile] = field(default_factory=lambda: dict(DEFAULT_EFFORT_PROFILES))
 
@@ -167,6 +172,10 @@ class Config:
             "max_tool_rounds": self.max_tool_rounds,
             "dynamic_context": self.dynamic_context,
             "metrics_enabled": self.metrics_enabled,
+            "hooks": list(self.hooks),
+            "mcp": dict(self.mcp),
+            "subagents": {"enabled": self.subagents_enabled},
+            "plugins": {"path": self.plugins_path, "enabled": list(self.plugins_enabled)},
             "command_policy": self.command_policy.to_dict(),
             "effort_profiles": {name: profile.to_dict() for name, profile in self.effort_profiles.items()},
         }
@@ -218,6 +227,11 @@ class ConfigManager:
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
+            hooks=list(data.get("hooks") or []),
+            mcp=dict(data.get("mcp") or {}),
+            subagents_enabled=self._as_bool((data.get("subagents") or {}).get("enabled", False)),
+            plugins_path=str((data.get("plugins") or {}).get("path", "~/.zerocoding/plugins")),
+            plugins_enabled=[str(n) for n in ((data.get("plugins") or {}).get("enabled") or [])],
             command_policy=CommandPolicy.from_dict(data.get("command_policy")),
             effort_profiles=effort_profiles,
         )

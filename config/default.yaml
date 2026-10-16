@@ -59,3 +59,42 @@ effort_profiles:
   high:
     max_output_tokens: 2048
     max_tool_rounds: 8
+
+# --- Extensions (all opt-in; see docs/ROADMAP-m6.md) ---------------------------------------------
+
+# Hooks run YOUR commands around tool calls, under command_policy. Zero prompt cost. Example:
+# hooks:
+#   - name: lint-python
+#     event: post_tool            # pre_tool | post_tool | turn_end
+#     match: [edit_file, write_file]
+#     path: "*.py"                # optional glob over the tool target
+#     command: "python3 -m py_compile ."   # stdin gets a JSON payload; env has ZC_HOOK_EVENT/ZC_TOOL_NAME/ZC_TOOL_TARGET
+#   - event: pre_tool
+#     blocking: true              # a failing blocking hook refuses the call (it can never approve anything)
+#     match: run_command
+#     command: "./scripts/check-command.sh"
+hooks: []
+
+# MCP servers (stdio). Nothing is exposed unless allowlisted under `tools`; non-read-only tools ask approval.
+# mcp:
+#   max_tools: 4
+#   max_schema_tokens: 400        # ~65 tokens per tool are added to EVERY request
+#   servers:
+#     files:
+#       command: ["python3", "server.py"]
+#       env: {EXAMPLE: "1"}       # only these (plus PATH, HOME, ...) reach the server
+#       tools:
+#         read_note: {read_only: true}
+mcp:
+  max_tools: 4
+  max_schema_tokens: 400
+  servers: {}
+
+# Read-only "explore" helper with its own context (sequential: saves context, not time).
+subagents:
+  enabled: false
+
+# Declarative plugins (skills + hooks + MCP config, no Python). Enabling one trusts its hooks and servers.
+plugins:
+  path: "~/.zerocoding/plugins"
+  enabled: []

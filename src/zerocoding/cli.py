@@ -9,7 +9,7 @@ from .core.agent import Agent
 from .core.config import ConfigManager
 from .core.dotenv import load_env
 from .core.cancel import TurnCancelled
-from .core.extensions import Extensions
+from .core.bootstrap import build_extensions, startup_warnings
 from .core.metrics import MetricsLog
 from .core.project_context import ProjectContext
 from .core.router import build_provider
@@ -90,10 +90,9 @@ def main(argv=None):
     session.skills = agent.active_skill_names()
     session_manager.save(session)
 
-    extensions = Extensions(metrics=MetricsLog(Path.cwd() / ".zerocoding" / "metrics" / "turns.jsonl") if config.metrics_enabled else None)
-    agent.extensions = extensions
-    if extensions.metrics:
-        agent.metrics_sink = extensions.metrics.record
+    metrics = MetricsLog(Path.cwd() / ".zerocoding" / "metrics" / "turns.jsonl") if config.metrics_enabled else None
+    if metrics:
+        agent.metrics_sink = metrics.record
 
     active_animation = [None]
     tui = ZerocodingTUI(
@@ -117,10 +116,13 @@ def main(argv=None):
                 animation.resume()
 
     agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
+    extensions = build_extensions(config, agent, Path.cwd(), skills, metrics=metrics)
     refresh_tui_state(tui, config, agent, session=session)
     sync_tui_runtime(tui, agent)
     tui.header()
     tui.show_welcome()
+    for warning in startup_warnings(extensions):
+        tui.show_warning(warning)
 
     while True:
         prompt = tui.input_prompt()

@@ -3,7 +3,6 @@ from pathlib import Path
 
 from .core.config import ProviderConfig
 from .core.router import build_provider, build_session_provider
-from .core.tools import ToolRegistry
 
 
 def handle_command(command, tui, agent, config, manager, skills, project_context, session_manager, session):
@@ -136,6 +135,9 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         return False, None, session
     if name == "/metrics":
         handle_metrics(tui, agent)
+        return False, None, session
+    if name in {"/mcp", "/hooks", "/plugins"}:
+        handle_extension_info(name, tui, agent)
         return False, None, session
 
     tui.show_error(f"Comando desconhecido: {command}")
@@ -395,7 +397,7 @@ def handle_resume(args_text, tui, agent, config, manager, project_context, sessi
         effort=session.effort,
     )
     if agent.tools is not None:
-        agent.tools = ToolRegistry(session.path, approve=agent.tools.approve, policy=agent.tools.policy)
+        agent.tools = agent.tools.clone_for(session.path)
     project_context.restore(session.context_files)
     tui.show_success(f"Session resumed: {session.id}")
     return build_session_provider(config, session.provider, session.model), session
@@ -511,3 +513,25 @@ def handle_metrics(tui, agent):
     tui.show_info(f"  Completion tokens (median / worst): {pair(summary['completion_tokens'])}")
     tui.show_info(f"  Tool calls: {summary['tool_calls']} · error rate {summary['tool_error_rate']:.1%}")
     tui.show_info(f"  Turns that trimmed history: {summary['turns_with_trimmed_history']} ({summary['trimmed_turn_rate']:.1%})")
+
+
+def handle_extension_info(name, tui, agent):
+    extensions = getattr(agent, "extensions", None)
+    if name == "/mcp":
+        lines = extensions.mcp.describe() if extensions and extensions.mcp else ["MCP is not configured."]
+    elif name == "/hooks":
+        runner = extensions.hooks if extensions else None
+        lines = (runner.describe() + [f"config error: {e}" for e in runner.errors]
+                 + [f"recent non-blocking failure: {f}" for f in runner.last_failures[-3:]]) if runner else []
+        lines = lines or ["No hooks configured (add `hooks:` to your config)."]
+    else:
+        plugins = extensions.plugins if extensions else []
+        lines = [
+            f"{p.name} [{'enabled' if p.enabled else 'disabled'}] {p.description or ''} · {p.skills} skills, {p.hooks} hooks, "
+            f"{len(p.mcp_servers)} MCP servers" + "".join(f" · ERROR {e}" for e in p.errors)
+            for p in plugins
+        ] or ["No plugins found (put folders in the plugins path and list them under `plugins.enabled`)."]
+        if extensions and extensions.subagents_enabled:
+            lines.append("Subagent: explore (read-only) is enabled.")
+    for line in lines:
+        tui.show_info(line)

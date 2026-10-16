@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import difflib
+import json
 import os
 import re
 import shlex
@@ -23,6 +24,7 @@ class ToolRegistry:
         self.root = Path(root).resolve()
         self.approve = approve
         self.policy = policy or CommandPolicy()
+        self._external: dict = {}  # name -> ExternalTool (duck-typed: .spec .server .tool .read_only .handler)
         self._specs = [
             self._spec("list_files", "List project files", {"path": {"type": "string"}, "limit": {"type": "integer"}}),
             self._spec("search_files", "Search text in project files using a regular expression", {"pattern": {"type": "string"}, "path": {"type": "string"}, "limit": {"type": "integer"}}, ["pattern"]),
@@ -41,9 +43,27 @@ class ToolRegistry:
     def schemas(self):
         return self._specs
 
+    def is_read_only(self, name: str) -> bool:
+        external = self._external.get(name)
+        return external.read_only if external else name in READ_ONLY_TOOL_NAMES
+
     @property
     def read_only_schemas(self):
-        return [spec for spec in self._specs if spec["function"]["name"] in READ_ONLY_TOOL_NAMES]
+        return [spec for spec in self._specs if self.is_read_only(spec["function"]["name"])]
+
+    def register_external(self, tool) -> None:
+        """Expose an extension tool (MCP or subagent). Replaces an earlier registration of the same name."""
+        if tool.name in {s["function"]["name"] for s in self._specs} and tool.name not in self._external:
+            raise ValueError(f"Tool name '{tool.name}' collides with a built-in tool")
+        self._external[tool.name] = tool
+        self._specs = [s for s in self._specs if s["function"]["name"] != tool.name] + [tool.spec]
+
+    def clone_for(self, root: str | Path) -> "ToolRegistry":
+        """Same approval callback, policy and extension tools, different workspace root."""
+        clone = ToolRegistry(root, approve=self.approve, policy=self.policy)
+        for tool in self._external.values():
+            clone.register_external(tool)
+        return clone
 
     def _path(self, value: str, *, must_exist=False) -> Path:
         candidate = Path(value or ".").expanduser()
@@ -97,14 +117,24 @@ class ToolRegistry:
             raise ValueError(f"Unknown tool '{name}'. Available tools: {known}")
         if not isinstance(args, dict):
             raise ValueError(f"Arguments for {name} must be an object")
-        missing = [key for key in spec["parameters"]["required"] if args.get(key) is None]
+        missing = [key for key in (spec["parameters"].get("required") or []) if args.get(key) is None]
         if missing:
             raise ValueError(f"Missing required argument(s) for {name}: {', '.join(missing)}")
 
+    def _run_external(self, tool, args: dict, event_callback) -> str:
+        if not tool.read_only:
+            preview = f"Server: {tool.server}\nTool: {tool.tool}\nArguments:\n{json.dumps(args, indent=2, ensure_ascii=False)[:2000]}"
+            self._emit(event_callback, AgentEvent("approval_requested", tool.name, tool.tool, "Tool call preview ready"))
+            if not self.approve or not self.approve("Run external tool", preview):
+                return "External tool call denied by user. Nothing was executed."
+        return tool.handler(args)
+
     def _execute(self, name: str, args: dict, event_callback=None, plan_mode: bool = False) -> str:
-        if plan_mode and name not in READ_ONLY_TOOL_NAMES:
+        if plan_mode and not self.is_read_only(name):
             return f"Tool '{name}' is blocked in Plan mode. No action was taken."
         self._validate(name, args)
+        if name in self._external:
+            return self._run_external(self._external[name], args, event_callback)
         if name == "list_files":
             root = self._path(args.get("path", "."), must_exist=True)
             if not root.is_dir():
