@@ -25,3 +25,12 @@ class LlamaCppProvider(OpenAICompatibleProvider):
         if effort in self.EFFORT_LEVELS:
             return {"reasoning_effort": effort}
         return {}
+
+    def count_tokens(self, text: str) -> int | None:
+        """Exact token count from the server's /tokenize endpoint, or None if unavailable."""
+        root = self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url
+        try:
+            tokens = self._post(root.rstrip("/") + "/tokenize", {"content": text}).get("tokens")
+        except RuntimeError:
+            return None
+        return len(tokens) if isinstance(tokens, list) else None

@@ -44,13 +44,13 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 ### M3 em andamento (iniciado em 2026-10-16)
 
 - 1.1 limpeza feita: removidos o pacote morto `src/zerocoding/tools/` e `tui/widgets.py` vazio; `ToolRegistry` mantém só `approve`. Os protótipos `tui/demo*.py`/`textual_app.py` continuam em `src/` (mover para `scripts/` exige ajustar README, CLAUDE.md e `scripts/measure_m1_ui.py`; decisão pendente).
+- 1.2 estimativa real de tokens: `core/tokens.py` (`TokenCounter`) usa `/tokenize` do llama-server via `LlamaCppProvider.count_tokens`, com cache e fallback permanente para ~4 chars/token após a primeira falha. `fit_messages` recebe o contador. Ainda não validado contra o servidor real (estava offline): falta medir o erro da heurística e confirmar o formato da resposta de `/tokenize`.
 
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 
 - Baseline: tags locais `m3-baseline` (M2 concluído) e `m3-baseline-2` (após as ressalvas abaixo); `development` sincronizada com `origin/development`, que preserva a linha antiga `9658fd2` apenas no histórico.
 - Suíte: `uv run python -m unittest discover -s tests -p 'test_*.py'` com 81 testes passando.
 - Ressalvas tratadas: contexto dinâmico opcional (`dynamic_context`, desligado por padrão, não medido); testes de caracterização dos comandos do `cli.py`; `providers/ollama.py` marcado como legado.
-- Pendente para o fim do M3 (decisão do usuário): estimativa real de tokens (`/tokenize` do llama-server com fallback) no lugar de ~4 caracteres por token.
 - Pendente de medição: ativar `dynamic_context` por padrão só depois de comparar com `scripts/prompt_study.py` usando o servidor Ornith.
 
 ## Regras de trabalho

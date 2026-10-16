@@ -10,6 +10,7 @@ from .context import ConversationContext
 from .events import AgentEvent
 from .prompt import build_messages
 from .relevance import select_skills, select_tool_schemas
+from .tokens import TokenCounter, estimate_tokens
 from .tools import READ_ONLY_TOOL_NAMES
 from ..providers.base import ProviderTurn, ToolCall, normalize_turn
 
@@ -17,24 +18,23 @@ from ..providers.base import ProviderTurn, ToolCall, normalize_turn
 COMPACT_CALL = re.compile(r"<tool_call>\s*(\{.*\})\s*</tool_call>", re.DOTALL)
 
 
-def estimate_tokens(value) -> int:
-    return max(1, (len(json.dumps(value, ensure_ascii=False)) + 3) // 4)
+def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens) -> list[dict]:
+    """Fit a prompt while keeping the current request and its tool results.
 
-
-def fit_messages(messages: list[dict], max_tokens: int) -> list[dict]:
-    """Fit a prompt while keeping the current request and its tool results."""
+    ``count`` maps a message list to a token count (heuristic by default).
+    """
     result = [dict(message) for message in messages]
-    while estimate_tokens(result) > max_tokens:
+    while count(result) > max_tokens:
         latest_user = max((i for i, msg in enumerate(result) if msg.get("role") == "user"), default=-1)
         removable = next((i for i, msg in enumerate(result)
                           if msg.get("role") != "system" and i != latest_user and i < latest_user), None)
         if removable is None:
             break
         result.pop(removable)
-    if estimate_tokens(result) > max_tokens:
+    if count(result) > max_tokens:
         # Tool outputs are expendable once they have been returned to the model.
         outputs = [msg for msg in result if msg.get("role") == "tool"]
-        while outputs and estimate_tokens(result) > max_tokens:
+        while outputs and count(result) > max_tokens:
             largest = max(outputs, key=lambda msg: len(str(msg.get("content", ""))))
             content = str(largest.get("content", ""))
             if len(content) <= 80:
@@ -42,7 +42,7 @@ def fit_messages(messages: list[dict], max_tokens: int) -> list[dict]:
                 result.remove(largest)
             else:
                 largest["content"] = content[: max(80, len(content) // 2)]
-    if estimate_tokens(result) > max_tokens and result:
+    if count(result) > max_tokens and result:
         system = next((m for m in result if m.get("role") == "system"), {"role": "system", "content": ""})
         current = next((m for m in reversed(result) if m.get("role") == "user"), result[-1])
         available_chars = max(80, (max_tokens - 80) * 3)
@@ -58,6 +58,7 @@ class Agent:
                  effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
                  dynamic_context=False):
         self.provider = provider
+        self.token_counter = TokenCounter(provider)
         self.dynamic_context = bool(dynamic_context)
         self.memory = memory  # retained for API compatibility; global history is never injected.
         self.skills = skills or []
@@ -155,7 +156,7 @@ class Agent:
             system_prompt = base_prompt + "\n\n" + "\n".join(instructions)
         skills = select_skills(text, self.active_skills) if self.dynamic_context else self.active_skills
         messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
-        return fit_messages(messages, self.max_input_tokens)
+        return fit_messages(messages, self.max_input_tokens, self.token_counter)
 
     @staticmethod
     def _kwargs(output_tokens):
@@ -174,8 +175,8 @@ class Agent:
         if tool_schemas:
             if messages and messages[0].get("role") == "system":
                 messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
-            tool_budget = max(256, self.max_input_tokens - estimate_tokens(tool_schemas))
-            messages = fit_messages(messages, tool_budget)
+            tool_budget = max(256, self.max_input_tokens - self.token_counter(tool_schemas))
+            messages = fit_messages(messages, tool_budget, self.token_counter)
         native_tools = bool(tool_schemas)
 
         def request_turn():
