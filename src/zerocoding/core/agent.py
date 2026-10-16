@@ -28,6 +28,7 @@ class Agent:
         self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
         self.last_turn: dict = {}
         self.extensions = None  # core.extensions.Extensions, set by the CLI
+        self.hooks = None  # core.hooks.HookRunner | None
         self._stats: dict = self._new_stats()
         self.dynamic_context = bool(dynamic_context)
         self.memory = memory  # retained for API compatibility; global history is never injected.
@@ -191,8 +192,13 @@ class Agent:
         started_at = time.monotonic()
         target = tool_target(call.name, call.arguments)
         emit_event(on_event, AgentEvent("tool_started", call.name, target))
-        if self.plan_mode and call.name not in READ_ONLY_TOOL_NAMES:
+        plan_blocked = self.plan_mode and call.name not in READ_ONLY_TOOL_NAMES
+        blocked_by_hook = self.hooks.pre_tool(call.name, target, call.arguments) if self.hooks and not plan_blocked else None
+        if plan_blocked:
             result = f"Tool '{call.name}' is blocked in Plan mode. No action was taken."
+            event_kind = "tool_denied"
+        elif blocked_by_hook:
+            result = blocked_by_hook
             event_kind = "tool_denied"
         else:
             try:
@@ -207,6 +213,10 @@ class Agent:
             else:
                 result_text = str(result).lower()
                 event_kind = "tool_denied" if "denied" in result_text or "nothing was executed" in result_text else "tool_completed"
+                if event_kind == "tool_completed" and self.hooks:
+                    note = self.hooks.post_tool(call.name, target, call.arguments)
+                    if note:
+                        result = f"{result}\n{note}"
         if event_kind == "tool_error":
             self._stats["tool_errors"] += 1
         elif event_kind == "tool_denied":
@@ -233,6 +243,8 @@ class Agent:
         try:
             result = self._ask(text, system_prompt, use_tools, on_event, cancel)
             outcome = "ok"
+            if self.hooks:
+                self.hooks.turn_end(outcome)
             return result
         except (KeyboardInterrupt, TurnCancelled):
             outcome = "cancelled"
