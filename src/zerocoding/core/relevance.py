@@ -5,6 +5,7 @@ import re
 
 from .tools import READ_ONLY_TOOL_NAMES
 
+WRITE_TOOL_NAMES = frozenset({"write_file", "edit_file"})
 WRITE_HINTS = {
     "write", "edit", "create", "add", "modify", "change", "update", "fix", "implement",
     "refactor", "rename", "delete", "remove", "replace", "patch", "save", "generate",
@@ -37,11 +38,11 @@ def select_tool_schemas(text: str, schemas: list[dict]) -> list[dict]:
         name = spec["function"]["name"]
         if name in READ_ONLY_TOOL_NAMES:
             selected.append(spec)
-        elif name == "write_file" and wants_write:
+        elif name in WRITE_TOOL_NAMES and wants_write:
             selected.append(spec)
         elif name == "run_command" and wants_command:
             selected.append(spec)
-        elif name not in {"write_file", "run_command"}:
+        elif name not in WRITE_TOOL_NAMES | {"run_command"}:
             selected.append(spec)  # unknown tools are kept: never hide what we cannot classify
     return selected
 

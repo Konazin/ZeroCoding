@@ -210,7 +210,10 @@ class Agent:
         while True:
             turn = parse_compact_call(turn)
             if not turn.tool_calls or not tool_schemas or rounds >= tool_round_limit:
-                response_text = turn.content or ("Tool round limit reached." if turn.tool_calls else "")
+                response_text = turn.content or (
+                    f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue, or raise /effort."
+                    if turn.tool_calls else ""
+                )
                 if tool_round_completed and not response_text.strip():
                     raise RuntimeError(
                         "The model returned an empty response after a tool result. Check the llama.cpp chat template and reasoning settings."

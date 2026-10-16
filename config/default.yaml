@@ -38,6 +38,15 @@ max_tool_rounds: 6
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
 
+# run_command: always needs approval; this policy decides what may even be offered for approval.
+# deny/allow are executable names (a denied list is always merged with built-in defaults such as sudo, dd, mkfs).
+command_policy:
+  deny: []
+  allow: []            # empty = any executable that is not denied
+  env_passthrough: []  # extra environment variables passed to commands (default: PATH, HOME, LANG, ...)
+  timeout: 60
+  max_output_chars: 8000
+
 effort_profiles:
   low:
     max_output_tokens: 512

@@ -48,6 +48,8 @@ def tool_summary(name: str, result: str) -> str:
         exit_code = next((line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("exit code:")), "unknown")
         output_lines = max(0, len(lines) - 1)
         return f"exit {exit_code} · {output_lines} output lines"
+    if name == "edit_file":
+        return "File edited" if value.lower().startswith("edited ") else "Completed"
     if name == "write_file":
         return "File written" if value.lower().startswith("wrote ") else "Completed"
     if len(lines) > 1:

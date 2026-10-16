@@ -34,7 +34,7 @@ class TestRelevance(unittest.TestCase):
 
     def test_edit_request_adds_write_tool_only(self):
         selected = select_tool_schemas("Corrija o bug no router", self.registry.schemas)
-        self.assertEqual(tool_names(selected), {"list_files", "search_files", "read_file", "write_file"})
+        self.assertEqual(tool_names(selected), {"list_files", "search_files", "read_file", "write_file", "edit_file"})
 
     def test_test_request_adds_command_tool(self):
         selected = select_tool_schemas("rode os testes", self.registry.schemas)
@@ -73,7 +73,7 @@ class TestAgentDynamicContext(unittest.TestCase):
     def test_disabled_by_default_sends_everything(self):
         self.assertFalse(Config.load().dynamic_context)
         messages, kwargs = self.ask(False, "Explain this")
-        self.assertEqual(len(kwargs["tools"]), 5)
+        self.assertEqual(len(kwargs["tools"]), 6)
         self.assertIn("Use type hints.", messages[0]["content"])
 
     def test_enabled_filters_tools_and_skills(self):

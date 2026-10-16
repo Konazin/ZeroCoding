@@ -31,6 +31,8 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 
 ## Estado do roadmap
 
+- **M3 concluído e M4 implementado em 2026-10-16** (detalhes abaixo). M5 em andamento; M6 apenas planejado em `docs/ROADMAP-m6.md`.
+
 - M1 visual/fluxo foi concluído e revisado pelo usuário.
 - M2, sobre prompt/contexto, foi declarado concluído pelo usuário em 2026-10-14. Os relatórios em `docs/` ficam como referência; o prompt de produção segue inalterado até uma decisão explícita.
 - M3 está liberado, mas só deve começar quando o usuário pedir. Ver `docs/ROADMAP-extension.md` para os itens de revisão e sub-marcos adicionais.
@@ -51,6 +53,13 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
   - `/tokenize` responde `{"tokens":[...]}` no formato esperado e o `TokenCounter` funciona de ponta a ponta. Erro da heurística de ~4 chars/token (JSON) vs. real: Python +14%, português +2%, inglês −4%, schemas de ferramentas +11%, YAML pequeno −29%. Em geral dentro de ±15%; a contagem real vale sobretudo perto do limite.
   - Smoke do agente (resposta direta, leitura com ferramenta, Plan bloqueando escrita, escrita recusada sem criar arquivo): tudo certo, sem resposta vazia em 4 execuções, então o item 1.4 não foi reproduzido com o Ornith (o problema documentado era do Qwen3.5).
   - A/B de `dynamic_context` (`scripts/dynamic_context_ab.py`, 8 casos × 1 repetição): economiza ~115 tokens de ~660 no prompt (~17%) e acertou 5/8 contra 7/8 com ele desligado. A amostra é pequena e ruidosa, mas não há evidência a favor: `dynamic_context` continua desligado por padrão.
+
+### M4 — fluxo confiável (implementado em 2026-10-16)
+
+- `edit_file` (path, old_text, new_text): `old_text` precisa casar exatamente uma vez; mostra diff e exige aprovação; bloqueado no Plan. `write_file` continua para arquivos novos/reescrita.
+- `core/command_policy.py` + bloco `command_policy` no YAML: executáveis negados (sudo, dd, mkfs…) e `allow` opcional, `rm` recursivo só dentro do projeto e nunca na raiz, ambiente mínimo (PATH, HOME, LANG… + `env_passthrough`), timeout e limite de saída configuráveis. Comando bloqueado nem chega ao prompt de aprovação. A aprovação continua obrigatória.
+- Erros legíveis: argumentos ausentes, ferramenta desconhecida (lista as disponíveis), inteiros/regex inválidos, timeout, binário inexistente, limite de rodadas com instrução de próximo passo.
+- Testes: `tests/test_m4_workflow.py` (aprovação/recusa de diff e comando, symlink e caminhos fora do workspace, política, erros, limite de rodadas, falha do provider, isolamento de sessão e ciclo busca → leitura → edição recusada → edição aprovada com provider simulado). Smoke real com o Ornith: edição mínima aplicada com diff mostrado antes da aprovação.
 
 ### Preparação do M3 (encerrada em 2026-10-14; M3 não iniciado)
 

@@ -105,7 +105,7 @@ def main(argv=None):
             if animation:
                 animation.resume()
 
-    agent.tools = ToolRegistry(Path.cwd(), approve=approve_action)
+    agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
     refresh_tui_state(tui, config, agent, session=session)
     sync_tui_runtime(tui, agent)
     tui.header()

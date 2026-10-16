@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .command_policy import CommandPolicy
 from .dotenv import load_env
 
 try:
@@ -117,6 +118,7 @@ class Config:
     max_output_tokens: int = 1024
     max_tool_rounds: int = 6
     dynamic_context: bool = False
+    command_policy: CommandPolicy = field(default_factory=CommandPolicy)
     effort_profiles: dict[str, EffortProfile] = field(default_factory=lambda: dict(DEFAULT_EFFORT_PROFILES))
 
     @property
@@ -163,6 +165,7 @@ class Config:
             "max_output_tokens": self.max_output_tokens,
             "max_tool_rounds": self.max_tool_rounds,
             "dynamic_context": self.dynamic_context,
+            "command_policy": self.command_policy.to_dict(),
             "effort_profiles": {name: profile.to_dict() for name, profile in self.effort_profiles.items()},
         }
 
@@ -212,6 +215,7 @@ class ConfigManager:
             max_output_tokens=medium.max_output_tokens,
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
+            command_policy=CommandPolicy.from_dict(data.get("command_policy")),
             effort_profiles=effort_profiles,
         )
 

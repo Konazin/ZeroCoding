@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 from typing import Callable
 
+from .command_policy import CommandPolicy
 from .events import AgentEvent
 
 
@@ -17,14 +18,17 @@ READ_ONLY_TOOL_NAMES = frozenset({"list_files", "search_files", "read_file"})
 
 
 class ToolRegistry:
-    def __init__(self, root: str | Path, approve: Callable[[str, str], bool] | None = None):
+    def __init__(self, root: str | Path, approve: Callable[[str, str], bool] | None = None,
+                 policy: CommandPolicy | None = None):
         self.root = Path(root).resolve()
         self.approve = approve
+        self.policy = policy or CommandPolicy()
         self._specs = [
             self._spec("list_files", "List project files", {"path": {"type": "string"}, "limit": {"type": "integer"}}),
             self._spec("search_files", "Search text in project files using a regular expression", {"pattern": {"type": "string"}, "path": {"type": "string"}, "limit": {"type": "integer"}}, ["pattern"]),
             self._spec("read_file", "Read a file inside the project", {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, ["path"]),
             self._spec("write_file", "Propose a complete file content update; user approval is required before writing", {"path": {"type": "string"}, "content": {"type": "string"}}, ["path", "content"]),
+            self._spec("edit_file", "Propose replacing one exact piece of text in an existing file; old_text must match exactly once. User approval is required before writing", {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, ["path", "old_text", "new_text"]),
             self._spec("run_command", "Run a command in the project; user approval is required first", {"command": {"type": "string"}}, ["command"]),
         ]
 
@@ -79,14 +83,33 @@ class ToolRegistry:
         except Exception:
             return
 
+    @staticmethod
+    def _int(args: dict, key: str, default: int, low: int, high: int) -> int:
+        try:
+            return min(high, max(low, int(args.get(key, default))))
+        except (TypeError, ValueError):
+            raise ValueError(f"Argument '{key}' must be an integer") from None
+
+    def _validate(self, name: str, args) -> None:
+        spec = next((s["function"] for s in self._specs if s["function"]["name"] == name), None)
+        if spec is None:
+            known = ", ".join(s["function"]["name"] for s in self._specs)
+            raise ValueError(f"Unknown tool '{name}'. Available tools: {known}")
+        if not isinstance(args, dict):
+            raise ValueError(f"Arguments for {name} must be an object")
+        missing = [key for key in spec["parameters"]["required"] if args.get(key) is None]
+        if missing:
+            raise ValueError(f"Missing required argument(s) for {name}: {', '.join(missing)}")
+
     def _execute(self, name: str, args: dict, event_callback=None, plan_mode: bool = False) -> str:
         if plan_mode and name not in READ_ONLY_TOOL_NAMES:
             return f"Tool '{name}' is blocked in Plan mode. No action was taken."
+        self._validate(name, args)
         if name == "list_files":
             root = self._path(args.get("path", "."), must_exist=True)
             if not root.is_dir():
                 raise ValueError("Path is not a directory")
-            limit = min(200, max(1, int(args.get("limit", 100))))
+            limit = self._int(args, "limit", 100, 1, 200)
             found = []
             for path in self._iter_files(root):
                 if not path.is_file():
@@ -97,8 +120,11 @@ class ToolRegistry:
             return "\n".join(found) or "No files found."
         if name == "search_files":
             root = self._path(args.get("path", "."), must_exist=True)
-            regex = re.compile(str(args["pattern"]))
-            limit = min(100, max(1, int(args.get("limit", 30))))
+            try:
+                regex = re.compile(str(args["pattern"]))
+            except re.error as exc:
+                raise ValueError(f"Invalid regular expression: {exc}") from None
+            limit = self._int(args, "limit", 30, 1, 100)
             found = []
             scanned_bytes = 0
             scanned_files = 0
@@ -126,8 +152,8 @@ class ToolRegistry:
             if path.stat().st_size > 1_000_000:
                 raise ValueError("File is too large to read with this tool (limit: 1 MB)")
             lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-            start = max(1, int(args.get("start_line", 1)))
-            end = min(len(lines), int(args.get("end_line", start + 300)))
+            start = self._int(args, "start_line", 1, 1, 10**9)
+            end = min(len(lines), self._int(args, "end_line", start + 300, 1, 10**9))
             return "\n".join(f"{idx}: {line}" for idx, line in enumerate(lines[start - 1:end], start))[:12000]
         if name == "write_file":
             path = self._path(args["path"])
@@ -150,8 +176,44 @@ class ToolRegistry:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(new, encoding="utf-8")
             return f"Wrote {path.relative_to(self.root)}."
+        if name == "edit_file":
+            path = self._path(args["path"], must_exist=True)
+            if not path.is_file():
+                raise ValueError("Path is not a file")
+            if path.stat().st_size > 1_000_000:
+                raise ValueError("File is too large to edit with this tool (limit: 1 MB)")
+            old_text, new_text = str(args["old_text"]), str(args["new_text"])
+            if not old_text:
+                raise ValueError("old_text must not be empty; use write_file to create a new file")
+            try:
+                original = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                raise ValueError("File is not valid UTF-8 text and cannot be edited with this tool") from None
+            relative = str(path.relative_to(self.root))
+            count = original.count(old_text)
+            if count == 0:
+                raise ValueError(f"old_text was not found in {relative}. Read the file again and copy the exact text, including indentation.")
+            if count > 1:
+                raise ValueError(f"old_text matches {count} places in {relative}. Include more surrounding lines so it matches exactly once.")
+            if old_text == new_text:
+                return "old_text and new_text are identical. No file was changed."
+            updated = original.replace(old_text, new_text, 1)
+            diff = "".join(difflib.unified_diff(original.splitlines(True), updated.splitlines(True),
+                      fromfile=relative, tofile=relative))
+            self._emit(event_callback, AgentEvent("approval_requested", name, relative, "Edit preview ready"))
+            if not self.approve or not self.approve("Edit file", diff):
+                return "Edit denied by user. No file was changed."
+            path.write_text(updated, encoding="utf-8")
+            return f"Edited {relative}."
         if name == "run_command":
             command = str(args["command"])
+            try:
+                argv = shlex.split(command)
+            except ValueError as exc:
+                raise ValueError(f"Could not parse the command: {exc}") from None
+            reason = self.policy.check(argv, self.root)
+            if reason:
+                return f"Command blocked by policy: {reason}. Nothing was executed."
             target = " ".join(command.split())
             if len(target) > 96:
                 target = target[:93] + "…"
@@ -160,10 +222,15 @@ class ToolRegistry:
             ))
             if not self.approve or not self.approve("Run command", command):
                 return "Command denied by user. Nothing was executed."
-            argv = shlex.split(command)
-            if not argv:
-                raise ValueError("Empty command")
-            result = subprocess.run(argv, cwd=self.root, capture_output=True, text=True, timeout=60, shell=False)
-            output = (result.stdout + result.stderr).strip()
-            return f"exit code: {result.returncode}\n{output[:8000]}"
+            try:
+                result = subprocess.run(argv, cwd=self.root, capture_output=True, text=True,
+                                        timeout=self.policy.timeout, shell=False, env=self.policy.environment())
+            except subprocess.TimeoutExpired:
+                return f"Command timed out after {self.policy.timeout}s and was stopped."
+            except FileNotFoundError:
+                return f"Command not found: {argv[0]}. Nothing was executed."
+            except OSError as exc:
+                return f"Command could not be started: {exc}. Nothing was executed."
+            output = self.policy.truncate((result.stdout + result.stderr).strip())
+            return f"exit code: {result.returncode}\n{output}"
         raise ValueError(f"Unknown tool: {name}")

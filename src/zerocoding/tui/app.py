@@ -441,6 +441,7 @@ class ZerocodingTUI:
                 "list_files": "Explore",
                 "search_files": "Search",
                 "write_file": "Write",
+                "edit_file": "Edit",
                 "run_command": "Command",
             }.get(name, name)
             self.console.print(Text(f"● {label} {target}".rstrip(), style=ZERO_PURPLE_LIGHT))
@@ -461,6 +462,7 @@ class ZerocodingTUI:
                 "list_files": "Exploring",
                 "search_files": "Searching",
                 "write_file": "Preparing a file change",
+                "edit_file": "Preparing a file edit",
                 "run_command": "Preparing a command",
             }.get(name, f"Using {name}")
             animation.set_message(f"{action} {target}".strip())

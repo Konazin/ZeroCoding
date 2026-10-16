@@ -392,7 +392,7 @@ def handle_resume(args_text, tui, agent, config, manager, project_context, sessi
         effort=session.effort,
     )
     if agent.tools is not None:
-        agent.tools = ToolRegistry(session.path, approve=agent.tools.approve)
+        agent.tools = ToolRegistry(session.path, approve=agent.tools.approve, policy=agent.tools.policy)
     project_context.restore(session.context_files)
     tui.show_success(f"Session resumed: {session.id}")
     return build_session_provider(config, session.provider, session.model), session
