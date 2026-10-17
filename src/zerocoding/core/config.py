@@ -116,6 +116,7 @@ class Config:
     theme: str = "purple"
     auto_save: bool = True
     max_input_tokens: int = 4096
+    context_window: int = 0  # 0 = detect from the server; max_input_tokens is the fallback
     max_output_tokens: int = 1024
     max_tool_rounds: int = 6
     dynamic_context: bool = False
@@ -175,6 +176,7 @@ class Config:
             "theme": self.theme,
             "auto_save": self.auto_save,
             "max_input_tokens": self.max_input_tokens,
+            "context_window": self.context_window,
             "max_output_tokens": self.max_output_tokens,
             "max_tool_rounds": self.max_tool_rounds,
             "dynamic_context": self.dynamic_context,
@@ -236,6 +238,7 @@ class ConfigManager:
             theme=str(data.get("theme", "purple")),
             auto_save=self._as_bool(data.get("auto_save", True)),
             max_input_tokens=max(256, int(data.get("max_input_tokens", 4096))),
+            context_window=max(0, int(data.get("context_window", 0) or 0)),
             max_output_tokens=medium.max_output_tokens,
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
@@ -310,6 +313,7 @@ class ConfigManager:
                 "theme": data.get("theme", "purple"),
                 "auto_save": data.get("auto_save", True),
                 "max_input_tokens": data.get("max_input_tokens", 4096),
+                "context_window": data.get("context_window", 0),
                 "max_output_tokens": data.get("max_output_tokens", 1024),
                 "max_tool_rounds": data.get("max_tool_rounds", 6),
             }

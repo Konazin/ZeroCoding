@@ -32,7 +32,8 @@ memory_path: ".zerocoding/memory.db"
 skills_path: "skills"
 theme: "purple"
 auto_save: true
-max_input_tokens: 4096
+max_input_tokens: 4096   # fallback prompt budget when the context window is unknown
+context_window: 0        # 0 = detect from the server (llama.cpp /props); set a number for other backends
 max_output_tokens: 1024
 max_tool_rounds: 6
 # Local per-turn numbers (tokens, latency, tool errors) in .zerocoding/metrics/turns.jsonl; never prompts or answers.

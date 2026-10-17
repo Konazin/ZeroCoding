@@ -29,6 +29,23 @@ class LlamaCppProvider(OpenAICompatibleProvider):
             return {"reasoning_effort": effort}
         return {}
 
+    def context_window(self) -> int | None:
+        """Server ``n_ctx`` from GET /props, cached after the first successful read."""
+        cached = getattr(self, "_n_ctx", None)
+        if cached:
+            return cached
+        root = self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url
+        try:
+            props = self._get(root.rstrip("/") + "/props")
+        except RuntimeError:
+            return None
+        settings = props.get("default_generation_settings") if isinstance(props, dict) else None
+        n_ctx = settings.get("n_ctx") if isinstance(settings, dict) else None
+        if isinstance(n_ctx, int) and n_ctx > 0:
+            self._n_ctx = n_ctx
+            return n_ctx
+        return None
+
     def count_tokens(self, text: str) -> int | None:
         """Exact token count from the server's /tokenize endpoint, or None if unavailable."""
         root = self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url

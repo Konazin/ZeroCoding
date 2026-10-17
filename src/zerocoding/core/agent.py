@@ -17,10 +17,12 @@ from ..providers.base import normalize_turn
 
 __all__ = ["Agent", "fit_messages"]
 
+WINDOW_MARGIN = 128  # tokens kept free for template overhead and counting error
+
 
 class Agent:
     def __init__(self, provider, memory=None, skills=None, max_input_tokens=4096,
-                 max_output_tokens=1024, max_tool_rounds=6, tools=None,
+                 context_window=0, max_output_tokens=1024, max_tool_rounds=6, tools=None,
                  effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
                  dynamic_context=False, streaming_enabled=False, shell_block_fallback=True):
         self.provider = provider
@@ -38,6 +40,7 @@ class Agent:
         self.active_skills = []
         self.context = ConversationContext()
         self.max_input_tokens = max(256, int(max_input_tokens))
+        self.context_window = max(0, int(context_window or 0))
         self.max_output_tokens = max(128, int(max_output_tokens))
         self.max_tool_rounds = max(1, min(12, int(max_tool_rounds)))
         self.tools = tools
@@ -111,6 +114,24 @@ class Agent:
         describe = getattr(self.provider, "native_effort_status", None)
         return str(describe(self.effort)) if callable(describe) else "supported by provider"
 
+    def window_tokens(self) -> int | None:
+        """Configured or server-reported context window, if known."""
+        if self.context_window:
+            return self.context_window
+        detect = getattr(self.provider, "context_window", None)
+        try:
+            return detect() if callable(detect) else None
+        except Exception:
+            return None
+
+    def input_budget(self, output_tokens: int | None = None) -> int:
+        """Prompt tokens allowed: the whole window minus the output budget and a safety margin."""
+        window = self.window_tokens()
+        if not window:
+            return self.max_input_tokens
+        output = output_tokens if output_tokens is not None else self.effective_budgets()[0]
+        return max(256, window - output - WINDOW_MARGIN)
+
     def _messages(self, text, system_prompt, tool_schemas=None):
         instructions = []
         if self.plan_mode:
@@ -131,7 +152,7 @@ class Agent:
         messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
         if tool_schemas and messages and messages[0].get("role") == "system":
             messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
-        return self._fit(messages, self.max_input_tokens, tool_schemas)
+        return self._fit(messages, self.input_budget(), tool_schemas)
 
     def _fit(self, messages, budget, tool_schemas=None):
         fitted = fit_messages(messages, budget, self.token_counter, tools=tool_schemas)
@@ -163,7 +184,7 @@ class Agent:
         return turn
 
     def _chat_once(self, messages, tool_schemas, output_tokens, state):
-        kwargs = {"num_ctx": self.max_input_tokens + output_tokens, **self._kwargs(output_tokens)}
+        kwargs = {"num_ctx": self.input_budget(output_tokens) + output_tokens, **self._kwargs(output_tokens)}
         effort_level = "high" if self.ultrathink else self.effort
         native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
         if native_effort:
@@ -370,7 +391,7 @@ class Agent:
                     changed = True
             rounds += 1
             tool_round_completed = True
-            messages = self._fit(messages, self.max_input_tokens, tool_schemas)
+            messages = self._fit(messages, self.input_budget(output_tokens), tool_schemas)
             turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)

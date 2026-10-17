@@ -294,3 +294,30 @@ class TestLongHistory(unittest.TestCase):
         self.assertLessEqual(count(fitted), 1000)
         self.assertIn("Earlier turns", fitted[0]["content"])
         self.assertLess(len(calls), 40)
+
+
+class TestContextWindowBudget(unittest.TestCase):
+    class _Provider:
+        def __init__(self, window):
+            self.window = window
+
+        def context_window(self):
+            return self.window
+
+        def chat(self, messages, **kwargs):
+            return {"content": "ok"}
+
+    def test_input_budget_uses_the_server_window_minus_output_and_margin(self):
+        agent = Agent(self._Provider(8192), max_input_tokens=4096, max_output_tokens=1024)
+
+        self.assertEqual(agent.input_budget(1024), 8192 - 1024 - 128)
+
+    def test_unknown_window_falls_back_to_max_input_tokens(self):
+        agent = Agent(self._Provider(None), max_input_tokens=4096)
+
+        self.assertEqual(agent.input_budget(1024), 4096)
+
+    def test_configured_window_beats_the_server_report(self):
+        agent = Agent(self._Provider(8192), context_window=16384, max_output_tokens=1024)
+
+        self.assertEqual(agent.input_budget(1024), 16384 - 1024 - 128)

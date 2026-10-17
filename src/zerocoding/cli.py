@@ -66,6 +66,7 @@ def main(argv=None):
         provider=provider,
         skills=skills,
         max_input_tokens=config.max_input_tokens,
+        context_window=config.context_window,
         max_output_tokens=config.max_output_tokens,
         max_tool_rounds=config.max_tool_rounds,
         effort_profiles=config.effort_profiles,

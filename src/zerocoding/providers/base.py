@@ -72,6 +72,10 @@ class BaseProvider(ABC):
     def list_models(self) -> list[str]:
         return []
 
+    def context_window(self) -> int | None:
+        """Total context tokens the backend serves, or None when it cannot be detected."""
+        return None
+
     def native_effort_kwargs(self, level: str) -> dict | None:
         """Return request fields only when this provider explicitly supports effort."""
         return None

@@ -30,7 +30,8 @@ def make_explorer_tool(agent) -> ExternalTool:
         if not task:
             raise ValueError("task must not be empty")
         registry = ToolRegistry(agent.tools.root, approve=None, policy=agent.tools.policy)  # built-in tools only: no explore inside explore
-        sub = Agent(agent.provider, max_input_tokens=agent.max_input_tokens, max_output_tokens=1024,
+        sub = Agent(agent.provider, max_input_tokens=agent.max_input_tokens, context_window=agent.context_window,
+                    max_output_tokens=1024,
                     max_tool_rounds=4, tools=registry, plan_mode=True)
         answer = sub.ask(task, system_prompt=EXPLORER_PROMPT, use_tools=True).strip()
         for key in ("llm_calls", "prompt_tokens", "completion_tokens"):
