@@ -48,6 +48,7 @@ COMMANDS = [
     ("/help", "Show commands"),
     ("/clear", "Clear conversation"),
     ("/exit", "Exit ZeroCoding"),
+    ("/config", "Open the settings menu"),
     ("/provider", "List providers"),
     ("/provider use", "Switch provider"),
     ("/provider add", "Add provider"),
