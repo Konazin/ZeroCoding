@@ -205,6 +205,19 @@ def _case_catalog() -> list[BenchCase]:
 CASES = _case_catalog()
 
 
+def hard_cases() -> list[BenchCase]:
+    """The harder multi-file suite (scripts/bench_hard_cases.py), wrapped as BenchCase objects."""
+    try:
+        from scripts.bench_hard_cases import hard_case_specs
+    except ImportError:  # run as `python scripts/m7_bench.py`
+        from bench_hard_cases import hard_case_specs
+    return [BenchCase(spec["id"], spec["prompts"], spec["prepare"], spec["verify"],
+                      writable_paths=spec.get("writable_paths", ()),
+                      # a user would approve running the project's tests while working on these tasks
+                      allowed_command=spec.get("allowed_command") or "python -m unittest discover -s tests")
+            for spec in hard_case_specs()]
+
+
 class RecordingProvider(LlamaCppProvider):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -372,9 +385,9 @@ def _stats(values: list[float]) -> dict:
     }
 
 
-def summarize(trials: list[dict]) -> dict:
+def summarize(trials: list[dict], cases: list[BenchCase] | None = None) -> dict:
     per_case = {}
-    for case in CASES:
+    for case in cases or CASES:
         rows = [trial for trial in trials if trial["case"] == case.id]
         if not rows:
             continue
@@ -429,7 +442,9 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=7001)
     parser.add_argument("--timeout", type=int, default=300)
     parser.add_argument("--output", type=Path)
-    parser.add_argument("--case", choices=[case.id for case in CASES], help="execute somente uma tarefa do catálogo")
+    parser.add_argument("--suite", choices=["small", "hard"], default="small",
+                        help="small = the 15 M7 tasks (saturated); hard = multi-file tasks from scripts/bench_hard_cases.py")
+    parser.add_argument("--case", help="execute somente uma tarefa do catálogo escolhido")
     parser.add_argument("--streaming", action="store_true", help="opt in to SSE and record measured TTFT")
     args = parser.parse_args(argv)
     if args.repetitions < 1:
@@ -437,7 +452,10 @@ def main(argv=None):
     pid = _server_pid()
     idle = {"rss_mb": round(_rss_mb(pid)), "vram_mb": round(_vram_mb())}
     trials = []
-    selected_cases = [case for case in CASES if args.case is None or case.id == args.case]
+    catalog = hard_cases() if args.suite == "hard" else CASES
+    selected_cases = [case for case in catalog if args.case is None or case.id == args.case]
+    if not selected_cases:
+        parser.error(f"unknown --case {args.case!r} for suite {args.suite}")
     for repetition in range(1, args.repetitions + 1):
         for case in selected_cases:
             trial = run_trial(case, args.base_url, args.model, pid, args.timeout,
@@ -455,12 +473,13 @@ def main(argv=None):
         "repetitions": args.repetitions,
         "seed_base": args.seed,
         "streaming": args.streaming,
+        "suite": args.suite,
         "cases": [case.id for case in selected_cases],
         "idle_memory": idle,
-        "summary": summarize(trials),
+        "summary": summarize(trials, catalog),
         "trials": trials,
     }
-    output = args.output or Path("docs") / f"m7-{args.label}-benchmark.json"
+    output = args.output or Path("docs") / f"m7-{args.label}-{args.suite}-benchmark.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps(report["summary"], indent=2, ensure_ascii=False))
