@@ -59,8 +59,15 @@ Fontes secundárias (a documentação varia por versão, confirmar sempre contra
 
 `max_tokens` = raciocínio + 1024 de resposta. Os números devem ser calibrados no benchmark do M7 (15 tarefas), medindo sucesso e tempo por nível.
 
+## Decisões do usuário (2026-10-17)
+
+- **O nível de effort deve depender da janela de contexto** disponível até o auto-compact: quanto menos folga de contexto, menos raciocínio, para o orçamento nunca empurrar a conversa para o limite. Isso entra no desenho dos níveis (a tabela acima é só ponto de partida) e depende de existir compactação de histórico (M7.8, ainda não implementada).
+- **Não haverá tecla "parar de pensar"**; a opção 4 está descartada.
+- O resto (calibração por benchmark, rodadas de ferramenta fora do effort, adaptativo por etapa) fica para a próxima sessão.
+
 ## Perguntas em aberto
 
+- Como medir a folga de contexto: usar a contagem exata de tokens (`/apply-template` + `/tokenize`) e reduzir o orçamento de raciocínio conforme `max_input_tokens` restante, ou só acima de um limiar (por exemplo 70%)?
 - Valores acima valem para o Ornith. Outros modelos exigiriam outra calibração.
 - Com `reasoning_budget_tokens` o texto cortado pode sair incompleto; a mensagem de fechamento ajuda, mas precisa de medição em tarefas reais.
 - O `reasoning_format` precisa continuar em `deepseek` para o raciocínio nunca aparecer na TUI nem ser salvo (regra existente).
