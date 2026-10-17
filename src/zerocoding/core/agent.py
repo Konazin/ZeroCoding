@@ -12,7 +12,7 @@ from .events import AgentEvent
 from .prompt import build_messages
 from .relevance import select_skills, select_tool_schemas
 from .tokens import TokenCounter
-from .toolcalls import CHANGING_TOOLS, emit_event, parse_compact_call, shell_calls_from_text, tool_summary, tool_target
+from .toolcalls import CHANGING_TOOLS, emit_event, parse_compact_call, shell_calls_from_text, tool_summary, tool_target, tool_was_denied
 from .tools import READ_ONLY_TOOL_NAMES
 from .config import MAX_TOOL_ROUNDS
 from ..providers.base import normalize_turn
@@ -26,7 +26,7 @@ WINDOW_MARGIN = 128  # tokens kept free for template overhead and counting error
 
 class Agent:
     def __init__(self, provider, memory=None, skills=None, max_input_tokens=4096,
-                 context_window=0, max_output_tokens=1024, max_tool_rounds=6, tools=None,
+                 context_window=0, max_output_tokens=1024, max_tool_rounds=40, tools=None,
                  effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
                  dynamic_context=False, streaming_enabled=False, shell_block_fallback=True):
         self.provider = provider
@@ -315,8 +315,7 @@ class Agent:
                 result = f"Tool error: {exc}"
                 event_kind = "tool_error"
             else:
-                result_text = str(result).lower()
-                event_kind = "tool_denied" if "denied" in result_text or "nothing was executed" in result_text else "tool_completed"
+                event_kind = "tool_denied" if tool_was_denied(call.name, result) else "tool_completed"
                 if event_kind == "tool_completed" and self.hooks:
                     note = self.hooks.post_tool(call.name, target, call.arguments)
                     if note:
@@ -439,7 +438,7 @@ class Agent:
             for call, call_id in zip(calls, call_ids):
                 result_message = self._run_tool_call(call, call_id, on_event, cancel)
                 messages.append(result_message)
-                if call.name in CHANGING_TOOLS and "denied" not in str(result_message.get("content", "")).lower():
+                if call.name in CHANGING_TOOLS and not tool_was_denied(call.name, result_message.get("content", "")):
                     changed = True
             rounds += 1
             tool_round_completed = True

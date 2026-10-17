@@ -299,3 +299,18 @@ class TestEndToEndCycle(Workspace):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDenialDetection(unittest.TestCase):
+    def test_file_contents_mentioning_denied_are_not_a_denial(self):
+        from zerocoding.core.toolcalls import tool_summary, tool_was_denied
+
+        text = 'raise PermissionError("Access denied by user policy")\n' * 3
+        self.assertFalse(tool_was_denied("read_file", text))
+        self.assertNotEqual(tool_summary("read_file", text), "Denied · no action taken")
+
+    def test_real_denials_of_changing_tools_are_detected(self):
+        from zerocoding.core.toolcalls import tool_was_denied
+
+        self.assertTrue(tool_was_denied("write_file", "Write denied by user. No file was changed."))
+        self.assertTrue(tool_was_denied("run_command", "Command blocked by policy: x. Nothing was executed."))

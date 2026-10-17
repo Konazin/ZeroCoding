@@ -5,6 +5,7 @@ import json
 import re
 
 from .events import AgentEvent
+from .tools import READ_ONLY_TOOL_NAMES
 from ..providers.base import ProviderTurn, ToolCall
 
 SHELL_FENCE = re.compile(r"```[ \t]*(?:bash|sh|shell|zsh|console|terminal)[ \t]*\n(.*?)```", re.IGNORECASE | re.DOTALL)
@@ -35,7 +36,7 @@ def tool_target(name: str, arguments: dict) -> str:
 def tool_summary(name: str, result: str) -> str:
     value = result.strip()
     lower = value.lower()
-    if "denied by user" in lower or "nothing was executed" in lower:
+    if tool_was_denied(name, value):
         return "Denied · no action taken"
     if value.startswith("Tool error:"):
         reason = " ".join(value[len("Tool error:"):].split())
@@ -124,3 +125,15 @@ def shell_calls_from_text(turn: ProviderTurn, limit: int = MAX_TEXT_COMMANDS) ->
         thinking_present=turn.thinking_present,
         reasoning_content=turn.reasoning_content,
     )
+
+
+def tool_was_denied(name: str, result) -> bool:
+    """True when a changing tool reported a user denial or policy block.
+
+    Only the start of the result is inspected: read tools return file contents, which can
+    legitimately contain the word "denied".
+    """
+    if name in READ_ONLY_TOOL_NAMES:
+        return False
+    head = str(result)[:200].lower()
+    return "denied by user" in head or "nothing was executed" in head
