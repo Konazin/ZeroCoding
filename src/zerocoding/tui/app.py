@@ -37,6 +37,8 @@ from .theme import (
     GHOST_SMALL,
     GHOST_SMALL_STATES,
     GHOST_TINY,
+    GHOST_WORK_ART,
+    GHOST_WORK_ART_ASCII,
     GHOST_WORK_FRAMES,
     GRAY as ZERO_GRAY,
     GREEN as ZERO_GREEN,
@@ -123,13 +125,22 @@ class _ThinkingView:
 
     def __rich_console__(self, console, options):
         elapsed = self.animation.elapsed()
+        unicode = self.animation.unicode
+        message = ellipsize(self.animation.message, max(8, TerminalSize.get_width() - 20))
+        if TerminalSize.get_width() >= 72:
+            # Full mascot: walks in place, antenna blinks, progress bar crosses the chest.
+            art = (GHOST_WORK_ART if unicode else GHOST_WORK_ART_ASCII)[int(elapsed * 4) % 4]
+            for index, row in enumerate(art):
+                line = Text(row.ljust(14), style=f"bold {ZERO_PURPLE}")
+                if index == 2:
+                    line.append(message, style=f"italic {ZERO_LIGHT}")
+                    line.append(f"  {elapsed:.0f}s", style=f"dim {ZERO_GRAY}")
+                yield line
+            return
         frame_index = int(elapsed * 4) % 2
-        frames = GHOST_WORK_FRAMES if self.animation.unicode else GHOST_ASCII_WORK_FRAMES
-        sparkle = ("✦" if frame_index == 0 else "✧") if self.animation.unicode else ("*" if frame_index == 0 else "+")
+        frames = GHOST_WORK_FRAMES if unicode else GHOST_ASCII_WORK_FRAMES
         line = Text()
         line.append(frames[frame_index] + "  ", style=f"bold {ZERO_PURPLE}")
-        line.append(sparkle + " ", style=f"bold {ZERO_PURPLE_LIGHT}")
-        message = ellipsize(self.animation.message, max(8, TerminalSize.get_width() - 20))
         line.append(message, style=f"italic {ZERO_LIGHT}")
         line.append(f"  {elapsed:.0f}s", style=f"dim {ZERO_GRAY}")
         yield line
@@ -449,15 +460,21 @@ class ZerocodingTUI:
                 )
                 self._response_live.start()
             self._response_text += getattr(event, "summary", "")
-            self._response_live.update(
-                Text("• " + self._response_text, style=ZERO_LIGHT), refresh=True,
-            )
+            # A live region taller than the terminal cannot be redrawn cleanly, so show only the tail
+            # while streaming; the complete answer is printed once the turn ends.
+            room = max(3, shutil.get_terminal_size((80, 24)).lines - 6)
+            visible = "\n".join(("• " + self._response_text).splitlines()[-room:])
+            self._response_live.update(Text(visible, style=ZERO_LIGHT), refresh=True)
             return
         if kind in {"response_end", "response_reset"}:
+            text = self._response_text
             if self._response_live is not None:
                 self._response_live.stop()
                 self._response_live = None
             self._response_text = ""
+            if kind == "response_end" and getattr(event, "summary", "") == "before_tools" and text.strip():
+                # Preamble to a tool call ("I'll read the file..."): keep it, the final answer prints later.
+                self.console.print(Text("• " + text.strip(), style=ZERO_LIGHT))
             return
         name = getattr(event, "tool_name", "")
         target = ellipsize(getattr(event, "target", ""), max(8, TerminalSize.get_width() - 30))

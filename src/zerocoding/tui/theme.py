@@ -1,3 +1,5 @@
+from zerocoding.tui.mascot import render, render_ascii
+
 PURPLE = "#A78BFA"
 PURPLE_LIGHT = "#C4B5FD"
 PURPLE_DARK = "#7C3AED"
@@ -14,77 +16,21 @@ USER_BG = "#211827"
 BORDER = "#3B2F4A"
 
 GHOST_TINY = "zc"
-GHOST_SMALL = "(o ᴗ o)"
+GHOST_SMALL = "[• •]"
 GHOST_SMALL_STATES = {
-    "idle": "(o ᴗ o)",
-    "approval": "(o ? o)",
-    "success": "(^ ᴗ ^)",
-    "error": "(x _ x)",
+    "idle": "[• •]",
+    "approval": "[• •]?",
+    "success": "[^ ^]",
+    "error": "[x x]",
 }
-GHOST_WORK_FRAMES = (
-    "◜█◉ᴗ◦█◝",
-    "◜█◦ᴗ◉█◝",
-)
-GHOST_ASCII_FULL = (
-    "       .--.      .",
-    "     /      \\",
-    "    |  o  o  |",
-    "    |   ^    |",
-    "     \\ .__. /",
-    "      '----'  .",
-)
-GHOST_ASCII_WORK_FRAMES = ("(o ^ o)", "(o^  o)")
-GHOST_FRAMES = (
-    (
-        "      ·       ▪",
-        "    ▄████▄",
-        "   ▟█ ◉  ◉ █▙",
-        "   █   ᴗ    █",
-        "   ▙█╲____╱█▟",
-        "     ▀████▀  ·",
-        "   ▪      ·",
-    ),
-    (
-        "      ·       ▪",
-        "    ▄████▄",
-        "   ▟█  ◉ ◉ █▙",
-        "   █    ᴗ   █",
-        "   ▟█╲____╱█▙",
-        "     ▀████▀  ·",
-        "   ▪      ·",
-    ),
-)
-GHOST_POSES = {
-    "idle": (
-        "    ▄████▄",
-        "   ▟█ ◉  ◉ █▙",
-        "   █   ᴗ    █",
-        "   ▙█╲____╱█▟",
-        "     ▀████▀",
-    ),
-    "approval": (
-        "    ▄████▄",
-        "   ▟█ ◉  ◉ █▙",
-        "   █   ?    █",
-        "   ▙█╲____╱█▟",
-        "     ▀████▀",
-    ),
-    "success": (
-        "    ▄████▄",
-        "   ▟█ ^  ^ █▙",
-        "   █   ᴗ    █",
-        "   ▙█╲____╱█▟",
-        "     ▀████▀",
-    ),
-    "error": (
-        "    ▄████▄",
-        "   ▟█ x  x █▙",
-        "   █   _    █",
-        "   ▙█╲____╱█▟",
-        "     ▀████▀",
-    ),
-}
-GHOST_FULL = "\n".join(GHOST_FRAMES[0])
+GHOST_WORK_FRAMES = ("╹[• •]╹", "╻[• •]╻")
+GHOST_ASCII_WORK_FRAMES = ("[o o]", "[o.o]")
+GHOST_ASCII_FULL = render_ascii("idle")
+# Full-size animation: four 5-line frames used while the agent works.
+GHOST_WORK_ART = tuple(render(f"work_{k}") for k in "abcd")
+GHOST_WORK_ART_ASCII = tuple(render_ascii(f"work_{k}") for k in "abcd")
+GHOST_POSES = {pose: render(pose) for pose in ("idle", "approval", "success", "error")}
+GHOST_FULL = "\n".join(render("idle"))
 
 WORK_PHRASES = (
     "Untangling the code…",
