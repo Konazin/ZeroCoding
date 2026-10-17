@@ -52,6 +52,7 @@ from .theme import (
     YELLOW as ZERO_YELLOW,
 )
 
+from .diffview import DiffView, looks_like_diff
 from .history import ProjectPromptHistory
 from .mascot import ANIMATIONS, render, render_ascii
 from .menus import run_screen
@@ -333,18 +334,24 @@ class ZerocodingTUI:
                 window.height = Dimension(min=1, max=6)
                 window.dont_extend_height = to_filter(True)
 
-    def header(self):
-        """Clear the visible screen and draw the responsive welcome header."""
-        self._refresh_size()
-        self.console.clear()
-        self.console.print()
-
+    def _print_header_art(self) -> None:
         if not self._unicode:
             ghost = "(o o)" if self._is_small else "\n".join(GHOST_ASCII_FULL)
         else:
             ghost = GHOST_TINY if self._is_tiny else GHOST_SMALL if self._is_small else GHOST_FULL.rstrip()
         if not self._is_tiny:
             self.console.print(Text(ghost, style=f"bold {ZERO_PURPLE}"))
+
+    def set_cancel(self, token) -> None:
+        """The fullscreen UI cancels a running task through this token; the classic UI uses Ctrl+C."""
+
+    def header(self):
+        """Clear the visible screen and draw the responsive welcome header."""
+        self._refresh_size()
+        self.console.clear()
+        self.console.print()
+
+        self._print_header_art()
 
         title = Text()
         if self._is_tiny:
@@ -462,8 +469,8 @@ class ZerocodingTUI:
             else "budget only (not declared by provider)"
         )
 
-    def handle_agent_event(self, event, animation: ThinkingAnimation | None = None) -> None:
-        kind = getattr(event, "kind", "")
+    def _handle_response_event(self, kind, event, animation) -> None:
+        """Streamed answer text: a transient live region that is replaced by the final render."""
         if kind == "response_delta":
             if animation is not None:
                 animation.stop()
@@ -482,15 +489,19 @@ class ZerocodingTUI:
             visible = "\n".join(("• " + self._response_text).splitlines()[-room:])
             self._response_live.update(Text(visible, style=ZERO_LIGHT), refresh=True)
             return
-        if kind in {"response_end", "response_reset"}:
-            text = self._response_text
-            if self._response_live is not None:
-                self._response_live.stop()
-                self._response_live = None
-            self._response_text = ""
-            if kind == "response_end" and getattr(event, "summary", "") == "before_tools" and text.strip():
-                # Preamble to a tool call ("I'll read the file..."): keep it, the final answer prints later.
-                self.console.print(Text("• " + text.strip(), style=ZERO_LIGHT))
+        text = self._response_text
+        if self._response_live is not None:
+            self._response_live.stop()
+            self._response_live = None
+        self._response_text = ""
+        if kind == "response_end" and getattr(event, "summary", "") == "before_tools" and text.strip():
+            # Preamble to a tool call ("I'll read the file..."): keep it, the final answer prints later.
+            self.console.print(Text("• " + text.strip(), style=ZERO_LIGHT))
+
+    def handle_agent_event(self, event, animation: ThinkingAnimation | None = None) -> None:
+        kind = getattr(event, "kind", "")
+        if kind in {"response_delta", "response_end", "response_reset"}:
+            self._handle_response_event(kind, event, animation)
             return
         name = getattr(event, "tool_name", "")
         target = ellipsize(getattr(event, "target", ""), max(8, TerminalSize.get_width() - 30))
@@ -507,11 +518,11 @@ class ZerocodingTUI:
             }.get(name, name)
             self.console.print(Text(f"● {label} {target}".rstrip(), style=ZERO_PURPLE_LIGHT))
         elif kind == "tool_completed":
-            self.console.print(Text(f"  └ {summary or 'Completed'} · {duration:.1f}s", style=f"dim {ZERO_GRAY}"))
+            self.console.print(Text(f"  ⎿  {summary or 'Completed'} · {duration:.1f}s", style=f"dim {ZERO_GRAY}"))
         elif kind == "tool_denied":
-            self.console.print(Text(f"  └ {summary or 'Denied · no action taken'}", style=f"dim {ZERO_YELLOW}"))
+            self.console.print(Text(f"  ⎿  {summary or 'Denied · no action taken'}", style=f"dim {ZERO_YELLOW}"))
         elif kind == "tool_error":
-            self.console.print(Text(f"  └ {summary or 'Tool error'}", style=f"dim {ZERO_RED}"))
+            self.console.print(Text(f"  ⎿  {summary or 'Tool error'}", style=f"dim {ZERO_RED}"))
         if animation is None:
             return
         if kind == "thinking":
@@ -580,7 +591,7 @@ class ZerocodingTUI:
     def confirm_action(self, action: str, preview: str) -> bool:
         """Show the complete approval preview and accept explicit Y/N/Esc input."""
         self.show_warning(f"{action} requires approval")
-        self.console.print(Text(preview))
+        self.console.print(DiffView(preview) if looks_like_diff(preview) else Text(preview))
         prompt = "Approve? [Y/N/Esc] "
         if HAS_PROMPT_TOOLKIT:
             bindings = KeyBindings()

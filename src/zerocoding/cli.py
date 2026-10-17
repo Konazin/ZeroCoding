@@ -19,6 +19,7 @@ from .commands import handle_command, refresh_tui_state, save_session_state, syn
 from .memory.sqlite import SQLiteMemory
 from .skills.loader import load_skills
 from .tui.app import ZerocodingTUI
+from .core.cancel import CancelToken
 
 
 def main(argv=None):
@@ -115,7 +116,10 @@ def main(argv=None):
         agent.metrics_sink = metrics.record
 
     active_animation = [None]
-    tui = ZerocodingTUI(
+    use_fullscreen = config.fullscreen and sys.stdin.isatty() and sys.stdout.isatty()
+    if use_fullscreen:
+        from .tui.fullscreen import FullscreenTUI
+    tui = (FullscreenTUI if use_fullscreen else ZerocodingTUI)(
         provider_name=config.provider,
         model=config.model,
         theme=config.theme,
@@ -138,76 +142,83 @@ def main(argv=None):
 
     agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
     extensions = build_extensions(config, agent, Path.cwd(), skills, metrics=metrics)
-    refresh_tui_state(tui, config, agent, session=session)
-    sync_tui_runtime(tui, agent)
-    tui.header()
-    tui.show_welcome()
-    for warning in startup_warnings(extensions):
-        tui.show_warning(warning)
+    def interactive_loop():
+        nonlocal session
+        refresh_tui_state(tui, config, agent, session=session)
+        sync_tui_runtime(tui, agent)
+        tui.header()
+        tui.show_welcome()
+        for warning in startup_warnings(extensions):
+            tui.show_warning(warning)
 
-    while True:
-        prompt = tui.input_prompt()
-        if not prompt:
-            continue
-
-        if prompt.startswith("/"):
-            try:
-                should_exit, provider, session = handle_command(
-                    prompt,
-                    tui,
-                    agent,
-                    config,
-                    manager,
-                    skills,
-                    project_context,
-                    session_manager,
-                    session,
-                )
-            except (OSError, ValueError) as exc:
-                tui.show_error(f"Command could not be completed: {exc}")
+        while True:
+            prompt = tui.input_prompt()
+            if not prompt:
                 continue
-            if provider is not None:
-                agent.provider = provider
-            refresh_tui_state(tui, config, agent, session=session)
-            sync_tui_runtime(tui, agent)
-            if should_exit:
+
+            if prompt.startswith("/"):
                 try:
-                    save_session_state(session_manager, session, config, agent, project_context)
+                    should_exit, provider, session = handle_command(
+                        prompt,
+                        tui,
+                        agent,
+                        config,
+                        manager,
+                        skills,
+                        project_context,
+                        session_manager,
+                        session,
+                    )
                 except (OSError, ValueError) as exc:
-                    tui.show_error(f"Could not save the session: {exc}")
+                    tui.show_error(f"Command could not be completed: {exc}")
+                    continue
+                if provider is not None:
+                    agent.provider = provider
+                refresh_tui_state(tui, config, agent, session=session)
+                sync_tui_runtime(tui, agent)
+                if should_exit:
+                    try:
+                        save_session_state(session_manager, session, config, agent, project_context)
+                    except (OSError, ValueError) as exc:
+                        tui.show_error(f"Could not save the session: {exc}")
+                        tui.goodbye()
+                        return 1
                     tui.goodbye()
-                    return 1
-                tui.goodbye()
-                return 0
-            continue
+                    return 0
+                continue
 
-        tui.display_message("user", prompt)
-        animation = tui.show_thinking(tokens=agent.turn_tokens)
-        active_animation[0] = animation
-        try:
-            system_prompt = project_context.build_system_prompt()
-            response = agent.ask(
-                prompt,
-                system_prompt=system_prompt,
-                use_tools=True,
-                on_event=lambda event: tui.handle_agent_event(event, animation),
-            )
-            elapsed = animation.stop()
-            active_animation[0] = None
-            tui.display_message("assistant", response)
-            tui.show_done(elapsed, tokens=agent.turn_tokens())
-            save_session_state(session_manager, session, config, agent, project_context)
-        except (KeyboardInterrupt, TurnCancelled):
-            elapsed = animation.stop()
-            active_animation[0] = None
-            tui.show_warning("Turn cancelled. Nothing from this turn was saved to the session.")
-            tui.show_done(elapsed, stopped=True, tokens=agent.turn_tokens())
-        except Exception as exc:
-            elapsed = animation.stop()
-            active_animation[0] = None
-            tui.show_error(str(exc))
-            tui.show_done(elapsed, tokens=agent.turn_tokens())
+            tui.display_message("user", prompt)
+            cancel = CancelToken()
+            tui.set_cancel(cancel)
+            animation = tui.show_thinking(tokens=agent.turn_tokens)
+            active_animation[0] = animation
+            try:
+                system_prompt = project_context.build_system_prompt()
+                response = agent.ask(
+                    prompt,
+                    system_prompt=system_prompt,
+                    use_tools=True,
+                    on_event=lambda event: tui.handle_agent_event(event, animation),
+                cancel=cancel,
+                )
+                elapsed = animation.stop()
+                active_animation[0] = None
+                tui.display_message("assistant", response)
+                tui.show_done(elapsed, tokens=agent.turn_tokens())
+                save_session_state(session_manager, session, config, agent, project_context)
+            except (KeyboardInterrupt, TurnCancelled):
+                elapsed = animation.stop()
+                active_animation[0] = None
+                tui.show_warning("Turn cancelled. Nothing from this turn was saved to the session.")
+                tui.show_done(elapsed, stopped=True, tokens=agent.turn_tokens())
+            except Exception as exc:
+                elapsed = animation.stop()
+                active_animation[0] = None
+                tui.show_error(str(exc))
+                tui.show_done(elapsed, tokens=agent.turn_tokens())
 
+
+    return tui.run(interactive_loop) if use_fullscreen else interactive_loop()
 
 if __name__ == "__main__":
     sys.exit(main())

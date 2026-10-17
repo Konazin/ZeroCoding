@@ -121,6 +121,7 @@ class Config:
     dynamic_context: bool = False
     streaming_enabled: bool = True
     mouse_support: bool = True
+    fullscreen: bool = True
     session_persistence: bool = True
     metrics_enabled: bool = True
     hooks: list = field(default_factory=list)
@@ -177,6 +178,7 @@ class Config:
             "dynamic_context": self.dynamic_context,
             "streaming_enabled": self.streaming_enabled,
             "mouse_support": self.mouse_support,
+            "fullscreen": self.fullscreen,
             "session_persistence": self.session_persistence,
             "metrics_enabled": self.metrics_enabled,
             "hooks": list(self.hooks),
@@ -235,6 +237,7 @@ class ConfigManager:
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
             streaming_enabled=self._as_bool(data.get("streaming_enabled", True)),
             mouse_support=self._as_bool(data.get("mouse_support", True)),
+            fullscreen=self._as_bool(data.get("fullscreen", True)),
             session_persistence=self._as_bool(data.get("session_persistence", True)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
             hooks=list(data.get("hooks") or []),
