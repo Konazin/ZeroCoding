@@ -158,7 +158,8 @@ class OpenAICompatibleProvider(BaseProvider):
     def chat_stream_turn(self, messages, on_delta=None, cancel=None, **kwargs):
         """Read an OpenAI-compatible SSE turn and assemble text and fragmented tool calls."""
         endpoint = urljoin(self.api_url + "/", "chat/completions")
-        payload = {"model": self.model, "messages": messages, "stream": True}
+        payload = {"model": self.model, "messages": messages, "stream": True,
+                   "stream_options": {"include_usage": True}}
         if kwargs.get("tools"):
             payload["tools"] = kwargs["tools"]
             payload["tool_choice"] = "auto"
@@ -251,7 +252,9 @@ class OpenAICompatibleProvider(BaseProvider):
             try:
                 arguments = json.loads(part["arguments"] or "{}")
             except ValueError:
-                arguments = {}
+                # Fragments that do not assemble into JSON must not run as an empty call; the agent
+                # catches this, drops the partial text and repeats the turn without streaming.
+                raise RuntimeError(f"stream produced malformed arguments for tool call {part['name']!r}")
             calls.append(ToolCall(part["name"], arguments if isinstance(arguments, dict) else {}, part["id"]))
         reasoning_content = "".join(reasoning_parts)
         return ProviderTurn(

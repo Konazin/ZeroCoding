@@ -39,7 +39,7 @@ max_tool_rounds: 6
 metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
-streaming_enabled: false # Opt-in until latency and task quality are compared against the buffered path.
+streaming_enabled: true # On since M7: 75/75 in the benchmark with usage reported. Set false to buffer whole replies.
 session_persistence: true # Set false or pass --no-session-save to keep the current run ephemeral.
 
 # run_command: always needs approval; this policy decides what may even be offered for approval.

@@ -36,14 +36,14 @@ class TestConfigLoad(unittest.TestCase):
         self.assertEqual(config.max_output_tokens, 1024)
         self.assertEqual(config.max_tool_rounds, 6)
 
-    def test_streaming_is_opt_in_and_persists(self):
+    def test_streaming_defaults_on_and_can_be_disabled(self):
         with tempfile.TemporaryDirectory() as directory:
             manager = ConfigManager(user_config_path=Path(directory) / "config.yaml", env_file=str(Path(directory) / "missing.env"))
             config = manager.load()
-            self.assertFalse(config.streaming_enabled)
-            config.streaming_enabled = True
+            self.assertTrue(config.streaming_enabled)
+            config.streaming_enabled = False
             manager.save(config)
-            self.assertTrue(manager.load().streaming_enabled)
+            self.assertFalse(manager.load().streaming_enabled)
 
     def test_session_persistence_defaults_on_and_can_be_disabled(self):
         with tempfile.TemporaryDirectory() as directory:

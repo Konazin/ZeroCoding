@@ -119,7 +119,7 @@ class Config:
     max_output_tokens: int = 1024
     max_tool_rounds: int = 6
     dynamic_context: bool = False
-    streaming_enabled: bool = False
+    streaming_enabled: bool = True
     session_persistence: bool = True
     metrics_enabled: bool = True
     hooks: list = field(default_factory=list)
@@ -231,7 +231,7 @@ class ConfigManager:
             max_output_tokens=medium.max_output_tokens,
             max_tool_rounds=medium.max_tool_rounds,
             dynamic_context=self._as_bool(data.get("dynamic_context", False)),
-            streaming_enabled=self._as_bool(data.get("streaming_enabled", False)),
+            streaming_enabled=self._as_bool(data.get("streaming_enabled", True)),
             session_persistence=self._as_bool(data.get("session_persistence", True)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
             hooks=list(data.get("hooks") or []),

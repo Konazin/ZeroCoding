@@ -1,4 +1,7 @@
+import tempfile
+import os
 import json
+from zerocoding.core.tools import ToolRegistry
 import unittest
 from unittest.mock import patch
 
@@ -61,6 +64,18 @@ class TestOpenAICompatibleStreaming(unittest.TestCase):
         self.assertTrue(turn.thinking_present)
         self.assertEqual(turn.reasoning_content, "private ")
         self.assertEqual(turn.tool_calls, [ToolCall("read_file", {"path": "a.py"}, "call-1")])
+        self.assertTrue(response.closed)
+
+    def test_malformed_streamed_tool_arguments_raise_instead_of_running_empty_call(self):
+        response = FakeSseResponse([
+            {"choices": [{"delta": {"tool_calls": [
+                {"index": 0, "id": "call-1", "function": {"name": "read_file", "arguments": "{\"path\": \"a.py"}},
+            ]}}]},
+        ])
+        provider = OpenAICompatibleProvider("", "http://localhost:8080/v1", "fake")
+        with patch("zerocoding.providers.openai_compatible.urllib.request.urlopen", lambda request, timeout: response):
+            with self.assertRaisesRegex(RuntimeError, "malformed arguments"):
+                provider.chat_stream_turn([{"role": "user", "content": "read"}], tools=[{"type": "function"}])
         self.assertTrue(response.closed)
 
     def test_inline_thinking_tags_split_across_stream_chunks_are_never_emitted(self):
@@ -129,6 +144,27 @@ class StreamingAgentProvider:
 
 
 class TestAgentStreaming(unittest.TestCase):
+    def test_text_before_a_tool_call_is_marked_so_the_ui_keeps_it(self):
+        class Provider:
+            def __init__(self):
+                self.turns = iter([
+                    ProviderTurn(content="I will list the files.", tool_calls=[ToolCall("list_files", {}, "c1")]),
+                    ProviderTurn(content="Done."),
+                ])
+
+            def chat_stream_turn(self, messages, on_delta=None, **kwargs):
+                turn = next(self.turns)
+                on_delta(turn.content)
+                return turn
+
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Agent(Provider(), tools=ToolRegistry(directory), streaming_enabled=True)
+            events = []
+            agent.ask("list", use_tools=True, on_event=events.append)
+
+        ends = [event.summary for event in events if event.kind == "response_end"]
+        self.assertEqual(ends, ["before_tools", ""])
+
     def test_streams_only_public_content_and_records_ttft(self):
         provider = StreamingAgentProvider()
         agent = Agent(provider, streaming_enabled=True)
@@ -206,6 +242,57 @@ class TestTuiStreaming(unittest.TestCase):
         self.assertTrue(instances[0].stopped)
         self.assertEqual(instances[0].updates[-1], "• public answer")
         self.assertIsNone(tui._response_live)
+
+    def test_text_before_a_tool_call_stays_on_screen_but_the_final_answer_is_not_duplicated(self):
+        class FakeLive:
+            def __init__(self, renderable, **kwargs):
+                pass
+
+            def start(self):
+                return None
+
+            def update(self, renderable, refresh=False):
+                return None
+
+            def stop(self):
+                return None
+
+        tui = ZerocodingTUI(provider_name="fake", model="stream", theme="purple", mode="code")
+        printed = []
+        tui.console.print = lambda *args, **kwargs: printed.append(getattr(args[0], "plain", str(args[0]))) if args else None
+        with patch("zerocoding.tui.app.Live", FakeLive):
+            tui.handle_agent_event(AgentEvent("response_delta", summary="I will read calc.py."))
+            tui.handle_agent_event(AgentEvent("response_end", summary="before_tools"))
+            self.assertIn("• I will read calc.py.", printed)
+            printed.clear()
+            tui.handle_agent_event(AgentEvent("response_delta", summary="Final answer."))
+            tui.handle_agent_event(AgentEvent("response_end"))
+            self.assertFalse([line for line in printed if "Final answer." in line])
+
+    def test_live_view_shows_only_the_tail_that_fits_the_terminal(self):
+        updates = []
+
+        class FakeLive:
+            def __init__(self, renderable, **kwargs):
+                pass
+
+            def start(self):
+                return None
+
+            def update(self, renderable, refresh=False):
+                updates.append(renderable.plain)
+
+            def stop(self):
+                return None
+
+        tui = ZerocodingTUI(provider_name="fake", model="stream", theme="purple", mode="code")
+        with patch("zerocoding.tui.app.Live", FakeLive), \
+                patch("zerocoding.tui.app.shutil.get_terminal_size", lambda fallback: os.terminal_size((80, 12))):
+            tui.handle_agent_event(AgentEvent("response_delta", summary="\n".join(f"line {i}" for i in range(40))))
+
+        shown = updates[-1].splitlines()
+        self.assertLessEqual(len(shown), 6)
+        self.assertEqual(shown[-1], "line 39")
 
 
 if __name__ == "__main__":

@@ -194,7 +194,9 @@ class Agent:
                     state["streaming"] = False
                     return normalize_turn(self.provider.chat(messages=messages, tools=tools, **kwargs))
                 if state.get("stream_visible"):
-                    emit_event(state.get("on_event"), AgentEvent("response_end"))
+                    # Text that precedes a tool call is not the final answer: tell the UI to keep it on screen.
+                    emit_event(state.get("on_event"), AgentEvent(
+                        "response_end", summary="before_tools" if turn.tool_calls else ""))
                     state["stream_visible"] = False
                 return turn
             except (KeyboardInterrupt, TurnCancelled):
