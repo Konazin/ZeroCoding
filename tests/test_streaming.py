@@ -78,6 +78,17 @@ class TestOpenAICompatibleStreaming(unittest.TestCase):
                 provider.chat_stream_turn([{"role": "user", "content": "read"}], tools=[{"type": "function"}])
         self.assertTrue(response.closed)
 
+    def test_generic_provider_sends_tool_call_arguments_as_json_string_but_llama_cpp_keeps_objects(self):
+        from zerocoding.providers.llama_cpp import LlamaCppProvider
+        history = [{"role": "assistant", "content": "", "tool_calls": [
+            {"id": "c1", "type": "function", "function": {"name": "read_file", "arguments": {"path": "a.py"}}}]},
+            {"role": "tool", "tool_call_id": "c1", "content": "x"}]
+        generic = OpenAICompatibleProvider("", "http://localhost:11434/v1", "fake")._wire_messages(history)
+        self.assertEqual(generic[0]["tool_calls"][0]["function"]["arguments"], '{"path": "a.py"}')
+        self.assertEqual(history[0]["tool_calls"][0]["function"]["arguments"], {"path": "a.py"})  # input untouched
+        local = LlamaCppProvider("", "http://localhost:8080/v1", "fake")._wire_messages(history)
+        self.assertEqual(local[0]["tool_calls"][0]["function"]["arguments"], {"path": "a.py"})
+
     def test_inline_thinking_tags_split_across_stream_chunks_are_never_emitted(self):
         response = FakeSseResponse([
             {"choices": [{"delta": {"content": "Public <thi"}}]},

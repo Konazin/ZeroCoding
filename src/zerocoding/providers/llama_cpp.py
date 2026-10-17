@@ -9,6 +9,9 @@ class LlamaCppProvider(OpenAICompatibleProvider):
     def __init__(self, api_key: str, api_url: str, model: str, timeout: int = 300):
         super().__init__(api_key=api_key, api_url=api_url, model=model, timeout=timeout)
 
+    def _wire_messages(self, messages):
+        return messages
+
     def native_effort_kwargs(self, level: str) -> dict | None:
         level = str(level).lower()
         if level not in self.EFFORT_LEVELS:

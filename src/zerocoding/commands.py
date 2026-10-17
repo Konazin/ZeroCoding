@@ -185,6 +185,20 @@ def handle_skill(name, args_text, tui, agent, skills):
         tui.show_error(f"Skill not found: {args_text}")
 
 
+PROVIDER_TYPES = ("llama_cpp", "openai_compatible", "ollama")
+
+
+def _warn_if_model_missing(tui, provider, model):
+    """A wrong model name makes every later request fail with a bare 400/404; catch it when saving."""
+    try:
+        available = provider.list_models()
+    except Exception:
+        return
+    if available and model not in available:
+        shown = ", ".join(available[:8])
+        tui.show_warning(f"Model '{model}' is not served there. Available: {shown}. Fix it with /model.")
+
+
 def handle_provider(args_text, tui, config, manager, active_provider=None):
     parts = args_text.split()
     action = parts[0].lower() if parts else ""
@@ -201,13 +215,21 @@ def handle_provider(args_text, tui, config, manager, active_provider=None):
         args_text = parts[1]
     elif action == "add" and len(parts) >= 5:
         name, provider_type, base_url, model = parts[1], parts[2], parts[3], " ".join(parts[4:])
+        if provider_type not in PROVIDER_TYPES:
+            tui.show_error(
+                f"Unknown provider type '{provider_type}'. Use one of: {', '.join(PROVIDER_TYPES)}. "
+                "Order is: /provider add name type base_url model. Ollama and most local servers use openai_compatible."
+            )
+            return None
         config.providers[name] = ProviderConfig(name=name, type=provider_type, base_url=base_url, model=model)
         config.provider = name
         manager.save(config)
         tui.provider_name = config.provider
         tui.model = config.model
         tui.show_success(f"Provider saved: {name}")
-        return build_provider(config)
+        provider = build_provider(config)
+        _warn_if_model_missing(tui, provider, model)
+        return provider
     elif action == "remove" and len(parts) >= 2:
         provider_name = parts[1]
         if provider_name in {config.provider, active_provider}:

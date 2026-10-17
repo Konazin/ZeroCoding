@@ -14,7 +14,9 @@ class TestConfigLoad(unittest.TestCase):
         self.assertTrue(config.memory_path)
 
     def test_modes_are_loaded(self):
-        config = Config.load()
+        with tempfile.TemporaryDirectory() as directory:  # never read the real ~/.zerocoding/config.yaml
+            manager = ConfigManager(user_config_path=Path(directory) / "config.yaml", env_file=str(Path(directory) / "missing.env"))
+            config = manager.load()
         self.assertIn('code', config.modes)
         self.assertIn('reason', config.modes)
         self.assertEqual(config.provider, 'llama_cpp_local')

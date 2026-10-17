@@ -284,6 +284,21 @@ class CliCommandTests(unittest.TestCase):
         self.assertEqual(self.tui.messages[-1][0], "error")
         self.assertIn(self.config.provider, self.config.providers)
 
+    def test_provider_add_rejects_unknown_type_and_keeps_config(self):
+        before = dict(self.config.providers)
+        _, provider = self.run_command("/provider add ollama local http://127.0.0.1:11434/v1 qwen3.5:4b")
+        self.assertIsNone(provider)
+        self.assertEqual(self.tui.messages[-1][0], "error")
+        self.assertIn("openai_compatible", self.tui.messages[-1][1])
+        self.assertEqual(self.config.providers, before)
+
+    def test_provider_add_warns_when_the_model_is_not_served(self):
+        with patch("zerocoding.providers.openai_compatible.OpenAICompatibleProvider.list_models",
+                   return_value=["qwen3.5:4b"]):
+            self.run_command("/provider add tiny openai_compatible http://127.0.0.1:11434/v1 qwen:3.5:4b")
+        self.assertIn("warning", self.tui.kinds())
+        self.assertIn("qwen3.5:4b", self.tui.text())
+
     def test_provider_add_saves_and_switches(self):
         _, provider = self.run_command("/provider add local llama_cpp http://127.0.0.1:9999/v1 my-model")
         self.assertIsNotNone(provider)

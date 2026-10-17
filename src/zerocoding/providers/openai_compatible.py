@@ -75,6 +75,24 @@ class OpenAICompatibleProvider(BaseProvider):
         self.model = model
         self.timeout = timeout
 
+    def _wire_messages(self, messages):
+        """Messages as sent on the wire. The OpenAI spec wants tool-call arguments as a JSON string;
+        strict servers (Ollama) answer 400 to an object. LlamaCppProvider keeps objects because its
+        chat templates read them as dicts."""
+        wired = []
+        for message in messages:
+            calls = message.get("tool_calls")
+            if calls:
+                message = {**message, "tool_calls": [
+                    {**call, "function": {**call.get("function", {}), "arguments": json.dumps(
+                        call.get("function", {}).get("arguments", {}), ensure_ascii=False)
+                        if not isinstance(call.get("function", {}).get("arguments"), str)
+                        else call["function"]["arguments"]}}
+                    for call in calls
+                ]}
+            wired.append(message)
+        return wired
+
     def _post(self, endpoint, payload):
         headers = {
             "Content-Type": "application/json",
@@ -120,7 +138,7 @@ class OpenAICompatibleProvider(BaseProvider):
         endpoint = urljoin(self.api_url + "/", "chat/completions")
         payload = {
             "model": self.model,
-            "messages": messages,
+            "messages": self._wire_messages(messages),
         }
         if kwargs.get("tools"):
             payload["tools"] = kwargs["tools"]
@@ -158,7 +176,7 @@ class OpenAICompatibleProvider(BaseProvider):
     def chat_stream_turn(self, messages, on_delta=None, cancel=None, **kwargs):
         """Read an OpenAI-compatible SSE turn and assemble text and fragmented tool calls."""
         endpoint = urljoin(self.api_url + "/", "chat/completions")
-        payload = {"model": self.model, "messages": messages, "stream": True,
+        payload = {"model": self.model, "messages": self._wire_messages(messages), "stream": True,
                    "stream_options": {"include_usage": True}}
         if kwargs.get("tools"):
             payload["tools"] = kwargs["tools"]
