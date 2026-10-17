@@ -92,3 +92,30 @@ class TestPermissionPolicy(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestYoloStaysInsideTheWorkspace(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.policy = PermissionPolicy(self.root, "yolo")
+
+    def test_commands_inside_the_project_are_approved(self):
+        for command in ("rm a.py", "python main.py", "pip install x", "git commit -m 'fix: ../x is fine in a message'",
+                        "mkdir -p a/b", "sed -i s/a/b/ src/f.py", "npm test"):
+            self.assertIsNotNone(self.policy.decide("Run command", command), command)
+
+    def test_commands_that_may_leave_the_project_are_asked(self):
+        for command in ("cat /etc/passwd", "ls ../..", "cat ~/.ssh/id_rsa", "rm ../x", "cp a /tmp/a", "ls $HOME",
+                        "git diff --output=/tmp/x", "/usr/bin/env python x", "echo 'unterminated"):
+            self.assertIsNone(self.policy.decide("Run command", command), command)
+
+    def test_a_symlink_that_points_outside_is_asked(self):
+        (self.root / "link").symlink_to("/etc")
+
+        self.assertIsNone(self.policy.decide("Run command", "cat link/passwd"))
+
+    def test_writes_and_edits_stay_approved(self):
+        self.assertIsNotNone(self.policy.decide("Write file", "diff"))
+        self.assertIsNotNone(self.policy.decide("Edit file", "diff"))

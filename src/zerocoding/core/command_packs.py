@@ -177,3 +177,27 @@ def evaluate(command: str, root: Path, packs: Iterable[str] = DEFAULT_PACKS) -> 
             allowed = bool(check(args, root))
             return Verdict(allowed, pack, "" if allowed else "arguments outside the pack's limits")
     return Verdict(False, reason="not in an enabled pack")
+
+
+def leaves_workspace(command: str, root: Path) -> bool:
+    """True when any argument could point outside the workspace (or the command cannot be parsed).
+
+    Conservative on purpose: absolute paths, ``~``, ``..``, variables and symlinks that resolve
+    elsewhere all count, including the value in ``--flag=value``.
+    """
+    try:
+        argv = shlex.split(command.strip())
+    except ValueError:
+        return True
+    root = Path(root).resolve()
+    for token in argv:
+        value = token.split("=", 1)[1] if token.startswith("-") and "=" in token else token
+        if value.startswith("-"):
+            continue
+        if value.startswith(("/", "~", "$")) or ".." in value.split("/") or "\x00" in value:
+            if not _inside(value, root) or value.startswith(("~", "$")):
+                return True
+            continue
+        if not _inside(value, root):  # a relative name that resolves outside, e.g. through a symlink
+            return True
+    return False

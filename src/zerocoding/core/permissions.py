@@ -8,13 +8,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from .command_packs import DEFAULT_PACKS, PACKS, evaluate
+from .command_packs import DEFAULT_PACKS, PACKS, evaluate, leaves_workspace
 
 MODES = ("ask", "auto", "yolo")
 MODE_SUMMARY = {
     "ask": "Ask before every write, edit and command",
     "auto": "Auto-approve safe commands from the packs; ask for everything else",
-    "yolo": "Approve every write, edit and command without asking",
+    "yolo": "Approve writes, edits and commands without asking, unless a command may leave the project",
 }
 
 
@@ -37,6 +37,9 @@ class PermissionPolicy:
     def decide(self, action: str, preview: str) -> Decision | None:
         """Return a Decision when the action is approved without asking, otherwise None (ask the user)."""
         if self.mode == "yolo":
+            # Even yolo keeps commands inside the project: anything that may leave it is asked.
+            if action == "Run command" and leaves_workspace(preview, self.root):
+                return None
             return Decision("yolo")
         if self.mode == "auto" and action == "Run command":
             verdict = evaluate(preview, self.root, self.packs)
