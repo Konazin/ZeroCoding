@@ -32,7 +32,8 @@ def tool_summary(name: str, result: str) -> str:
     if "denied by user" in lower or "nothing was executed" in lower:
         return "Denied · no action taken"
     if value.startswith("Tool error:"):
-        return "Tool error"
+        reason = " ".join(value[len("Tool error:"):].split())
+        return f"Tool error · {reason[:90]}" if reason else "Tool error"
     lines = [line for line in value.splitlines() if line.strip()]
     if name == "read_file":
         return f"{len(lines)} lines read"

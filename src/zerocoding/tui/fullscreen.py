@@ -482,7 +482,7 @@ class FullscreenTUI(ZerocodingTUI):
             return
         text, self._stream_text = self._stream_text, ""
         if kind == "response_end" and getattr(event, "summary", "") == "before_tools" and text.strip():
-            self.console.print(Text("• " + text.strip(), style=ZERO_LIGHT))
+            self._print_preamble(text.strip())
         self._invalidate()
 
     def goodbye(self) -> None:

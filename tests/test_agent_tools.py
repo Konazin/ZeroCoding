@@ -20,6 +20,12 @@ class DummyProvider:
 
 
 class TestAgentTools(unittest.TestCase):
+    def test_tool_error_summary_includes_the_reason(self):
+        from zerocoding.core.toolcalls import tool_summary
+        self.assertEqual(tool_summary("list_files", "Tool error: Path does not exist: calculadora"),
+                         "Tool error · Path does not exist: calculadora")
+        self.assertEqual(tool_summary("list_files", "Tool error:"), "Tool error")
+
     def test_tool_loop_and_session_history_isolation(self):
         with tempfile.TemporaryDirectory() as directory:
             Path(directory, "hello.py").write_text("print('hello')\n", encoding="utf-8")

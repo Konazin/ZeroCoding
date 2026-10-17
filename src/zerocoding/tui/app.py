@@ -469,6 +469,15 @@ class ZerocodingTUI:
             else "budget only (not declared by provider)"
         )
 
+    def _print_preamble(self, text: str) -> None:
+        """Text the model wrote before a tool call, formatted like the final answer (Markdown, bullet)."""
+        try:
+            body = Markdown(text, code_theme="monokai")
+        except Exception:
+            body = Text(text, style=ZERO_LIGHT)
+        self.console.print(Text("• ", style=f"bold {ZERO_PURPLE}"), end="")
+        self.console.print(body)
+
     def _handle_response_event(self, kind, event, animation) -> None:
         """Streamed answer text: a transient live region that is replaced by the final render."""
         if kind == "response_delta":
@@ -496,7 +505,7 @@ class ZerocodingTUI:
         self._response_text = ""
         if kind == "response_end" and getattr(event, "summary", "") == "before_tools" and text.strip():
             # Preamble to a tool call ("I'll read the file..."): keep it, the final answer prints later.
-            self.console.print(Text("• " + text.strip(), style=ZERO_LIGHT))
+            self._print_preamble(text.strip())
 
     def handle_agent_event(self, event, animation: ThinkingAnimation | None = None) -> None:
         kind = getattr(event, "kind", "")

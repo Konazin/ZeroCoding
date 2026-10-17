@@ -287,11 +287,12 @@ class TestTuiStreaming(unittest.TestCase):
 
         tui = ZerocodingTUI(provider_name="fake", model="stream", theme="purple", mode="code")
         printed = []
-        tui.console.print = lambda *args, **kwargs: printed.append(getattr(args[0], "plain", str(args[0]))) if args else None
+        tui.console.print = lambda *args, **kwargs: printed.append(
+            getattr(args[0], "plain", None) or getattr(args[0], "markup", str(args[0]))) if args else None
         with patch("zerocoding.tui.app.Live", FakeLive):
             tui.handle_agent_event(AgentEvent("response_delta", summary="I will read calc.py."))
             tui.handle_agent_event(AgentEvent("response_end", summary="before_tools"))
-            self.assertIn("• I will read calc.py.", printed)
+            self.assertEqual(printed, ["• ", "I will read calc.py."])  # bullet, then Markdown body
             printed.clear()
             tui.handle_agent_event(AgentEvent("response_delta", summary="Final answer."))
             tui.handle_agent_event(AgentEvent("response_end"))
