@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from typing import Generator
@@ -13,10 +14,12 @@ from .relevance import select_skills, select_tool_schemas
 from .tokens import TokenCounter
 from .toolcalls import CHANGING_TOOLS, emit_event, parse_compact_call, shell_calls_from_text, tool_summary, tool_target
 from .tools import READ_ONLY_TOOL_NAMES
+from .config import MAX_TOOL_ROUNDS
 from ..providers.base import normalize_turn
 
 __all__ = ["Agent", "fit_messages"]
 
+REPEAT_LIMIT = 3  # identical consecutive tool calls tolerated before the loop is stopped
 COMPACT_AT = 0.7  # fraction of the input budget that triggers compaction
 WINDOW_MARGIN = 128  # tokens kept free for template overhead and counting error
 
@@ -43,12 +46,12 @@ class Agent:
         self.max_input_tokens = max(256, int(max_input_tokens))
         self.context_window = max(0, int(context_window or 0))
         self.max_output_tokens = max(128, int(max_output_tokens))
-        self.max_tool_rounds = max(1, min(12, int(max_tool_rounds)))
+        self.max_tool_rounds = max(1, min(MAX_TOOL_ROUNDS, int(max_tool_rounds)))
         self.tools = tools
         self.effort_profiles = effort_profiles or {
             "low": {"max_output_tokens": 512, "max_tool_rounds": 3},
             "medium": {"max_output_tokens": self.max_output_tokens, "max_tool_rounds": self.max_tool_rounds},
-            "high": {"max_output_tokens": self.max_output_tokens * 2, "max_tool_rounds": min(12, self.max_tool_rounds + 2)},
+            "high": {"max_output_tokens": self.max_output_tokens * 2, "max_tool_rounds": self.max_tool_rounds},
         }
         self.set_session_controls(plan_mode=plan_mode, ultrathink=ultrathink, effort=effort)
 
@@ -95,14 +98,12 @@ class Agent:
         profile = self.effort_profiles.get(self.effort, self.effort_profiles.get("medium", {}))
         if isinstance(profile, dict):
             output_tokens = int(profile.get("max_output_tokens", self.max_output_tokens))
-            tool_rounds = int(profile.get("max_tool_rounds", self.max_tool_rounds))
         else:
             output_tokens = int(getattr(profile, "max_output_tokens", self.max_output_tokens))
-            tool_rounds = int(getattr(profile, "max_tool_rounds", self.max_tool_rounds))
         if self.ultrathink:
             output_tokens += 1024
-            tool_rounds += 2
-        return max(128, output_tokens), max(1, min(12, tool_rounds))
+        # Tool rounds are a safety cap only; effort and ultrathink do not change it.
+        return max(128, output_tokens), self.max_tool_rounds
 
     def native_effort_supported(self) -> bool:
         method = getattr(self.provider, "native_effort_kwargs", None)
@@ -378,6 +379,7 @@ class Agent:
         rounds = 0
         tool_round_completed = False
         retried_compact = False
+        last_signature, repeats = None, 0
         changed = False  # a write, edit or command already ran this turn
         while True:
             turn = parse_compact_call(turn)
@@ -390,7 +392,7 @@ class Agent:
                     turn = converted
             if not turn.tool_calls or not tool_schemas or rounds >= tool_round_limit:
                 response_text = turn.content or (
-                    f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue, or raise /effort."
+                    f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue."
                     if turn.tool_calls else ""
                 )
                 if tool_round_completed and not response_text.strip() and not retried_compact:
@@ -414,6 +416,13 @@ class Agent:
                     response_text = turn.content
                     break
                 raise RuntimeError("The model returned a tool call without a valid function name.")
+            signature = tuple((call.name, json.dumps(call.arguments, sort_keys=True, default=str)) for call in calls)
+            repeats = repeats + 1 if signature == last_signature else 1
+            last_signature = signature
+            if repeats > REPEAT_LIMIT:
+                response_text = (f"Stopped: the model repeated the same {calls[0].name} call {repeats} times "
+                                 "without progress. Rephrase the request or give it more detail.")
+                break
             self._stats["tool_rounds"] += 1
             call_ids = [call.call_id or f"call_{uuid.uuid4().hex[:10]}" for call in calls]
             assistant_message = {

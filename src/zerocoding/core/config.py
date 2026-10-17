@@ -81,6 +81,9 @@ class ModeConfig:
         }
 
 
+MAX_TOOL_ROUNDS = 100  # hard ceiling for the configurable safety cap
+
+
 @dataclass(frozen=True)
 class EffortProfile:
     max_output_tokens: int
@@ -91,7 +94,7 @@ class EffortProfile:
         values = values or {}
         return cls(
             max_output_tokens=max(128, int(values.get("max_output_tokens", defaults.max_output_tokens))),
-            max_tool_rounds=max(1, min(12, int(values.get("max_tool_rounds", defaults.max_tool_rounds)))),
+            max_tool_rounds=max(1, min(MAX_TOOL_ROUNDS, int(values.get("max_tool_rounds", defaults.max_tool_rounds)))),
         )
 
     def to_dict(self) -> dict[str, int]:
@@ -99,9 +102,9 @@ class EffortProfile:
 
 
 DEFAULT_EFFORT_PROFILES = {
-    "low": EffortProfile(512, 3),
-    "medium": EffortProfile(1024, 6),
-    "high": EffortProfile(2048, 8),
+    "low": EffortProfile(512, 40),
+    "medium": EffortProfile(1024, 40),
+    "high": EffortProfile(2048, 40),
 }
 
 
@@ -118,7 +121,7 @@ class Config:
     max_input_tokens: int = 4096
     context_window: int = 0  # 0 = detect from the server; max_input_tokens is the fallback
     max_output_tokens: int = 1024
-    max_tool_rounds: int = 6
+    max_tool_rounds: int = 40  # safety cap only; effort no longer changes it
     dynamic_context: bool = False
     streaming_enabled: bool = True
     mouse_support: bool = True
@@ -266,11 +269,11 @@ class ConfigManager:
         )
         if legacy_limits:
             medium_output = max(128, int(data.get("max_output_tokens", 1024)))
-            medium_rounds = max(1, min(12, int(data.get("max_tool_rounds", 6))))
+            medium_rounds = max(1, min(MAX_TOOL_ROUNDS, int(data.get("max_tool_rounds", 40))))
             defaults = {
-                "low": EffortProfile(max(128, medium_output // 2), max(1, (medium_rounds + 1) // 2)),
+                "low": EffortProfile(max(128, medium_output // 2), medium_rounds),
                 "medium": EffortProfile(medium_output, medium_rounds),
-                "high": EffortProfile(medium_output * 2, min(12, medium_rounds + 2)),
+                "high": EffortProfile(medium_output * 2, medium_rounds),
             }
         raw_profiles = {} if legacy_limits else data.get("effort_profiles") or {}
         return {
@@ -315,7 +318,7 @@ class ConfigManager:
                 "max_input_tokens": data.get("max_input_tokens", 4096),
                 "context_window": data.get("context_window", 0),
                 "max_output_tokens": data.get("max_output_tokens", 1024),
-                "max_tool_rounds": data.get("max_tool_rounds", 6),
+                "max_tool_rounds": data.get("max_tool_rounds", 40),
             }
         legacy_type = "ollama" if provider == "ollama" else "openai_compatible"
         return {

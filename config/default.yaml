@@ -35,7 +35,7 @@ auto_save: true
 max_input_tokens: 4096   # fallback prompt budget when the context window is unknown
 context_window: 0        # 0 = detect from the server (llama.cpp /props); set a number for other backends
 max_output_tokens: 1024
-max_tool_rounds: 6
+max_tool_rounds: 40   # safety cap per task (stops runaway loops); effort does not change it
 # Local per-turn numbers (tokens, latency, tool errors) in .zerocoding/metrics/turns.jsonl; never prompts or answers.
 metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
@@ -60,13 +60,13 @@ command_policy:
 effort_profiles:
   low:
     max_output_tokens: 512
-    max_tool_rounds: 3
+    max_tool_rounds: 40
   medium:
     max_output_tokens: 1024
-    max_tool_rounds: 6
+    max_tool_rounds: 40
   high:
     max_output_tokens: 2048
-    max_tool_rounds: 8
+    max_tool_rounds: 40
 
 # --- Extensions (all opt-in; see docs/ROADMAP-m6.md) ---------------------------------------------
 

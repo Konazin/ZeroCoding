@@ -104,7 +104,8 @@ def pick_effort(tui, agent, dispatch) -> None:
 
     def hint(level):
         profile = profiles.get(level) or {}
-        return f"{profile.get('max_output_tokens', '?')} output tokens · {profile.get('max_tool_rounds', '?')} tool rounds"
+        tokens = profile.get("max_output_tokens") if isinstance(profile, dict) else getattr(profile, "max_output_tokens", None)
+        return f"{tokens or '?'} output tokens"
 
     rows = [Row(level.title(), hint(level), level, checked=level == agent.effort) for level in EFFORTS]
     window = agent.window_tokens() if hasattr(agent, "window_tokens") else None

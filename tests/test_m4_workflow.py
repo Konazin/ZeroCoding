@@ -237,13 +237,19 @@ class TestToolErrorsAreUnderstandable(Workspace):
         self.assertEqual(tool_message["role"], "tool")
         self.assertIn("Tool error: Missing required argument", tool_message["content"])
 
+    def test_identical_repeated_tool_calls_stop_the_loop(self):
+        calls = [ProviderTurn(tool_calls=[ToolCall("list_files", {}, f"c{i}")]) for i in range(10)]
+        agent = Agent(ScriptedProvider(calls), tools=self.registry(True))
+        result = agent.ask("loop", use_tools=True)
+        self.assertIn("repeated the same list_files call", result)
+
     def test_round_limit_message_is_actionable(self):
         calls = [ProviderTurn(tool_calls=[ToolCall("list_files", {}, f"c{i}")]) for i in range(10)]
         agent = Agent(ScriptedProvider(calls), tools=self.registry(True), max_tool_rounds=2)
         agent.set_session_controls(effort="medium")
         result = agent.ask("loop", use_tools=True)
         self.assertIn("Tool round limit reached", result)
-        self.assertIn("/effort", result)
+        self.assertIn("Ask me to continue", result)
 
     def test_provider_failure_propagates_as_a_clear_error(self):
         class Broken:
