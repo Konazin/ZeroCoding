@@ -239,3 +239,36 @@ class TestPromptBudgetProtocol(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHistoryDigest(unittest.TestCase):
+    @staticmethod
+    def _chars(items):
+        return sum(len(str(item.get("content", ""))) for item in items)
+
+    def _messages(self):
+        return [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "old question about parser.py " + "x" * 200},
+            {"role": "assistant", "content": "old answer: fixed parser.py"},
+            {"role": "user", "content": "current request"},
+        ]
+
+    def test_dropped_turns_leave_a_short_digest_in_the_system_message(self):
+        fitted = fit_messages(self._messages(), 260, count=self._chars)
+
+        self.assertEqual([m["role"] for m in fitted], ["system", "user"])
+        self.assertIn("Earlier turns", fitted[0]["content"])
+        self.assertIn("parser.py", fitted[0]["content"])
+        self.assertLessEqual(self._chars(fitted), 260)
+
+    def test_digest_is_omitted_when_it_does_not_fit(self):
+        fitted = fit_messages(self._messages(), 30, count=self._chars)
+
+        self.assertEqual(fitted[0]["content"], "sys")
+
+    def test_no_digest_when_nothing_was_dropped(self):
+        fitted = fit_messages(self._messages(), 10_000, count=self._chars)
+
+        self.assertEqual(len(fitted), 4)
+        self.assertEqual(fitted[0]["content"], "sys")

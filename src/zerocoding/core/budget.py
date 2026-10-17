@@ -29,6 +29,29 @@ def _turn_groups(messages: list[dict]) -> list[list[dict]]:
     return groups
 
 
+def _first_line(message: dict, limit: int) -> str:
+    text = " ".join(str(message.get("content") or "").split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _digest(dropped: list[list[dict]], max_entries: int = 6, max_chars: int = 700) -> str:
+    """Deterministic one-line-per-turn summary of turns removed to fit the budget."""
+    lines = []
+    for group in dropped[-max_entries:]:
+        asked = next((m for m in group if m.get("role") == "user"), None)
+        answered = next((m for m in reversed(group) if m.get("role") == "assistant" and m.get("content")), None)
+        if asked is None:
+            continue
+        line = f"- asked: {_first_line(asked, 100)}"
+        if answered is not None:
+            line += f" | answered: {_first_line(answered, 100)}"
+        lines.append(line)
+    if not lines:
+        return ""
+    text = "Earlier turns, shortened to fit context:\n" + "\n".join(lines)
+    return text if len(text) <= max_chars else text[: max_chars - 1] + "…"
+
+
 def _trim_tool_output(message: dict) -> bool:
     content = str(message.get("content", ""))
     marker = "\n[… tool output truncated to fit context …]\n"
@@ -70,6 +93,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
     def flattened() -> list[dict]:
         return [message for group in groups for message in group]
 
+    dropped: list[list[dict]] = []
     while _count_prompt(count, flattened(), tools) > max_tokens:
         removable = next(
             (index for index, group in enumerate(groups)
@@ -78,7 +102,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         )
         if removable is None:
             break
-        groups.pop(removable)
+        dropped.append(groups.pop(removable))
         current_group -= 1
 
     fitted = flattened()
@@ -89,6 +113,13 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         largest = max(outputs, key=lambda message: len(str(message.get("content", ""))))
         if not _trim_tool_output(largest):
             break
+
+    note = _digest(dropped) if dropped else ""
+    if note and fitted and fitted[0].get("role") == "system":
+        original = fitted[0]["content"]
+        fitted[0]["content"] = f"{original}\n\n{note}"
+        if _count_prompt(count, fitted, tools) > max_tokens:
+            fitted[0]["content"] = original
 
     if _count_prompt(count, fitted, tools) > max_tokens:
         raise PromptTooLargeError(
