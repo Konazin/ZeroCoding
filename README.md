@@ -154,7 +154,7 @@ You can also use environment variables from `.env.example`.
 - `/provider remove local` removes a non-active provider.
 - `/provider test` tests the active provider.
 - `/config` (no arguments) opens an arrow-key settings menu: switch or add providers (the model is picked from what the server serves), choose the model (Enter saves it as the default, `s` applies to this session only), effort and streaming. Typed commands keep working.
-- `/buddy [work|look|dance|sleep|cheer|shock]` plays a mascot animation.
+- `/buddy [work|look|dance|sleep|cheer|shock]` plays a mascot animation. With `mouse_support: true` (default) you can also click the small pet on the status row: the first click plays `work`, later ones pick an easter egg. The mouse costs plain text selection and wheel scrolling while the prompt is open (Shift+drag and Shift+wheel still work in most terminals); turn it off in `/config` → Mouse or with `mouse_support: false`.
 - `/model` or `/model list` lists models when the provider supports it.
 - `/model use ornith-1.5-9b-q5-k-m` switches model for the current session.
 - `/plan [on|off]` enables read-only planning. Plan mode exposes only project listing, search and file reading to the agent.

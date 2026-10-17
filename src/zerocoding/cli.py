@@ -124,6 +124,7 @@ def main(argv=None):
         connection_status="unknown",
         skills=agent.active_skill_names(),
     )
+    tui.mouse_enabled = config.mouse_support
 
     def approve_action(action, preview):
         animation = active_animation[0]

@@ -59,9 +59,11 @@ from .menus import MenuOption, MenuState, ask_text, run_menu
 try:
     from prompt_toolkit import PromptSession
     from prompt_toolkit.completion import Completer, Completion
-    from prompt_toolkit.filters import to_filter
+    from prompt_toolkit.application import run_in_terminal
+    from prompt_toolkit.filters import Condition, to_filter
     from prompt_toolkit.key_binding import KeyBindings
     from prompt_toolkit.layout import Dimension
+    from prompt_toolkit.mouse_events import MouseEventType
     from prompt_toolkit.styles import Style as PTStyle
 
     HAS_PROMPT_TOOLKIT = True
@@ -257,6 +259,8 @@ class ZerocodingTUI:
         self.history: List[Dict[str, Any]] = []
         self.console = Console(force_terminal=True, color_system="truecolor", highlight=False, force_interactive=True)
         self.commands = COMMANDS
+        self.mouse_enabled = False
+        self._buddy_clicks = 0
         self._turn_count = 0
         self._start_time = time.time()
         self._is_small = TerminalSize.is_small()
@@ -295,6 +299,7 @@ class ZerocodingTUI:
                 "composer-border": f"{ZERO_GRAY}",
                 "composer-bottom-border": "fg:default bg:default noreverse",
                 "composer-status": "fg:default bg:default noreverse",
+                "composer-pet": f"{ZERO_PURPLE} noreverse",
             }
         )
 
@@ -307,6 +312,7 @@ class ZerocodingTUI:
             multiline=True,
             prompt_continuation="  ",
             wrap_lines=True,
+            mouse_support=Condition(lambda: self.mouse_enabled),
         )
 
         # Keep the composer compact and let its buffer scroll internally after six rows.
@@ -594,18 +600,24 @@ class ZerocodingTUI:
     def _composer_rule(self) -> str:
         return ("─" if self._unicode else "-") * max(1, self._refresh_size())
 
-    def _status_row(self, pet: str) -> str:
-        """Effort on the right and a small pet in the middle; the pet is dropped when it would collide."""
+    def _status_parts(self, pet: str) -> tuple[str, str, str]:
+        """Status row split around the pet: (before, pet, after). Effort sits on the right; the pet is
+        centered and dropped when it would collide with it."""
         width = max(1, TerminalSize.get_width())
         effort = ellipsize(f"Effort: {self.effort.title()}", width)
-        row = [" "] * width
         start = max(0, width - len(effort))
-        row[start:] = list(effort)
-        if pet:
-            left = (width - len(pet)) // 2
-            if left > 0 and left + len(pet) + 2 < start:
-                row[left:left + len(pet)] = list(pet)
-        return "".join(row)
+        left = (width - len(pet)) // 2
+        if pet and left > 0 and left + len(pet) + 2 < start:
+            return " " * left, pet, " " * (start - left - len(pet)) + effort
+        return " " * start + effort, "", ""
+
+    def _status_row(self, pet: str) -> str:
+        return "".join(self._status_parts(pet))
+
+    def click_buddy(self) -> str:
+        """First click shows the work animation; later clicks pick any of the easter eggs."""
+        self._buddy_clicks += 1
+        return self.play_buddy("work" if self._buddy_clicks == 1 else None)
 
     def _status_line_text(self) -> str:
         return self._status_row(PET_IDLE if self._unicode else PET_ASCII[0])
@@ -618,11 +630,22 @@ class ZerocodingTUI:
         ]
 
     def _bottom_toolbar(self):
-        return [
-            ("class:composer-bottom-border", self._composer_rule()),
-            ("", "\n"),
-            ("class:composer-status", self._status_line_text()),
+        before, pet, after = self._status_parts(PET_IDLE if self._unicode else PET_ASCII[0])
+        fragments = [("class:composer-bottom-border", self._composer_rule()), ("", "\n")]
+        if not pet:
+            return fragments + [("class:composer-status", before)]
+        return fragments + [
+            ("class:composer-status", before),
+            ("class:composer-pet", pet, self._on_pet_mouse),
+            ("class:composer-status", after),
         ]
+
+    def _on_pet_mouse(self, mouse_event):
+        """Click on the status-row pet: play the animation above the prompt, then redraw the prompt."""
+        if mouse_event.event_type != MouseEventType.MOUSE_UP:
+            return None
+        run_in_terminal(self.click_buddy)  # schedules itself; the prompt is redrawn afterwards
+        return None
 
     def input_prompt(self) -> str:
         self._refresh_size()

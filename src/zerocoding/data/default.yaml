@@ -39,6 +39,7 @@ max_tool_rounds: 6
 metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
+mouse_support: true # Click the small pet for an animation. Costs plain text selection while the prompt is open (Shift+drag still selects in most terminals) and wheel scrolling there; set false to restore both.
 streaming_enabled: true # On since M7: 75/75 in the benchmark with usage reported. Set false to buffer whole replies.
 session_persistence: true # Set false or pass --no-session-save to keep the current run ephemeral.
 

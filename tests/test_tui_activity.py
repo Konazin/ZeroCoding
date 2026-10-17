@@ -23,6 +23,21 @@ class TestActivityLine(unittest.TestCase):
         self.assertNotIn("[• •]", row)
         self.assertTrue(row.endswith("Effort: Medium"))
 
+    def test_pet_fragment_is_clickable_and_a_click_plays_work_first(self):
+        from prompt_toolkit.mouse_events import MouseEvent, MouseEventType, MouseButton, MouseModifier
+        with patch.object(app.TerminalSize, "get_width", staticmethod(lambda: 80)):
+            fragments = self.tui._bottom_toolbar()
+        pet = [f for f in fragments if len(f) == 3]
+        self.assertEqual(len(pet), 1)
+        self.assertEqual(pet[0][1], "[• •]")
+        played = []
+        self.tui.play_buddy = lambda name=None: played.append(name) or (name or "dance")
+        self.tui.click_buddy()
+        self.tui.click_buddy()
+        self.assertEqual(played, ["work", None])
+        down = MouseEvent(app.Point(0, 0) if hasattr(app, "Point") else None, MouseEventType.MOUSE_DOWN, MouseButton.LEFT, frozenset())
+        self.assertIsNone(self.tui._on_pet_mouse(down))  # only MOUSE_UP triggers
+
     def test_done_line_shows_elapsed_and_clock_time(self):
         lines = []
         self.tui.console.print = lambda text, **kw: lines.append(text.plain)

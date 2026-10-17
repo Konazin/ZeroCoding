@@ -22,6 +22,7 @@ def run_config_menu(tui, config, manager, agent, dispatch) -> None:
             ("Model", agent_model(config, agent)),
             ("Effort", agent.effort.title()),
             ("Streaming", "on" if config.streaming_enabled else "off"),
+            ("Mouse", "on · click the pet" if config.mouse_support else "off · plain terminal selection and scrolling"),
             ("Add provider…", "connect another server"),
             ("Remove provider…", ""),
         ]
@@ -40,6 +41,11 @@ def run_config_menu(tui, config, manager, agent, dispatch) -> None:
             agent.streaming_enabled = config.streaming_enabled
             manager.save(config)
             tui.show_success(f"Streaming {'on' if config.streaming_enabled else 'off'}.")
+        elif choice == "Mouse":
+            config.mouse_support = not config.mouse_support
+            tui.mouse_enabled = config.mouse_support
+            manager.save(config)
+            tui.show_success(f"Mouse {'on' if config.mouse_support else 'off'}.")
         elif choice == "Add provider…":
             _add_provider(tui, config, dispatch)
         else:

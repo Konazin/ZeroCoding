@@ -101,21 +101,29 @@ class TestConfigMenu(unittest.TestCase):
         self.assertFalse(self.agent.streaming_enabled)
         self.assertFalse(self.manager.load().streaming_enabled)
 
+    def test_mouse_toggle_is_saved_and_applied_to_the_tui(self):
+        ui = ScriptedUI([(4, "enter"), None])
+        ui.mouse_enabled = True
+        run_config_menu(ui, self.config, self.manager, self.agent, self.commands.append)
+        self.assertFalse(self.config.mouse_support)
+        self.assertFalse(ui.mouse_enabled)
+        self.assertFalse(self.manager.load().mouse_support)
+
     def test_add_provider_picks_the_model_from_what_the_server_serves(self):
         with patch("zerocoding.providers.openai_compatible.OpenAICompatibleProvider.list_models",
                    return_value=["qwen3.5:4b"]):
-            self.run_menu([(4, "enter"), (0, "enter"), (0, "enter"), None],
+            self.run_menu([(5, "enter"), (0, "enter"), (0, "enter"), None],
                           answers=["tiny", "http://127.0.0.1:11434/v1"])
         self.assertEqual(self.commands, ["/provider add tiny openai_compatible http://127.0.0.1:11434/v1 qwen3.5:4b"])
 
     def test_add_provider_refuses_an_existing_name(self):
-        ui = self.run_menu([(4, "enter"), (0, "enter"), None], answers=[self.config.provider])
+        ui = self.run_menu([(5, "enter"), (0, "enter"), None], answers=[self.config.provider])
         self.assertEqual(self.commands, [])
         self.assertTrue(any("already exists" in message for message in ui.messages))
 
     def test_remove_provider_never_offers_the_active_one(self):
         self.manager.save(self.config)
-        ui = self.run_menu([(5, "enter"), None])
+        ui = self.run_menu([(6, "enter"), None])
         self.assertEqual(self.commands, [])
         self.assertTrue(any("switch to another" in message for message in ui.messages))
 
