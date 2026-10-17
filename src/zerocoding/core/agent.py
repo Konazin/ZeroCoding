@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import Generator
 
-from .budget import fit_messages
+from .budget import compact_tool_results, count_prompt, fit_messages
 from .cancel import TurnCancelled
 from .context import ConversationContext
 from .events import AgentEvent
@@ -17,6 +17,7 @@ from ..providers.base import normalize_turn
 
 __all__ = ["Agent", "fit_messages"]
 
+COMPACT_AT = 0.7  # fraction of the input budget that triggers compaction
 WINDOW_MARGIN = 128  # tokens kept free for template overhead and counting error
 
 
@@ -153,6 +154,19 @@ class Agent:
         if tool_schemas and messages and messages[0].get("role") == "system":
             messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
         return self._fit(messages, self.input_budget(), tool_schemas)
+
+    def _compact_if_needed(self, messages, budget, tool_schemas, on_event):
+        """Shrink old tool outputs once the prompt passes COMPACT_AT of the budget, before it overflows."""
+        before = count_prompt(self.token_counter, messages, tool_schemas)
+        if before <= budget * COMPACT_AT:
+            return messages
+        messages = [dict(m) for m in messages]
+        if not compact_tool_results(messages):
+            return messages
+        after = count_prompt(self.token_counter, messages, tool_schemas)
+        self._stats["compactions"] = self._stats.get("compactions", 0) + 1
+        emit_event(on_event, AgentEvent("compacted", summary=f"{before} → {after} tokens"))
+        return messages
 
     def _fit(self, messages, budget, tool_schemas=None):
         fitted = fit_messages(messages, budget, self.token_counter, tools=tool_schemas)
@@ -345,6 +359,7 @@ class Agent:
         turn = self._chat_non_empty(messages, tool_schemas, output_tokens, state, on_event)
         rounds = 0
         tool_round_completed = False
+        retried_compact = False
         changed = False  # a write, edit or command already ran this turn
         while True:
             turn = parse_compact_call(turn)
@@ -360,6 +375,16 @@ class Agent:
                     f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue, or raise /effort."
                     if turn.tool_calls else ""
                 )
+                if tool_round_completed and not response_text.strip() and not retried_compact:
+                    # An empty reply after a tool result often means the prompt filled the window:
+                    # shrink every tool output once and ask again before giving up.
+                    retried_compact = True
+                    messages = [dict(m) for m in messages]
+                    if compact_tool_results(messages, keep_last_round=False):
+                        emit_event(on_event, AgentEvent("compacted", summary="retrying after an empty reply"))
+                        self._stats["compactions"] = self._stats.get("compactions", 0) + 1
+                        turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
+                        continue
                 if tool_round_completed and not response_text.strip():
                     raise RuntimeError(
                         "The model returned an empty response after a tool result. Check the llama.cpp chat template and reasoning settings."
@@ -391,7 +416,9 @@ class Agent:
                     changed = True
             rounds += 1
             tool_round_completed = True
-            messages = self._fit(messages, self.input_budget(output_tokens), tool_schemas)
+            budget = self.input_budget(output_tokens)
+            messages = self._compact_if_needed(messages, budget, tool_schemas, on_event)
+            messages = self._fit(messages, budget, tool_schemas)
             turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)

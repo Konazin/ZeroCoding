@@ -545,6 +545,8 @@ class ZerocodingTUI:
             self.console.print(Text(f"  ⎿  {summary or 'Denied · no action taken'}", style=f"dim {ZERO_YELLOW}"))
         elif kind == "tool_error":
             self.console.print(Text(f"  ⎿  {summary or 'Tool error'}", style=f"dim {ZERO_RED}"))
+        elif kind == "compacted":
+            self.console.print(Text(f"  ⎿  Context compacted · {summary}", style=f"dim {ZERO_GRAY}"))
         if animation is None:
             return
         if kind == "thinking":

@@ -11,7 +11,7 @@ class PromptTooLargeError(ValueError):
     """Raised when the system instructions and current request cannot fit intact."""
 
 
-def _count_prompt(count, messages: list[dict], tools: list[dict] | None) -> int:
+def count_prompt(count, messages: list[dict], tools: list[dict] | None) -> int:
     method = getattr(count, "count_prompt", None)
     if callable(method):
         return method(messages, tools)
@@ -53,6 +53,33 @@ def _digest(dropped: list[list[dict]], max_entries: int = 6, max_chars: int = 70
         return ""
     text = "Earlier turns, shortened to fit context:\n" + "\n".join(lines)
     return text if len(text) <= max_chars else text[: max_chars - 1] + "…"
+
+
+COMPACT_MIN_CHARS = 240
+
+
+def compact_tool_results(messages: list[dict], keep_last_round: bool = True) -> int:
+    """Replace large old tool outputs with a one-line stub; returns how many were compacted.
+
+    Tool-call/result pairing stays intact. The newest round of results is kept whole so the
+    model can still act on what it just read.
+    """
+    tool_positions = [i for i, m in enumerate(messages) if m.get("role") == "tool"]
+    if keep_last_round and tool_positions:
+        last_assistant = max((i for i, m in enumerate(messages) if m.get("role") == "assistant" and m.get("tool_calls")),
+                             default=-1)
+        tool_positions = [i for i in tool_positions if i < last_assistant]
+    compacted = 0
+    for index in tool_positions:
+        message = messages[index]
+        content = str(message.get("content") or "")
+        if len(content) < COMPACT_MIN_CHARS or content.startswith("[compacted"):
+            continue
+        head = " ".join(content.split())[:80]
+        lines = content.count("\n") + 1
+        message["content"] = f"[compacted {message.get('name') or 'tool'} result: {lines} lines, {len(content)} chars; starts: {head}]"
+        compacted += 1
+    return compacted
 
 
 def _trim_tool_output(message: dict) -> bool:
@@ -113,7 +140,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         cheap.pop(removable)
         current_group -= 1
 
-    while _count_prompt(count, flattened(), tools) > drop_limit:
+    while count_prompt(count, flattened(), tools) > drop_limit:
         removable = next(
             (index for index, group in enumerate(groups)
              if index < current_group and not any(message.get("role") == "system" for message in group)),
@@ -125,7 +152,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         current_group -= 1
 
     fitted = flattened()
-    while _count_prompt(count, fitted, tools) > max_tokens:
+    while count_prompt(count, fitted, tools) > max_tokens:
         outputs = [message for message in fitted if message.get("role") == "tool"]
         if not outputs:
             break
@@ -137,10 +164,10 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
     if note and fitted and fitted[0].get("role") == "system":
         original = fitted[0]["content"]
         fitted[0]["content"] = f"{original}\n\n{note}"
-        if _count_prompt(count, fitted, tools) > max_tokens:
+        if count_prompt(count, fitted, tools) > max_tokens:
             fitted[0]["content"] = original
 
-    if _count_prompt(count, fitted, tools) > max_tokens:
+    if count_prompt(count, fitted, tools) > max_tokens:
         raise PromptTooLargeError(
             "The current request and required instructions exceed the input token budget. "
             "Shorten the request or reduce the configured system prompt/active skills."

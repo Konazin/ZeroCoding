@@ -321,3 +321,69 @@ class TestContextWindowBudget(unittest.TestCase):
         agent = Agent(self._Provider(8192), context_window=16384, max_output_tokens=1024)
 
         self.assertEqual(agent.input_budget(1024), 16384 - 1024 - 128)
+
+
+class TestToolResultCompaction(unittest.TestCase):
+    @staticmethod
+    def _round(call_id, name, content):
+        return [
+            {"role": "assistant", "content": "", "tool_calls": [
+                {"id": call_id, "type": "function", "function": {"name": name, "arguments": {}}}]},
+            {"role": "tool", "tool_call_id": call_id, "name": name, "content": content},
+        ]
+
+    def test_old_large_results_become_stubs_and_the_latest_round_stays_whole(self):
+        from zerocoding.core.budget import compact_tool_results
+
+        messages = [{"role": "system", "content": "s"}, {"role": "user", "content": "q"}]
+        messages += self._round("a", "read_file", "line\n" * 300)
+        messages += self._round("b", "read_file", "fresh\n" * 300)
+
+        self.assertEqual(compact_tool_results(messages), 1)
+        self.assertTrue(messages[3]["content"].startswith("[compacted read_file result"))
+        self.assertEqual(messages[3]["tool_call_id"], "a")
+        self.assertEqual(messages[5]["content"], "fresh\n" * 300)
+
+    def test_agent_compacts_before_the_prompt_overflows(self):
+        events = []
+        agent = Agent(TestContextWindowBudget._Provider(1000), max_output_tokens=128)
+        messages = [{"role": "system", "content": "s"}, {"role": "user", "content": "q"}]
+        messages += self._round("a", "read_file", "x" * 2000)
+        messages += self._round("b", "read_file", "y" * 100)
+
+        out = agent._compact_if_needed(messages, 600, None, events.append)
+
+        self.assertTrue(out[3]["content"].startswith("[compacted"))
+        self.assertEqual(events[0].kind, "compacted")
+        self.assertEqual(agent._stats["compactions"], 1)
+
+
+class TestEmptyReplyRecovery(unittest.TestCase):
+    def test_empty_reply_after_a_tool_result_is_retried_once_with_compacted_outputs(self):
+        import tempfile
+        from zerocoding.providers.base import ToolCall
+
+        class Scripted(TestContextWindowBudget._Provider):
+            def __init__(self):
+                super().__init__(8192)
+                self.seen = []
+                self.turns = [
+                    ProviderTurn(tool_calls=[ToolCall("read_file", {"path": "big.txt"}, "c1")]),
+                    ProviderTurn(content=""),
+                    ProviderTurn(content="done"),
+                ]
+
+            def chat(self, messages, **kwargs):
+                self.seen.append([dict(m) for m in messages])
+                return self.turns.pop(0)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            (__import__("pathlib").Path(tmp) / "big.txt").write_text("data\n" * 200)
+            provider = Scripted()
+            agent = Agent(provider, tools=ToolRegistry(tmp, approve=lambda *_: False))
+
+            answer = agent.ask("read it", use_tools=True)
+
+        self.assertEqual(answer, "done")
+        last_tool = [m for m in provider.seen[-1] if m.get("role") == "tool"][-1]
+        self.assertTrue(last_tool["content"].startswith("[compacted"))
