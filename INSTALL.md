@@ -19,7 +19,13 @@ uv sync --locked
 uv run pytest -q
 ```
 
-Também é possível instalar com pip:
+Sem uv, o pipx instala o comando isolado (use `--editable` para refletir mudanças do checkout):
+
+```bash
+pipx install --editable /caminho/para/ZeroCoding
+```
+
+Ou com pip:
 
 ```bash
 python -m pip install .
@@ -56,6 +62,6 @@ zc -m "Explique este projeto"  # resposta única
 zc --list-skills           # listar skills disponíveis
 ```
 
-Streaming é opcional e permanece desligado até passar pela comparação de qualidade do M7. Para habilitá-lo, defina `streaming_enabled: true` na configuração.
+Streaming vem ligado desde a versão 0.2.0. Para desligá-lo, defina `streaming_enabled: false` na configuração.
 
 Na TUI, `/help` lista os comandos. `/provider test` verifica o endpoint atual. Escritas e comandos continuam exigindo aprovação explícita.
