@@ -69,7 +69,9 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - Corrigido (vinha do M1): a aprovação na TUI falhava sempre (teclas `s-y`/`s-n` inválidas) e aceitava qualquer texto + Enter como "sim". Só `Y` aprova agora; `tests/test_tui_confirm.py`.
 - Decisão: o subagente foi implementado mesmo sem o gatilho de uso real do plano; segue desligado.
 
-### M7 — confiabilidade, medição e empacotamento (M7.1–M7.4 concluídos em 2026-10-16)
+### M7 — confiabilidade, medição e empacotamento (encerrado em 2026-10-17, versão 0.2.0)
+
+- Fechamento: M7.9 validado localmente (wheel em venv limpo; CI do GitHub é a confirmação final). M7.5 não adotado por falta de margem no benchmark; M7.6–M7.8 ficam condicionais (ver `docs/ROADMAP-m7.md`). Smoke test da TUI com streaming real adiado por decisão do usuário.
 
 - Rodada final: 74/75 (98,7%) sem streaming e 75/75 com streaming; as medições anteriores (85%) refletiam defeitos do verificador (ver `docs/ROADMAP-m7.md`). Fallback de tokens recalibrado (mediana 6%, p90 12%); meta de 3% substituída por mediana ≤ 10% e p90 ≤ 20% (aprovada em 2026-10-17). Streaming devolve `usage` e está ligado por padrão desde 2026-10-17; riscos em observação até o smoke test da TUI. Mascote Patinhas (`tui/mascot.py`) substitui o fantasma.
 

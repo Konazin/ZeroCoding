@@ -45,7 +45,7 @@ class McpClient:
         try:
             result = self._request("initialize", {
                 "protocolVersion": PROTOCOL_VERSION, "capabilities": {},
-                "clientInfo": {"name": "zerocoding", "version": "0.1.0"},
+                "clientInfo": {"name": "zerocoding", "version": "0.2.0"},
             }, self.startup_timeout)
             self.server_info = result.get("serverInfo", {}) if isinstance(result, dict) else {}
             self._notify("notifications/initialized")
