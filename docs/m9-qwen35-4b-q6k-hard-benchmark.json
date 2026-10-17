@@ -1,0 +1,1239 @@
+{
+  "label": "qwen35-4b-q6k",
+  "date": "2026-10-17",
+  "server": {
+    "model_path": "qwen35-4b",
+    "n_ctx": 8192,
+    "total_slots": 1,
+    "build_info": "b11681-5e03a1ff4",
+    "supports_tools": true
+  },
+  "repetitions": 3,
+  "seed_base": 7001,
+  "streaming": false,
+  "suite": "hard",
+  "cases": [
+    "h_root_cause_dependency",
+    "h_two_bugs_two_modules",
+    "h_rename_class_5_files",
+    "h_extract_function_module",
+    "h_edit_inside_long_file",
+    "h_feature_with_test",
+    "h_cross_file_question",
+    "h_run_tests_then_fix"
+  ],
+  "idle_memory": {
+    "rss_mb": 7978,
+    "vram_mb": 5263
+  },
+  "summary": {
+    "per_case": {
+      "h_root_cause_dependency": {
+        "passed": "1/3",
+        "success_rate": 0.333,
+        "duration_s": {
+          "median": 44.74,
+          "worst": 99.99,
+          "range": 55.83
+        },
+        "prompt_tokens": {
+          "median": 8214,
+          "worst": 19971,
+          "range": 13329
+        },
+        "completion_tokens": {
+          "median": 1133,
+          "worst": 2305,
+          "range": 1217
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 18,
+        "invalid_tool_calls": 0,
+        "approvals": 6
+      },
+      "h_two_bugs_two_modules": {
+        "passed": "0/3",
+        "success_rate": 0.0,
+        "duration_s": {
+          "median": 85.15,
+          "worst": 88.89,
+          "range": 36.79
+        },
+        "prompt_tokens": {
+          "median": 14502,
+          "worst": 20778,
+          "range": 17525
+        },
+        "completion_tokens": {
+          "median": 1975,
+          "worst": 1976,
+          "range": 708
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 16,
+        "invalid_tool_calls": 1,
+        "approvals": 11
+      },
+      "h_rename_class_5_files": {
+        "passed": "2/3",
+        "success_rate": 0.667,
+        "duration_s": {
+          "median": 91.7,
+          "worst": 165.85,
+          "range": 106.07
+        },
+        "prompt_tokens": {
+          "median": 12545,
+          "worst": 107444,
+          "range": 97079
+        },
+        "completion_tokens": {
+          "median": 2151,
+          "worst": 2899,
+          "range": 1409
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 40,
+        "invalid_tool_calls": 1,
+        "approvals": 43
+      },
+      "h_extract_function_module": {
+        "passed": "2/3",
+        "success_rate": 0.667,
+        "duration_s": {
+          "median": 93.26,
+          "worst": 107.16,
+          "range": 59.29
+        },
+        "prompt_tokens": {
+          "median": 33305,
+          "worst": 37960,
+          "range": 17445
+        },
+        "completion_tokens": {
+          "median": 1816,
+          "worst": 2322,
+          "range": 1323
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 34,
+        "invalid_tool_calls": 1,
+        "approvals": 20
+      },
+      "h_edit_inside_long_file": {
+        "passed": "3/3",
+        "success_rate": 1.0,
+        "duration_s": {
+          "median": 24.42,
+          "worst": 38.93,
+          "range": 15.51
+        },
+        "prompt_tokens": {
+          "median": 6769,
+          "worst": 6827,
+          "range": 110
+        },
+        "completion_tokens": {
+          "median": 309,
+          "worst": 366,
+          "range": 63
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 6,
+        "invalid_tool_calls": 0,
+        "approvals": 3
+      },
+      "h_feature_with_test": {
+        "passed": "3/3",
+        "success_rate": 1.0,
+        "duration_s": {
+          "median": 53.76,
+          "worst": 65.83,
+          "range": 15.77
+        },
+        "prompt_tokens": {
+          "median": 14194,
+          "worst": 21452,
+          "range": 7388
+        },
+        "completion_tokens": {
+          "median": 1277,
+          "worst": 1495,
+          "range": 273
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 25,
+        "invalid_tool_calls": 0,
+        "approvals": 12
+      },
+      "h_cross_file_question": {
+        "passed": "3/3",
+        "success_rate": 1.0,
+        "duration_s": {
+          "median": 23.19,
+          "worst": 24.85,
+          "range": 5.3
+        },
+        "prompt_tokens": {
+          "median": 4563,
+          "worst": 5698,
+          "range": 2274
+        },
+        "completion_tokens": {
+          "median": 567,
+          "worst": 615,
+          "range": 175
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 9,
+        "invalid_tool_calls": 0,
+        "approvals": 0
+      },
+      "h_run_tests_then_fix": {
+        "passed": "3/3",
+        "success_rate": 1.0,
+        "duration_s": {
+          "median": 36.2,
+          "worst": 40.39,
+          "range": 12.58
+        },
+        "prompt_tokens": {
+          "median": 9630,
+          "worst": 10084,
+          "range": 2520
+        },
+        "completion_tokens": {
+          "median": 933,
+          "worst": 977,
+          "range": 262
+        },
+        "ttft_ms": {
+          "median": null,
+          "worst": null,
+          "range": null
+        },
+        "tool_rounds": 17,
+        "invalid_tool_calls": 0,
+        "approvals": 11
+      }
+    },
+    "overall_passed": "17/24",
+    "overall_success_rate": 0.708,
+    "tool_calls": 240,
+    "tool_rounds": 165,
+    "invalid_tool_calls": 3,
+    "approvals": 106,
+    "peak_rss_mb": 9160,
+    "peak_vram_mb": 5654
+  },
+  "trials": [
+    {
+      "case": "h_root_cause_dependency",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": true,
+      "error": null,
+      "duration_s": 99.99,
+      "llm_calls": 10,
+      "prompt_tokens": 19971,
+      "completion_tokens": 2305,
+      "first_prompt_ms_proxy": 416.0,
+      "ttft_ms": null,
+      "tool_calls": 12,
+      "tool_rounds": 9,
+      "invalid_tool_calls": 0,
+      "approvals": 4,
+      "approval_log": [
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -c \"from tax import apply_tax; print(apply_tax(100))\""
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tax.py\n+++ tax.py\n@@ -1,4 +1,4 @@\n-RATE = 8  # percent\n+RATE = 0.08  # percent\n \n \n def apply_tax(amount):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tax.py\n+++ tax.py\n@@ -2,4 +2,4 @@\n \n \n def apply_tax(amount):\n-    return round(amount * RATE, 2)\n+    return round(amount + (amount * RATE), 2)"
+        }
+      ],
+      "answer_excerpt": "**Causa raiz identificada:**\n\nNo arquivo `tax.py`:\n1. `RATE = 8` estava definido como inteiro (800% em vez de 8%)\n2. `apply_tax()` apenas retornava o valor multiplicado, não o total com imposto\n\n**Correção aplicada:**\n\n```python\nRATE = 0.08  # 8% como decimal\ndef apply_tax(amount):\n    return round(amount + (amount * RATE), 2)  # Retorna total com imposto\n```\n\nAgora:\n- `cart.total()` com item de 1",
+      "command_summaries": [],
+      "peak_rss_mb": 9079,
+      "peak_vram_mb": 5613
+    },
+    {
+      "case": "h_two_bugs_two_modules",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": false,
+      "error": null,
+      "duration_s": 52.1,
+      "llm_calls": 3,
+      "prompt_tokens": 3253,
+      "completion_tokens": 1268,
+      "first_prompt_ms_proxy": 345.2,
+      "ttft_ms": null,
+      "tool_calls": 5,
+      "tool_rounds": 2,
+      "invalid_tool_calls": 0,
+      "approvals": 0,
+      "approval_log": [],
+      "answer_excerpt": "Vou analisar os códigos e testes para identificar os problemas",
+      "command_summaries": [],
+      "peak_rss_mb": 8867,
+      "peak_vram_mb": 5343
+    },
+    {
+      "case": "h_rename_class_5_files",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": false,
+      "error": null,
+      "duration_s": 59.78,
+      "llm_calls": 6,
+      "prompt_tokens": 10365,
+      "completion_tokens": 1490,
+      "first_prompt_ms_proxy": 308.2,
+      "ttft_ms": null,
+      "tool_calls": 17,
+      "tool_rounds": 5,
+      "invalid_tool_calls": 0,
+      "approvals": 7,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- inventory.py\n+++ inventory.py\n@@ -1,4 +1,4 @@\n-class Inventory:\n+class Stock:\n     def __init__(self):\n         self.items = {}"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- orders.py\n+++ orders.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def can_fulfil(inventory: Inventory, name, qty):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def open_shop():"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -2,8 +2,8 @@\n from inventory import Inventory\n \n \n-class TestInventory(unittest.TestCase):\n+class TestStock(unittest.TestCase):\n     def test_add_and_count(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         invento"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -1,5 +1,5 @@\n import unittest\n-from inventory import Inventory\n+from inventory import Stock\n from orders import can_fulfil"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -5,6 +5,6 @@\n \n class TestOrders(unittest.TestCase):\n     def test_can_fulfil(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         inventory.add('pen', 3)\n         self.assertTrue(can_fulfil(inventory, 'pen', 3))"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest discover tests -v"
+        }
+      ],
+      "answer_excerpt": "**Alterações realizadas com sucesso:**\n\n| Arquivo | Alteração |\n|---------|-----------|\n| `inventory.py` | `class Inventory` → `class Stock` |\n| `orders.py` | `from inventory import Inventory` → `from inventory import Stock` |\n| `shop.py` | `from inventory import Inventory` → `from inventory import Stock` |\n| `tests/test_inventory.py` | Import, classe `TestInventory` → `TestStock`, e `Inventory()`",
+      "command_summaries": [],
+      "peak_rss_mb": 8301,
+      "peak_vram_mb": 5409
+    },
+    {
+      "case": "h_extract_function_module",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": false,
+      "error": null,
+      "duration_s": 93.26,
+      "llm_calls": 14,
+      "prompt_tokens": 37960,
+      "completion_tokens": 1816,
+      "first_prompt_ms_proxy": 314.9,
+      "ttft_ms": null,
+      "tool_calls": 16,
+      "tool_rounds": 13,
+      "invalid_tool_calls": 0,
+      "approvals": 10,
+      "approval_log": [
+        {
+          "action": "Write file",
+          "preview": "--- slug_utils.py\n+++ slug_utils.py\n@@ -0,0 +1,6 @@\n+import re\n+\n+\n+def slugify(text):\n+    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n+    return text.strip('-')"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,9 +1,4 @@\n-import re\n-\n-\n-def slugify(text):\n-    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n-    return text.strip('-')\n+from slug_utils import slugify\n \n \n def price_rule_1(value):"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -c \"from catalog import category_url; from shop import product_url; print('Teste:', product_url('Blue Pen!'), '==', '/products/blue-pen'); print('Teste:', category_url('Office & Home'), '==', '/categories/office-home')\""
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_urls.py -v"
+        }
+      ],
+      "answer_excerpt": "## Conclusão\n\nAs alterações foram concluídas com sucesso:\n\n| Arquivo | Alteração |\n|---------|-----------|\n| **slug_utils.py** | ✅ Criado com a função `slugify` |\n| **shop.py** | ✅ Agora importa `from slug_utils import slugify` |\n| **catalog.py** | ✅ Sem alteração (continua importando de `shop`) |\n| **tests/test_urls.py** | ✅ Deve continuar passando |\n\n**Fluxo de importação:**\n- `catalog.py` → `sh",
+      "command_summaries": [],
+      "peak_rss_mb": 9160,
+      "peak_vram_mb": 5549
+    },
+    {
+      "case": "h_edit_inside_long_file",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": true,
+      "error": null,
+      "duration_s": 24.42,
+      "llm_calls": 3,
+      "prompt_tokens": 6769,
+      "completion_tokens": 309,
+      "first_prompt_ms_proxy": 478.5,
+      "ttft_ms": null,
+      "tool_calls": 2,
+      "tool_rounds": 2,
+      "invalid_tool_calls": 0,
+      "approvals": 1,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- rates.py\n+++ rates.py\n@@ -113,7 +113,7 @@\n \n def premium_rate(base):\n     \"\"\"Tier 23.\"\"\"\n-    return round(base * 1.2, 2)\n+    return round(base * 1.5, 2)\n \n \n def rate_24(base):"
+        }
+      ],
+      "answer_excerpt": "Done. A função `premium_rate` agora usa o fator 1.5.",
+      "command_summaries": [],
+      "peak_rss_mb": 8916,
+      "peak_vram_mb": 5527
+    },
+    {
+      "case": "h_feature_with_test",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": true,
+      "error": null,
+      "duration_s": 65.83,
+      "llm_calls": 11,
+      "prompt_tokens": 21452,
+      "completion_tokens": 1495,
+      "first_prompt_ms_proxy": 449.4,
+      "ttft_ms": null,
+      "tool_calls": 10,
+      "tool_rounds": 10,
+      "invalid_tool_calls": 0,
+      "approvals": 5,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- store.py\n+++ store.py\n@@ -9,3 +9,11 @@\n \n     def get_item(self, name):\n         return self._stock.get(name, 0)\n+\n+    def remove_item(self, name, qty):\n+        current_qty = self._stock.get(name, 0)\n+        if current_qty == 0:\n+            raise ValueError(f'Item {name} not found in stock')"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_store.py\n+++ tests/test_store.py\n@@ -7,3 +7,20 @@\n         store = Store()\n         store.add_item('pen', 2)\n         self.assertEqual(store.get_item('pen'), 2)\n+\n+    def test_remove(self):\n+        store = Store()\n+        store.add_item('pen', 5)\n+        store.remove_item('pen', 3"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests.test_store"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests.test_store"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests.test_store -v"
+        }
+      ],
+      "answer_excerpt": "As alterações foram concluídas com sucesso:\n\n**Adicionado à classe Store (`store.py`):**\n- Método `remove_item(name, qty)` que:\n  - Verifica se o item existe no estoque (levanta `ValueError` se não existir)\n  - Verifica se há quantidade suficiente (levanta `ValueError` se não houver)\n  - Reduz o estoque corretamente\n\n**Adicionado em `tests/test_store.py`:**\n- `test_remove` - Verifica remoção norma",
+      "command_summaries": [],
+      "peak_rss_mb": 8406,
+      "peak_vram_mb": 5504
+    },
+    {
+      "case": "h_cross_file_question",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": true,
+      "error": null,
+      "duration_s": 19.55,
+      "llm_calls": 3,
+      "prompt_tokens": 3424,
+      "completion_tokens": 440,
+      "first_prompt_ms_proxy": 451.7,
+      "ttft_ms": null,
+      "tool_calls": 2,
+      "tool_rounds": 2,
+      "invalid_tool_calls": 0,
+      "approvals": 0,
+      "approval_log": [],
+      "answer_excerpt": "A taxa de imposto aplicada a pedidos de países que não são BR, PT, DE ou FR é **0,0% (zero)**.\n\n**Arquivo:** `regions.py`  \n**Estrutura:** `TAX_BY_REGION` (dicionário)\n\nA função `region_of` mapeia qualquer país fora dessa lista para a região `'export'`, que corresponde à taxa de 0,0 no dicionário `TAX_BY_REGION`.",
+      "command_summaries": [],
+      "peak_rss_mb": 8406,
+      "peak_vram_mb": 5229
+    },
+    {
+      "case": "h_run_tests_then_fix",
+      "repetition": 1,
+      "seed": 7002,
+      "passed": true,
+      "error": null,
+      "duration_s": 40.39,
+      "llm_calls": 7,
+      "prompt_tokens": 10084,
+      "completion_tokens": 977,
+      "first_prompt_ms_proxy": 321.8,
+      "ttft_ms": null,
+      "tool_calls": 7,
+      "tool_rounds": 6,
+      "invalid_tool_calls": 0,
+      "approvals": 4,
+      "approval_log": [
+        {
+          "action": "Run command",
+          "preview": "python -m unittest discover -s tests"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest discover -s tests"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- stats.py\n+++ stats.py\n@@ -1,6 +1,8 @@\n def median(values):\n     ordered = sorted(values)\n     middle = len(ordered) // 2\n+    if len(ordered) % 2 == 0:\n+        return (ordered[middle - 1] + ordered[middle]) / 2\n     return ordered[middle]"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest discover -s tests"
+        }
+      ],
+      "answer_excerpt": "✅ Todos os testes passaram.\n\n**Problema:** A função `median` retornava o elemento central em vez da média dos dois elementos centrais para listas com número par de elementos.\n\n**Correção:** Para listas pares, agora retorna `(ordered[middle - 1] + ordered[middle]) / 2` (média dos dois elementos do meio).",
+      "command_summaries": [
+        "exit 1 · 12 output lines",
+        "exit 0 · 4 output lines"
+      ],
+      "peak_rss_mb": 8021,
+      "peak_vram_mb": 5553
+    },
+    {
+      "case": "h_root_cause_dependency",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": false,
+      "error": null,
+      "duration_s": 44.16,
+      "llm_calls": 6,
+      "prompt_tokens": 8214,
+      "completion_tokens": 1088,
+      "first_prompt_ms_proxy": 296.0,
+      "ttft_ms": null,
+      "tool_calls": 7,
+      "tool_rounds": 5,
+      "invalid_tool_calls": 0,
+      "approvals": 1,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- tax.py\n+++ tax.py\n@@ -2,4 +2,4 @@\n \n \n def apply_tax(amount):\n-    return round(amount * RATE, 2)\n+    return round(amount * RATE / 100, 2)"
+        }
+      ],
+      "answer_excerpt": "✅ Consertado! O defeito estava em `tax.py`: a função `apply_tax` multiplicava pelo valor 8 em vez de 0.08 (8/100). \n\n**Resumo:**\n- **Defeito:** `round(amount * RATE, 2)` deveria ser `round(amount * RATE / 100, 2)`\n- **Causa:** O código tratava a taxa como valor absoluto (8) em vez de percentual (8%)\n- **Impacto:** `total()` retornava 800.0 em vez de 108.0 (100 * 1.08)\n\nOs testes permaneceram inalt",
+      "command_summaries": [],
+      "peak_rss_mb": 8021,
+      "peak_vram_mb": 5654
+    },
+    {
+      "case": "h_two_bugs_two_modules",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": false,
+      "error": null,
+      "duration_s": 85.15,
+      "llm_calls": 9,
+      "prompt_tokens": 20778,
+      "completion_tokens": 1976,
+      "first_prompt_ms_proxy": 285.0,
+      "ttft_ms": null,
+      "tool_calls": 14,
+      "tool_rounds": 8,
+      "invalid_tool_calls": 0,
+      "approvals": 7,
+      "approval_log": [
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- dates.py\n+++ dates.py\n@@ -3,7 +3,7 @@\n \n def days_between(first, second):\n     \"\"\"Whole days from first to second (second exclusive).\"\"\"\n-    return (second - first).days + 1\n+    return (second - first).days\n \n \n def is_weekend(day):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- dates.py\n+++ dates.py\n@@ -7,4 +7,4 @@\n \n \n def is_weekend(day):\n-    return day.weekday() >= 5\n+    return day.weekday() == 5"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- text.py\n+++ text.py\n@@ -9,4 +9,4 @@\n \n \n def count_words(text):\n-    return len(text.split(' '))\n+    return len(text.split())"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python tests/test_dates.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_dates.py"
+        }
+      ],
+      "answer_excerpt": "As correções foram aplicadas com sucesso:\n\n**dates.py:**\n- `days_between`: Removeu o `+ 1`, agora retorna apenas a diferença de dias\n- `is_weekend`: Alterou de `>= 5` para `== 5`, considerando apenas sexta-feira (5) como fim de semana, não domingo (6)\n\n**text.py:**\n- `count_words`: Alterou `text.split(' ')` para `text.split()`, ignorando múltiplos espaços\n\nOs testes devem passar agora. As alteraçõ",
+      "command_summaries": [],
+      "peak_rss_mb": 8776,
+      "peak_vram_mb": 5470
+    },
+    {
+      "case": "h_rename_class_5_files",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 91.7,
+      "llm_calls": 7,
+      "prompt_tokens": 12545,
+      "completion_tokens": 2151,
+      "first_prompt_ms_proxy": 290.1,
+      "ttft_ms": null,
+      "tool_calls": 23,
+      "tool_rounds": 6,
+      "invalid_tool_calls": 0,
+      "approvals": 10,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- inventory.py\n+++ inventory.py\n@@ -1,4 +1,4 @@\n-class Inventory:\n+class Stock:\n     def __init__(self):\n         self.items = {}"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- orders.py\n+++ orders.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def can_fulfil(inventory: Inventory, name, qty):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- orders.py\n+++ orders.py\n@@ -1,5 +1,5 @@\n from inventory import Stock\n \n \n-def can_fulfil(inventory: Inventory, name, qty):\n+def can_fulfil(inventory: Stock, name, qty):\n     return inventory.count(name) >= qty"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def open_shop():"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -2,6 +2,6 @@\n \n \n def open_shop():\n-    inventory = Inventory()\n+    inventory = Stock()\n     inventory.add('pen', 5)\n     return inventory"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -1,5 +1,5 @@\n import unittest\n-from inventory import Inventory\n+from inventory import Stock\n \n \n class TestInventory(unittest.TestCase):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -2,7 +2,7 @@\n from inventory import Stock\n \n \n-class TestInventory(unittest.TestCase):\n+class TestStock(unittest.TestCase):\n     def test_add_and_count(self):\n         inventory = Inventory()\n         inventory.add('pen', 2)"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -4,6 +4,6 @@\n \n class TestStock(unittest.TestCase):\n     def test_add_and_count(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         inventory.add('pen', 2)\n         self.assertEqual(inventory.count('pen'), 2)"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -1,5 +1,5 @@\n import unittest\n-from inventory import Inventory\n+from inventory import Stock\n from orders import can_fulfil"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -5,6 +5,6 @@\n \n class TestOrders(unittest.TestCase):\n     def test_can_fulfil(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         inventory.add('pen', 3)\n         self.assertTrue(can_fulfil(inventory, 'pen', 3))"
+        }
+      ],
+      "answer_excerpt": "Todas as substituições foram realizadas com sucesso! O nome \"Inventory\" foi trocado por \"Stock\" em todos os arquivos .py:\n\n**Arquivos atualizados:**\n- `inventory.py`: classe `Inventory` → `Stock`\n- `orders.py`: imports e type hints atualizados para `Stock`\n- `shop.py`: imports e instanciação atualizados para `Stock`\n- `tests/test_inventory.py`: import, classe `TestInventory` → `TestStock`, e insta",
+      "command_summaries": [],
+      "peak_rss_mb": 8638,
+      "peak_vram_mb": 5447
+    },
+    {
+      "case": "h_extract_function_module",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 47.87,
+      "llm_calls": 11,
+      "prompt_tokens": 20515,
+      "completion_tokens": 999,
+      "first_prompt_ms_proxy": 318.9,
+      "ttft_ms": null,
+      "tool_calls": 10,
+      "tool_rounds": 10,
+      "invalid_tool_calls": 1,
+      "approvals": 3,
+      "approval_log": [
+        {
+          "action": "Write file",
+          "preview": "--- slug_utils.py\n+++ slug_utils.py\n@@ -0,0 +1,6 @@\n+import re\n+\n+\n+def slugify(text):\n+    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n+    return text.strip('-')"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,9 +1,4 @@\n-import re\n-\n-\n-def slugify(text):\n-    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n-    return text.strip('-')\n+from slug_utils import slugify\n \n \n def price_rule_1(value):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- catalog.py\n+++ catalog.py\n@@ -1,4 +1,4 @@\n-from shop import slugify\n+from slug_utils import slugify\n \n \n def category_url(name):"
+        }
+      ],
+      "answer_excerpt": "Concluído! As mudanças foram aplicadas:\n\n**1. Criado `slug_utils.py`** com a definição de `slugify`:\n```python\nimport re\n\n\ndef slugify(text):\n    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n    return text.strip('-')\n```\n\n**2. Atualizado `shop.py`**: Agora importa de `slug_utils`:\n```python\nfrom slug_utils import slugify\n```\n\n**3. Atualizado `catalog.py`**: Agora importa de `slug_utils`:\n```py",
+      "command_summaries": [],
+      "peak_rss_mb": 8867,
+      "peak_vram_mb": 5413
+    },
+    {
+      "case": "h_edit_inside_long_file",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 23.42,
+      "llm_calls": 3,
+      "prompt_tokens": 6717,
+      "completion_tokens": 303,
+      "first_prompt_ms_proxy": 308.6,
+      "ttft_ms": null,
+      "tool_calls": 2,
+      "tool_rounds": 2,
+      "invalid_tool_calls": 0,
+      "approvals": 1,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- rates.py\n+++ rates.py\n@@ -113,7 +113,7 @@\n \n def premium_rate(base):\n     \"\"\"Tier 23.\"\"\"\n-    return round(base * 1.2, 2)\n+    return round(base * 1.5, 2)\n \n \n def rate_24(base):"
+        }
+      ],
+      "answer_excerpt": "Muda feita. O fator de `premium_rate` em `rates.py` foi alterado de `1.2` para `1.5`.",
+      "command_summaries": [],
+      "peak_rss_mb": 8867,
+      "peak_vram_mb": 5291
+    },
+    {
+      "case": "h_feature_with_test",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 53.76,
+      "llm_calls": 9,
+      "prompt_tokens": 14064,
+      "completion_tokens": 1277,
+      "first_prompt_ms_proxy": 312.3,
+      "ttft_ms": null,
+      "tool_calls": 8,
+      "tool_rounds": 8,
+      "invalid_tool_calls": 0,
+      "approvals": 3,
+      "approval_log": [
+        {
+          "action": "Write file",
+          "preview": "--- store.py\n+++ store.py\n@@ -9,3 +9,8 @@\n \n     def get_item(self, name):\n         return self._stock.get(name, 0)\n+\n+    def remove_item(self, name, qty):\n+        if name not in self._stock or self._stock[name] < qty:\n+            raise ValueError('Item not found or insufficient stock')\n+        "
+        },
+        {
+          "action": "Write file",
+          "preview": "--- tests/test_store.py\n+++ tests/test_store.py\n@@ -7,3 +7,20 @@\n         store = Store()\n         store.add_item('pen', 2)\n         self.assertEqual(store.get_item('pen'), 2)\n+\n+    def test_remove_item_exists(self):\n+        store = Store()\n+        store.add_item('pen', 5)\n+        store.remove_i"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests/test_store.py"
+        }
+      ],
+      "answer_excerpt": "Implementação concluída:\n\n**store.py** - Método `remove_item` adicionado:\n```python\ndef remove_item(self, name, qty):\n    if name not in self._stock or self._stock[name] < qty:\n        raise ValueError('Item not found or insufficient stock')\n    self._stock[name] = self._stock[name] - qty\n```\n\n**tests/test_store.py** - Testes adicionados:\n- `test_remove_item_exists`: Verifica remoção com estoque s",
+      "command_summaries": [],
+      "peak_rss_mb": 8532,
+      "peak_vram_mb": 5456
+    },
+    {
+      "case": "h_cross_file_question",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 23.19,
+      "llm_calls": 4,
+      "prompt_tokens": 4563,
+      "completion_tokens": 567,
+      "first_prompt_ms_proxy": 361.5,
+      "ttft_ms": null,
+      "tool_calls": 3,
+      "tool_rounds": 3,
+      "invalid_tool_calls": 0,
+      "approvals": 0,
+      "approval_log": [],
+      "answer_excerpt": "**Arquivo:** `regions.py`\n\n**Variável:** `TAX_BY_REGION['export']`\n\n**Lógica:**\n- A função `region_of(country)` retorna 'export' para países fora de BR e UE (incluindo PT, DE, FR)\n- A variável `TAX_BY_REGION = {'domestic': 0.19, 'eu': 0.21, 'export': 0.0, 'duty_free_zone': 0.07}` define o imposto 'export': **0.0** (0%)\n\nPara países como PT, DE, FR, a função retorna 'eu' (0.21 = 21%), mas para qual",
+      "command_summaries": [],
+      "peak_rss_mb": 8463,
+      "peak_vram_mb": 5536
+    },
+    {
+      "case": "h_run_tests_then_fix",
+      "repetition": 2,
+      "seed": 7003,
+      "passed": true,
+      "error": null,
+      "duration_s": 27.81,
+      "llm_calls": 6,
+      "prompt_tokens": 7564,
+      "completion_tokens": 715,
+      "first_prompt_ms_proxy": 435.5,
+      "ttft_ms": null,
+      "tool_calls": 5,
+      "tool_rounds": 5,
+      "invalid_tool_calls": 0,
+      "approvals": 4,
+      "approval_log": [
+        {
+          "action": "Run command",
+          "preview": "python -m unittest discover -s tests"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest discover -s tests"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- stats.py\n+++ stats.py\n@@ -1,6 +1,8 @@\n def median(values):\n     ordered = sorted(values)\n     middle = len(ordered) // 2\n+    if len(ordered) % 2 == 0:\n+        return (ordered[middle - 1] + ordered[middle]) / 2\n     return ordered[middle]"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest discover -s tests"
+        }
+      ],
+      "answer_excerpt": "✅ All tests pass. The fix correctly handles even-length lists by averaging the two middle values.",
+      "command_summaries": [
+        "exit 1 · 12 output lines",
+        "exit 0 · 4 output lines"
+      ],
+      "peak_rss_mb": 8378,
+      "peak_vram_mb": 5521
+    },
+    {
+      "case": "h_root_cause_dependency",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": false,
+      "error": null,
+      "duration_s": 44.74,
+      "llm_calls": 5,
+      "prompt_tokens": 6642,
+      "completion_tokens": 1133,
+      "first_prompt_ms_proxy": 323.5,
+      "ttft_ms": null,
+      "tool_calls": 7,
+      "tool_rounds": 4,
+      "invalid_tool_calls": 0,
+      "approvals": 1,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- tax.py\n+++ tax.py\n@@ -1,4 +1,4 @@\n-RATE = 8  # percent\n+RATE = 0.08  # percent\n \n \n def apply_tax(amount):"
+        }
+      ],
+      "answer_excerpt": "Encontrei e corrigi a causa raiz:\n\n**Problema:** Em `tax.py`, o `RATE` estava definido como `8` (inteiro) em vez de `0.08` (decimal). Isso fazia com que o imposto fosse calculado como 800% em vez de 8%.\n\n- `round(100.0 * 8, 2)` = 800.0 ✗ (deveria ser 108.0)\n- `round(16.0 * 8, 2)` = 128.0 ✗ (deveria ser 17.28)\n\n**Correção:** Alterei `RATE = 8` para `RATE = 0.08` em `tax.py`.\n\nAgora os cálculos estã",
+      "command_summaries": [],
+      "peak_rss_mb": 8686,
+      "peak_vram_mb": 5328
+    },
+    {
+      "case": "h_two_bugs_two_modules",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": false,
+      "error": null,
+      "duration_s": 88.89,
+      "llm_calls": 7,
+      "prompt_tokens": 14502,
+      "completion_tokens": 1975,
+      "first_prompt_ms_proxy": 310.1,
+      "ttft_ms": null,
+      "tool_calls": 10,
+      "tool_rounds": 6,
+      "invalid_tool_calls": 1,
+      "approvals": 4,
+      "approval_log": [
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- dates.py\n+++ dates.py\n@@ -3,7 +3,7 @@\n \n def days_between(first, second):\n     \"\"\"Whole days from first to second (second exclusive).\"\"\"\n-    return (second - first).days + 1\n+    return (second - first).days\n \n \n def is_weekend(day):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- dates.py\n+++ dates.py\n@@ -7,4 +7,4 @@\n \n \n def is_weekend(day):\n-    return day.weekday() >= 5\n+    return day.weekday() == 5"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- text.py\n+++ text.py\n@@ -9,4 +9,4 @@\n \n \n def count_words(text):\n-    return len(text.split(' '))\n+    return len(text.split())"
+        }
+      ],
+      "answer_excerpt": "Correções aplicadas:\n\n**dates.py:**\n- `days_between`: Removi o `+1` indevido\n- `is_weekend`: Mudei `>= 5` para `== 5` (apenas sábado)\n\n**text.py:**\n- `count_words`: Mudei `split(' ')` para `split()` (ignora múltiplos espaços)\n\nTodos os 6 testes devem passar agora.",
+      "command_summaries": [],
+      "peak_rss_mb": 8587,
+      "peak_vram_mb": 5569
+    },
+    {
+      "case": "h_rename_class_5_files",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 165.85,
+      "llm_calls": 30,
+      "prompt_tokens": 107444,
+      "completion_tokens": 2899,
+      "first_prompt_ms_proxy": 370.2,
+      "ttft_ms": null,
+      "tool_calls": 43,
+      "tool_rounds": 29,
+      "invalid_tool_calls": 1,
+      "approvals": 26,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- inventory.py\n+++ inventory.py\n@@ -1,4 +1,4 @@\n-class Inventory:\n+class Stock:\n     def __init__(self):\n         self.items = {}"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- orders.py\n+++ orders.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def can_fulfil(inventory: Inventory, name, qty):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- orders.py\n+++ orders.py\n@@ -1,5 +1,5 @@\n from inventory import Stock\n \n \n-def can_fulfil(inventory: Inventory, name, qty):\n+def can_fulfil(inventory: Stock, name, qty):\n     return inventory.count(name) >= qty"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,4 +1,4 @@\n-from inventory import Inventory\n+from inventory import Stock\n \n \n def open_shop():"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -2,6 +2,6 @@\n \n \n def open_shop():\n-    inventory = Inventory()\n+    inventory = Stock()\n     inventory.add('pen', 5)\n     return inventory"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -2,7 +2,7 @@\n from inventory import Inventory\n \n \n-class TestInventory(unittest.TestCase):\n+class TestStock(unittest.TestCase):\n     def test_add_and_count(self):\n         inventory = Inventory()\n         inventory.add('pen', 2)"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -4,6 +4,6 @@\n \n class TestStock(unittest.TestCase):\n     def test_add_and_count(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         inventory.add('pen', 2)\n         self.assertEqual(inventory.count('pen'), 2)"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -5,6 +5,6 @@\n \n class TestOrders(unittest.TestCase):\n     def test_can_fulfil(self):\n-        inventory = Inventory()\n+        inventory = Stock()\n         inventory.add('pen', 3)\n         self.assertTrue(can_fulfil(inventory, 'pen', 3))"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_inventory.py\n+++ tests/test_inventory.py\n@@ -1,5 +1,5 @@\n import unittest\n-from inventory import Inventory\n+from inventory import Stock\n \n \n class TestStock(unittest.TestCase):"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_orders.py\n+++ tests/test_orders.py\n@@ -1,5 +1,5 @@\n import unittest\n-from inventory import Inventory\n+from inventory import Stock\n from orders import can_fulfil"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest discover tests -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest"
+        },
+        {
+          "action": "Run command",
+          "preview": "python tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3"
+        },
+        {
+          "action": "Run command",
+          "preview": "python tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 tests/test_inventory.py"
+        }
+      ],
+      "answer_excerpt": "Stopped: the model repeated the same run_command call 4 times without progress. Rephrase the request or give it more detail.",
+      "command_summaries": [],
+      "peak_rss_mb": 9054,
+      "peak_vram_mb": 5589
+    },
+    {
+      "case": "h_extract_function_module",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 107.16,
+      "llm_calls": 12,
+      "prompt_tokens": 33305,
+      "completion_tokens": 2322,
+      "first_prompt_ms_proxy": 339.9,
+      "ttft_ms": null,
+      "tool_calls": 16,
+      "tool_rounds": 11,
+      "invalid_tool_calls": 0,
+      "approvals": 7,
+      "approval_log": [
+        {
+          "action": "Write file",
+          "preview": "--- slug_utils.py\n+++ slug_utils.py\n@@ -0,0 +1,6 @@\n+import re\n+\n+\n+def slugify(text):\n+    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n+    return text.strip('-')"
+        },
+        {
+          "action": "Write file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -1,9 +1,4 @@\n-import re\n-\n-\n-def slugify(text):\n-    text = re.sub(r'[^a-z0-9]+', '-', text.lower())\n-    return text.strip('-')\n+from slug_utils import slugify\n \n \n def price_rule_1(value):\n@@ -28,7 +23,7 @@\n \n \n def price_rule_4(value):\n-    \"\"\"Pricing rule number 4.\"\"\"\n"
+        },
+        {
+          "action": "Write file",
+          "preview": "--- catalog.py\n+++ catalog.py\n@@ -1,4 +1,4 @@\n-from shop import slugify\n+from slug_utils import slugify\n \n \n def category_url(name):"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/ -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests.test_urls -v"
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- shop.py\n+++ shop.py\n@@ -23,7 +23,7 @@\n \n \n def price_rule_4(value):\n-    \"\"\"Pricing rule number number 4.\"\"\"\n+    \"\"\"Pricing rule number 4.\"\"\"\n     if value < 4:\n         return value\n     return value - 4 * 0.01"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest tests.test_urls"
+        }
+      ],
+      "answer_excerpt": "As mudanças foram feitas com sucesso. Aqui está o resumo:\n\n## Mudanças realizadas:\n\n1. **`slug_utils.py`** (novo arquivo) - Contém a função `slugify`\n2. **`shop.py`** - Agora importa `slugify` de `slug_utils` em vez de definir a função localmente\n3. **`catalog.py`** - Agora importa `slugify` de `slug_utils` em vez de de `shop`\n\n### Estrutura atual:\n```\nslug_utils.py  ← função slugify (móvel)\nshop.",
+      "command_summaries": [],
+      "peak_rss_mb": 8335,
+      "peak_vram_mb": 5533
+    },
+    {
+      "case": "h_edit_inside_long_file",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 38.93,
+      "llm_calls": 3,
+      "prompt_tokens": 6827,
+      "completion_tokens": 366,
+      "first_prompt_ms_proxy": 425.4,
+      "ttft_ms": null,
+      "tool_calls": 2,
+      "tool_rounds": 2,
+      "invalid_tool_calls": 0,
+      "approvals": 1,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- rates.py\n+++ rates.py\n@@ -113,7 +113,7 @@\n \n def premium_rate(base):\n     \"\"\"Tier 23.\"\"\"\n-    return round(base * 1.2, 2)\n+    return round(base * 1.5, 2)\n \n \n def rate_24(base):"
+        }
+      ],
+      "answer_excerpt": "Alterado. A função `premium_rate` agora usa o fator 1.5 em vez de 1.2.",
+      "command_summaries": [],
+      "peak_rss_mb": 8847,
+      "peak_vram_mb": 5519
+    },
+    {
+      "case": "h_feature_with_test",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 50.06,
+      "llm_calls": 8,
+      "prompt_tokens": 14194,
+      "completion_tokens": 1222,
+      "first_prompt_ms_proxy": 364.4,
+      "ttft_ms": null,
+      "tool_calls": 9,
+      "tool_rounds": 7,
+      "invalid_tool_calls": 0,
+      "approvals": 4,
+      "approval_log": [
+        {
+          "action": "Edit file",
+          "preview": "--- store.py\n+++ store.py\n@@ -9,3 +9,11 @@\n \n     def get_item(self, name):\n         return self._stock.get(name, 0)\n+\n+    def remove_item(self, name, qty):\n+        current_qty = self._stock.get(name, 0)\n+        if current_qty == 0:\n+            raise ValueError(f'Item {name} does not exist')\n+  "
+        },
+        {
+          "action": "Edit file",
+          "preview": "--- tests/test_store.py\n+++ tests/test_store.py\n@@ -7,3 +7,20 @@\n         store = Store()\n         store.add_item('pen', 2)\n         self.assertEqual(store.get_item('pen'), 2)\n+\n+    def test_remove(self):\n+        store = Store()\n+        store.add_item('pen', 5)\n+        store.remove_item('pen', 2"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_store.py -v"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m pytest tests/test_store.py -v"
+        }
+      ],
+      "answer_excerpt": "Done! I've added the `remove_item(name, qty)` method to the `Store` class and added corresponding tests in `tests/test_store.py`.\n\n**Changes to `store.py`:**\n- Added `remove_item(name, qty)` method that:\n  - Checks if item exists (raises `ValueError` if not)\n  - Validates sufficient quantity (raises `ValueError` if not)\n  - Reduces stock by the specified quantity\n\n**Changes to `tests/test_store.py",
+      "command_summaries": [],
+      "peak_rss_mb": 8015,
+      "peak_vram_mb": 5583
+    },
+    {
+      "case": "h_cross_file_question",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 24.85,
+      "llm_calls": 5,
+      "prompt_tokens": 5698,
+      "completion_tokens": 615,
+      "first_prompt_ms_proxy": 406.8,
+      "ttft_ms": null,
+      "tool_calls": 4,
+      "tool_rounds": 4,
+      "invalid_tool_calls": 0,
+      "approvals": 0,
+      "approval_log": [],
+      "answer_excerpt": "A taxa de imposto aplicada a pedidos cujo país não é BR, PT, DE nem FR é **0.0 (0%)**.\n\n**Arquivo:** `regions.py`  \n**Estrutura:** `TAX_BY_REGION`\n\nNo código:\n```python\nTAX_BY_REGION = {'domestic': 0.19, 'eu': 0.21, 'export': 0.0, 'duty_free_zone': 0.07}\n```\n\nA função `region_of()` determina que países que não são BR, PT, DE ou FR retornam a região `'export'`, que tem taxa de 0.0.",
+      "command_summaries": [],
+      "peak_rss_mb": 8511,
+      "peak_vram_mb": 5283
+    },
+    {
+      "case": "h_run_tests_then_fix",
+      "repetition": 3,
+      "seed": 7004,
+      "passed": true,
+      "error": null,
+      "duration_s": 36.2,
+      "llm_calls": 7,
+      "prompt_tokens": 9630,
+      "completion_tokens": 933,
+      "first_prompt_ms_proxy": 321.5,
+      "ttft_ms": null,
+      "tool_calls": 6,
+      "tool_rounds": 6,
+      "invalid_tool_calls": 0,
+      "approvals": 3,
+      "approval_log": [
+        {
+          "action": "Write file",
+          "preview": "--- stats.py\n+++ stats.py\n@@ -1,7 +1,13 @@\n def median(values):\n     ordered = sorted(values)\n-    middle = len(ordered) // 2\n-    return ordered[middle]\n+    n = len(ordered)\n+    if n % 2 == 0:\n+        middle = n // 2 - 1\n+        right = middle + 1\n+        return (ordered[middle] + ordered[righ"
+        },
+        {
+          "action": "Run command",
+          "preview": "python -m unittest discover -s tests"
+        },
+        {
+          "action": "Run command",
+          "preview": "python3 -m unittest discover -s tests"
+        }
+      ],
+      "answer_excerpt": "Todos os testes passaram! ✅\n\n**Problema identificado:** A função `median` não estava calculando corretamente para listas com número par de elementos.\n\n**Correção aplicada:** Para listas pares, a mediana é a média dos dois elementos do meio. A função agora verifica se o número de elementos é par ou ímpar e calcula accordingly:\n\n- **Ímpar:** Retorna o elemento do meio\n- **Par:** Retorna a média dos ",
+      "command_summaries": [
+        "exit 0 · 4 output lines"
+      ],
+      "peak_rss_mb": 8519,
+      "peak_vram_mb": 5457
+    }
+  ]
+}
