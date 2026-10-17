@@ -155,6 +155,23 @@ class StreamingAgentProvider:
 
 
 class TestAgentStreaming(unittest.TestCase):
+    def test_turn_tokens_sum_provider_usage_across_the_whole_task(self):
+        class Provider:
+            def __init__(self):
+                self.turns = iter([
+                    ProviderTurn(tool_calls=[ToolCall("list_files", {}, "c1")], usage={"prompt_tokens": 100, "completion_tokens": 10}),
+                    ProviderTurn(content="Done.", usage={"prompt_tokens": 150, "completion_tokens": 20}),
+                ])
+
+            def chat(self, messages, **kwargs):
+                return next(self.turns)
+
+        with tempfile.TemporaryDirectory() as directory:
+            agent = Agent(Provider(), tools=ToolRegistry(directory))
+            self.assertEqual(agent.turn_tokens(), (0, 0))
+            agent.ask("list", use_tools=True)
+        self.assertEqual(agent.turn_tokens(), (250, 30))
+
     def test_text_before_a_tool_call_is_marked_so_the_ui_keeps_it(self):
         class Provider:
             def __init__(self):

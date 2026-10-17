@@ -114,6 +114,14 @@ class TerminalSize:
         return TerminalSize.get_width() < 62
 
 
+def format_tokens(prompt: int, completion: int) -> str:
+    """"2.6k in · 312 out", or "" when the provider reported no usage."""
+    def short(count: int) -> str:
+        return str(count) if count < 1000 else f"{count / 1000:.1f}k"
+
+    return f"{short(prompt)} in · {short(completion)} out" if prompt or completion else ""
+
+
 def ellipsize(value: str, limit: int) -> str:
     if limit <= 0:
         return ""
@@ -139,7 +147,9 @@ class _ThinkingView:
         line = Text()
         line.append(frames[tick % len(frames)] + " ", style=f"bold {ZERO_PURPLE}")
         line.append(message + "…", style=ZERO_PURPLE_LIGHT)
-        line.append(f" ({elapsed:.0f}s · ctrl+c to interrupt)", style=f"dim {ZERO_GRAY}")
+        used = format_tokens(*anim.tokens()) if anim.tokens is not None else ""
+        details = " · ".join(part for part in (f"{elapsed:.0f}s", used, "ctrl+c to interrupt") if part)
+        line.append(f" ({details})", style=f"dim {ZERO_GRAY}")
         yield line
         if anim.footer is not None:
             pets = PET_WORK if anim.unicode else PET_ASCII
@@ -149,8 +159,9 @@ class _ThinkingView:
 class ThinkingAnimation:
     """Compact mascot and status animation while the agent works."""
 
-    def __init__(self, console: Console, message: str | None = None, footer=None):
+    def __init__(self, console: Console, message: str | None = None, footer=None, tokens=None):
         self.console = console
+        self.tokens = tokens  # callable() -> (prompt, completion) tokens so far, supplied by the caller
         self.footer = footer  # callable(pet) -> status row text, supplied by the TUI
         self.message = message or random.choice(WORK_PHRASES)
         self.started_at = 0.0
@@ -534,8 +545,8 @@ class ZerocodingTUI:
             return GHOST_SMALL_STATES.get(state, GHOST_SMALL_STATES["idle"])
         return {"idle": "(o o)", "approval": "(o ?)", "success": "(^ ^)", "error": "(x x)"}.get(state, "(o o)")
 
-    def show_thinking(self, message: str | None = None) -> ThinkingAnimation:
-        anim = ThinkingAnimation(self.console, message, footer=self._status_row)
+    def show_thinking(self, message: str | None = None, tokens=None) -> ThinkingAnimation:
+        anim = ThinkingAnimation(self.console, message, footer=self._status_row, tokens=tokens)
         anim.start()
         return anim
 
@@ -546,12 +557,12 @@ class ZerocodingTUI:
             self.show_info("Interactive menus need a terminal. Use the typed commands, e.g. /provider add.")
         return done
 
-    def show_done(self, seconds: float, stopped: bool = False) -> None:
-        """Completion line with the wall-clock time, e.g. "✻ Worked for 12s · 14:32"."""
+    def show_done(self, seconds: float, stopped: bool = False, tokens: tuple[int, int] = (0, 0)) -> None:
+        """Completion line with the clock time and task tokens, e.g. "✻ Worked for 12s · 14:32 · 2.6k in · 312 out"."""
         verb = "Stopped after" if stopped else "Worked for"
         glyph = "✻" if self._unicode else "*"
-        stamp = time.strftime("%H:%M")
-        self.console.print(Text(f"{glyph} {verb} {seconds:.0f}s · {stamp}", style=f"dim {ZERO_GRAY}"))
+        parts = [f"{verb} {seconds:.0f}s", time.strftime("%H:%M"), format_tokens(*tokens)]
+        self.console.print(Text(f"{glyph} " + " · ".join(part for part in parts if part), style=f"dim {ZERO_GRAY}"))
 
     def play_buddy(self, name: str | None = None) -> str:
         """Play one mascot animation in place (the printed header cannot be clicked in a scrollback TUI)."""

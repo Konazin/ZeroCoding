@@ -278,6 +278,10 @@ class Agent:
             return format_result(call_id, call.name, str(result)[:8000])
         return {"role": "tool", "tool_call_id": call_id, "name": call.name, "content": str(result)[:8000]}
 
+    def turn_tokens(self) -> tuple[int, int]:
+        """(prompt, completion) tokens reported by the provider for the current or last task."""
+        return int(self._stats.get("prompt_tokens", 0)), int(self._stats.get("completion_tokens", 0))
+
     @staticmethod
     def _new_stats() -> dict:
         return {"llm_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0, "tool_rounds": 0,

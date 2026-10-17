@@ -182,7 +182,7 @@ def main(argv=None):
             continue
 
         tui.display_message("user", prompt)
-        animation = tui.show_thinking()
+        animation = tui.show_thinking(tokens=agent.turn_tokens)
         active_animation[0] = animation
         try:
             system_prompt = project_context.build_system_prompt()
@@ -195,18 +195,18 @@ def main(argv=None):
             elapsed = animation.stop()
             active_animation[0] = None
             tui.display_message("assistant", response)
-            tui.show_done(elapsed)
+            tui.show_done(elapsed, tokens=agent.turn_tokens())
             save_session_state(session_manager, session, config, agent, project_context)
         except (KeyboardInterrupt, TurnCancelled):
             elapsed = animation.stop()
             active_animation[0] = None
             tui.show_warning("Turn cancelled. Nothing from this turn was saved to the session.")
-            tui.show_done(elapsed, stopped=True)
+            tui.show_done(elapsed, stopped=True, tokens=agent.turn_tokens())
         except Exception as exc:
             elapsed = animation.stop()
             active_animation[0] = None
             tui.show_error(str(exc))
-            tui.show_done(elapsed)
+            tui.show_done(elapsed, tokens=agent.turn_tokens())
 
 
 if __name__ == "__main__":
