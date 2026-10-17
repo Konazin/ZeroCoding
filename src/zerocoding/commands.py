@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core.config import ProviderConfig
 from .core.project_context import ProjectContext
-from .config_menu import run_config_menu
+from .config_menu import pick_model, run_settings
 from .core.router import build_provider, build_session_provider
 from .core.sessions import Session
 
@@ -14,6 +14,25 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
     name = name.lower()
     args_text = " ".join(args)
 
+    interactive = hasattr(tui, "run_screen")
+    if interactive and (
+        (name == "/config" and not args) or (name == "/provider" and not args_text) or (name == "/model" and not args_text)
+    ):
+        state = {"provider": None, "session": session}
+
+        def dispatch(command):
+            _, new_provider, new_session = handle_command(
+                command, tui, agent, config, manager, skills, project_context, session_manager, state["session"])
+            state["session"] = new_session
+            if new_provider is not None:
+                agent.provider = state["provider"] = new_provider
+
+        if name == "/model":
+            pick_model(tui, config, manager, agent, dispatch)
+        else:
+            run_settings(tui, config, manager, agent, dispatch, tab="Providers" if name == "/provider" else "Config")
+        refresh_tui_state(tui, config, agent, session=state["session"])
+        return False, state["provider"], state["session"]
     if name in {"/exit", "/quit", "/q"}:
         return True, None, session
     if name == "/clear":
@@ -119,19 +138,6 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         tui.clear()
         tui.show_success(f"New session: {session.id}")
         return False, provider, session
-    if name == "/config" and not args and hasattr(tui, "select"):
-        state = {"provider": None, "session": session}
-
-        def dispatch(command):
-            _, new_provider, new_session = handle_command(
-                command, tui, agent, config, manager, skills, project_context, session_manager, state["session"])
-            state["session"] = new_session
-            if new_provider is not None:
-                agent.provider = state["provider"] = new_provider
-
-        run_config_menu(tui, config, manager, agent, dispatch)
-        refresh_tui_state(tui, config, agent, session=state["session"])
-        return False, state["provider"], state["session"]
     if name == "/config":
         provider = handle_config(args, tui, config, manager)
         if provider is not None:

@@ -54,7 +54,7 @@ from .theme import (
 
 from .history import ProjectPromptHistory
 from .mascot import ANIMATIONS, render, render_ascii
-from .menus import MenuOption, MenuState, ask_text, run_menu
+from .menus import run_screen
 
 try:
     from prompt_toolkit import PromptSession
@@ -539,13 +539,12 @@ class ZerocodingTUI:
         anim.start()
         return anim
 
-    def select(self, title: str, options: list, current: int | None = None, extra_keys: dict | None = None):
-        """Arrow-key picker. `options` are labels or (label, hint) pairs; returns (index, key) or None."""
-        items = [MenuOption(*option) if isinstance(option, tuple) else MenuOption(option) for option in options]
-        return run_menu(MenuState(title, items, index=current or 0, extra_keys=extra_keys or {}))
-
-    def ask(self, prompt: str, default: str = ""):
-        return ask_text(prompt, default)
+    def run_screen(self, screen):
+        """Run a settings screen (see menus.py); cancelled with a hint when there is no terminal."""
+        done = run_screen(screen)
+        if done.cancelled and not (sys.stdin.isatty() and sys.stdout.isatty()):
+            self.show_info("Interactive menus need a terminal. Use the typed commands, e.g. /provider add.")
+        return done
 
     def show_done(self, seconds: float, stopped: bool = False) -> None:
         """Completion line with the wall-clock time, e.g. "✻ Worked for 12s · 14:32"."""
