@@ -33,12 +33,16 @@ GHOST_POSES = {pose: render(pose) for pose in ("idle", "approval", "success", "e
 GHOST_FULL = "\n".join(render("idle"))
 
 WORK_PHRASES = (
-    "Untangling the code…",
-    "Checking the moving parts…",
-    "Connecting a few dots…",
-    "Sorting through the details…",
-    "Giving the pieces a closer look…",
+    "Calibrating", "Pondering", "Untangling", "Tinkering", "Cogitating", "Noodling", "Sifting",
+    "Mulling", "Wrangling", "Deciphering", "Assembling", "Tracing", "Weighing", "Stitching",
 )
+# Activity glyph, same family and cadence as the Claude Code spinner: grows, then shrinks.
+SPINNER_FRAMES = ("·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢")
+SPINNER_ASCII = ("-", "\\", "|", "/")
+# One-line pet kept in the middle of the status row; legs shuffle while the agent works.
+PET_IDLE = "[• •]"
+PET_WORK = ("╹[• •]╹", "╻[• •]╻")
+PET_ASCII = ("[o o]", "[o.o]")
 
 COMMANDS = [
     ("/help", "Show commands"),
@@ -86,4 +90,5 @@ COMMANDS = [
     ("/session", "Show current session"),
     ("/new", "Start a new session"),
     ("/status", "Show full session status"),
+    ("/buddy", "Play a mascot animation"),
 ]

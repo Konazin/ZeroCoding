@@ -39,6 +39,7 @@ class FakeTUI:
     def show_error(self, text): self._log("error", text)
     def show_warning(self, text): self._log("warning", text)
     def show_help(self): self._log("help", "")
+    def play_buddy(self, name=None): return name or "dance"
     def show_status(self): self._log("status", "")
     def show_skills(self, skills): self._log("skills", ",".join(s.name for s in skills))
     def clear(self): self._log("clear", "")
@@ -283,6 +284,10 @@ class CliCommandTests(unittest.TestCase):
         self.run_command(f"/provider remove {self.config.provider}")
         self.assertEqual(self.tui.messages[-1][0], "error")
         self.assertIn(self.config.provider, self.config.providers)
+
+    def test_buddy_command_plays_an_animation(self):
+        self.run_command("/buddy sleep")
+        self.assertIn("sleep", self.tui.text())
 
     def test_provider_add_rejects_unknown_type_and_keeps_config(self):
         before = dict(self.config.providers)

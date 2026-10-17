@@ -194,18 +194,18 @@ def main(argv=None):
             elapsed = animation.stop()
             active_animation[0] = None
             tui.display_message("assistant", response)
-            tui.show_info(f"Worked for {elapsed:.0f}s")
+            tui.show_done(elapsed)
             save_session_state(session_manager, session, config, agent, project_context)
         except (KeyboardInterrupt, TurnCancelled):
             elapsed = animation.stop()
             active_animation[0] = None
             tui.show_warning("Turn cancelled. Nothing from this turn was saved to the session.")
-            tui.show_info(f"Stopped after {elapsed:.0f}s")
+            tui.show_done(elapsed, stopped=True)
         except Exception as exc:
             elapsed = animation.stop()
             active_animation[0] = None
             tui.show_error(str(exc))
-            tui.show_info(f"Worked for {elapsed:.0f}s")
+            tui.show_done(elapsed)
 
 
 if __name__ == "__main__":

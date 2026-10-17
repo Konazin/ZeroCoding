@@ -32,14 +32,10 @@ from .theme import (
     COMMANDS,
     DARK as ZERO_DARK,
     GHOST_ASCII_FULL,
-    GHOST_ASCII_WORK_FRAMES,
     GHOST_FULL,
     GHOST_SMALL,
     GHOST_SMALL_STATES,
     GHOST_TINY,
-    GHOST_WORK_ART,
-    GHOST_WORK_ART_ASCII,
-    GHOST_WORK_FRAMES,
     GRAY as ZERO_GRAY,
     GREEN as ZERO_GREEN,
     LIGHT as ZERO_LIGHT,
@@ -47,11 +43,17 @@ from .theme import (
     PURPLE_LIGHT as ZERO_PURPLE_LIGHT,
     RED as ZERO_RED,
     USER_BG as ZERO_USER_BG,
+    PET_ASCII,
+    PET_IDLE,
+    PET_WORK,
+    SPINNER_ASCII,
+    SPINNER_FRAMES,
     WORK_PHRASES,
     YELLOW as ZERO_YELLOW,
 )
 
 from .history import ProjectPromptHistory
+from .mascot import ANIMATIONS, render, render_ascii
 
 try:
     from prompt_toolkit import PromptSession
@@ -120,37 +122,33 @@ def ellipsize(value: str, limit: int) -> str:
 
 
 class _ThinkingView:
+    """Claude Code style activity line plus the status row, where the tiny pet walks while we work."""
+
     def __init__(self, animation: "ThinkingAnimation"):
         self.animation = animation
 
     def __rich_console__(self, console, options):
-        elapsed = self.animation.elapsed()
-        unicode = self.animation.unicode
-        message = ellipsize(self.animation.message, max(8, TerminalSize.get_width() - 20))
-        if TerminalSize.get_width() >= 72:
-            # Full mascot: walks in place, antenna blinks, progress bar crosses the chest.
-            art = (GHOST_WORK_ART if unicode else GHOST_WORK_ART_ASCII)[int(elapsed * 4) % 4]
-            for index, row in enumerate(art):
-                line = Text(row.ljust(14), style=f"bold {ZERO_PURPLE}")
-                if index == 2:
-                    line.append(message, style=f"italic {ZERO_LIGHT}")
-                    line.append(f"  {elapsed:.0f}s", style=f"dim {ZERO_GRAY}")
-                yield line
-            return
-        frame_index = int(elapsed * 4) % 2
-        frames = GHOST_WORK_FRAMES if unicode else GHOST_ASCII_WORK_FRAMES
+        anim = self.animation
+        elapsed = anim.elapsed()
+        tick = int(elapsed * 8)
+        frames = SPINNER_FRAMES if anim.unicode else SPINNER_ASCII
+        message = ellipsize(anim.message, max(8, TerminalSize.get_width() - 34))
         line = Text()
-        line.append(frames[frame_index] + "  ", style=f"bold {ZERO_PURPLE}")
-        line.append(message, style=f"italic {ZERO_LIGHT}")
-        line.append(f"  {elapsed:.0f}s", style=f"dim {ZERO_GRAY}")
+        line.append(frames[tick % len(frames)] + " ", style=f"bold {ZERO_PURPLE}")
+        line.append(message + "…", style=ZERO_PURPLE_LIGHT)
+        line.append(f" ({elapsed:.0f}s · ctrl+c to interrupt)", style=f"dim {ZERO_GRAY}")
         yield line
+        if anim.footer is not None:
+            pets = PET_WORK if anim.unicode else PET_ASCII
+            yield Text(anim.footer(pets[(tick // 2) % 2]), style=f"dim {ZERO_GRAY}")
 
 
 class ThinkingAnimation:
     """Compact mascot and status animation while the agent works."""
 
-    def __init__(self, console: Console, message: str | None = None):
+    def __init__(self, console: Console, message: str | None = None, footer=None):
         self.console = console
+        self.footer = footer  # callable(pet) -> status row text, supplied by the TUI
         self.message = message or random.choice(WORK_PHRASES)
         self.started_at = 0.0
         self.unicode = self._supports_unicode()
@@ -530,9 +528,29 @@ class ZerocodingTUI:
         return {"idle": "(o o)", "approval": "(o ?)", "success": "(^ ^)", "error": "(x x)"}.get(state, "(o o)")
 
     def show_thinking(self, message: str | None = None) -> ThinkingAnimation:
-        anim = ThinkingAnimation(self.console, message)
+        anim = ThinkingAnimation(self.console, message, footer=self._status_row)
         anim.start()
         return anim
+
+    def show_done(self, seconds: float, stopped: bool = False) -> None:
+        """Completion line with the wall-clock time, e.g. "✻ Worked for 12s · 14:32"."""
+        verb = "Stopped after" if stopped else "Worked for"
+        glyph = "✻" if self._unicode else "*"
+        stamp = time.strftime("%H:%M")
+        self.console.print(Text(f"{glyph} {verb} {seconds:.0f}s · {stamp}", style=f"dim {ZERO_GRAY}"))
+
+    def play_buddy(self, name: str | None = None) -> str:
+        """Play one mascot animation in place (the printed header cannot be clicked in a scrollback TUI)."""
+        names = sorted(ANIMATIONS)
+        choice = name if name in ANIMATIONS else random.choice(names)
+        poses, delay = ANIMATIONS[choice]
+        render_pose = render if self._unicode else render_ascii
+        with Live(Text(""), console=self.console, refresh_per_second=20, transient=False) as live:
+            for pose in poses:
+                live.update(Text("\n".join(render_pose(pose)), style=f"bold {ZERO_PURPLE}"), refresh=True)
+                time.sleep(delay)
+            live.update(Text("\n".join(render_pose("idle")), style=f"bold {ZERO_PURPLE}"), refresh=True)
+        return choice
 
     def confirm_action(self, action: str, preview: str) -> bool:
         """Show the complete approval preview and accept explicit Y/N/Esc input."""
@@ -567,10 +585,21 @@ class ZerocodingTUI:
     def _composer_rule(self) -> str:
         return ("─" if self._unicode else "-") * max(1, self._refresh_size())
 
-    def _status_line_text(self) -> str:
+    def _status_row(self, pet: str) -> str:
+        """Effort on the right and a small pet in the middle; the pet is dropped when it would collide."""
         width = max(1, TerminalSize.get_width())
-        value = ellipsize(f"Effort: {self.effort.title()}", width)
-        return " " * max(0, width - len(value)) + value
+        effort = ellipsize(f"Effort: {self.effort.title()}", width)
+        row = [" "] * width
+        start = max(0, width - len(effort))
+        row[start:] = list(effort)
+        if pet:
+            left = (width - len(pet)) // 2
+            if left > 0 and left + len(pet) + 2 < start:
+                row[left:left + len(pet)] = list(pet)
+        return "".join(row)
+
+    def _status_line_text(self) -> str:
+        return self._status_row(PET_IDLE if self._unicode else PET_ASCII[0])
 
     def _prompt_message(self):
         return [

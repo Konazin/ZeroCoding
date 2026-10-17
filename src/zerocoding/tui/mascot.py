@@ -90,3 +90,22 @@ def svg(pose: str = "idle", cell: int = 16, fill: str = "#A78BFA") -> str:
     ]
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w} {h}" width="{w}" height="{h}" '
             f'shape-rendering="crispEdges"><g fill="{fill}">{"".join(rects)}</g></svg>')
+
+
+# Easter-egg poses and the animations played by /buddy (or a click, where the terminal allows it).
+POSE_HOLES["blink"] = SQUINT
+POSE_HOLES["look_left"] = frozenset((r, c) for r in (4, 5) for c in (2, 6))
+POSE_HOLES["look_right"] = frozenset((r, c) for r in (4, 5) for c in (4, 8))
+POSE_HOLES["sleep"] = SQUINT | LEGS_A
+POSE_HOLES["dance_a"] = EYES | LEGS_A | frozenset({(7, 5)})
+POSE_HOLES["dance_b"] = frozenset({(4, 3), (5, 2), (5, 4), (4, 8), (5, 7), (5, 9)}) | LEGS_B | ANTENNA_TIP
+
+ANIMATIONS = {
+    "work": (("work_a", "work_b", "work_c", "work_d") * 3, 0.25),
+    "look": (("idle", "look_left", "look_left", "idle", "look_right", "look_right", "idle", "blink", "idle"), 0.3),
+    "dance": (("dance_a", "dance_b") * 6, 0.22),
+    "sleep": (("sleep",) * 4 + ("idle", "blink", "sleep", "sleep"), 0.45),
+    "cheer": (("success", "dance_b", "success", "dance_b", "success"), 0.25),
+    "shock": (("idle", "approval", "approval", "error", "idle"), 0.35),
+}
+POSES = tuple(POSE_HOLES)

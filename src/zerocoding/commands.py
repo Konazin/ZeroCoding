@@ -135,6 +135,11 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
             tui.show_error(f"Provider {session.provider} is offline.")
             tui.connection_status = "offline"
         return False, None, session
+    if name == "/buddy":
+        played = tui.play_buddy(args_text.strip().lower() or None)
+        tui.show_info(f"Buddy played '{played}'. Try: /buddy work, look, dance, sleep, cheer, shock.")
+        return False, None, session
+
     if name == "/status":
         tui.show_status()
         return False, None, session
