@@ -54,6 +54,7 @@ from .theme import (
 
 from .history import ProjectPromptHistory
 from .mascot import ANIMATIONS, render, render_ascii
+from .menus import MenuOption, MenuState, ask_text, run_menu
 
 try:
     from prompt_toolkit import PromptSession
@@ -531,6 +532,14 @@ class ZerocodingTUI:
         anim = ThinkingAnimation(self.console, message, footer=self._status_row)
         anim.start()
         return anim
+
+    def select(self, title: str, options: list, current: int | None = None, extra_keys: dict | None = None):
+        """Arrow-key picker. `options` are labels or (label, hint) pairs; returns (index, key) or None."""
+        items = [MenuOption(*option) if isinstance(option, tuple) else MenuOption(option) for option in options]
+        return run_menu(MenuState(title, items, index=current or 0, extra_keys=extra_keys or {}))
+
+    def ask(self, prompt: str, default: str = ""):
+        return ask_text(prompt, default)
 
     def show_done(self, seconds: float, stopped: bool = False) -> None:
         """Completion line with the wall-clock time, e.g. "✻ Worked for 12s · 14:32"."""
