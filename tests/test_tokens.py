@@ -387,3 +387,29 @@ class TestEmptyReplyRecovery(unittest.TestCase):
         self.assertEqual(answer, "done")
         last_tool = [m for m in provider.seen[-1] if m.get("role") == "tool"][-1]
         self.assertTrue(last_tool["content"].startswith("[compacted"))
+
+
+class TestCompactHistory(unittest.TestCase):
+    def test_compact_history_keeps_recent_messages_and_folds_the_rest(self):
+        agent = Agent(TestContextWindowBudget._Provider(None))
+        for n in range(8):
+            agent.context.add_message("user", f"question {n} " + "x" * 300)
+            agent.context.add_message("assistant", f"answer {n} " + "y" * 300)
+
+        before, after = agent.compact_history(keep_messages=4)
+
+        self.assertLess(after, before)
+        history = agent.context.history
+        self.assertEqual(len(history), 6)
+        self.assertIn("Earlier turns", history[0]["content"])
+        self.assertEqual(history[-1]["content"].split()[0:2], ["answer", "7"])
+
+    def test_compact_history_is_a_noop_on_short_history(self):
+        agent = Agent(TestContextWindowBudget._Provider(None))
+        agent.context.add_message("user", "hi")
+        agent.context.add_message("assistant", "hello")
+
+        before, after = agent.compact_history()
+
+        self.assertEqual(before, after)
+        self.assertEqual(len(agent.context.history), 2)

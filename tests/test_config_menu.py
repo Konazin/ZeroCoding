@@ -224,3 +224,22 @@ class TestModelPicker(MenuFlowCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestEffortMenu(unittest.TestCase):
+    def test_effort_menu_shows_budgets_and_dispatches_the_choice(self):
+        from zerocoding.config_menu import pick_effort
+
+        agent = FakeAgent()
+        agent.effort_profiles = {"low": {"max_output_tokens": 512, "max_tool_rounds": 3},
+                                 "medium": {"max_output_tokens": 1024, "max_tool_rounds": 6},
+                                 "high": {"max_output_tokens": 2048, "max_tool_rounds": 8}}
+        agent.window_tokens = lambda: 8192
+        ui, chosen = ScriptedUI([["down", "enter"]]), []
+
+        pick_effort(ui, agent, chosen.append)
+
+        screen = ui.opened[0]
+        self.assertEqual(chosen, ["/effort high"])
+        self.assertIn("512 output tokens · 3 tool rounds", screen.rows[0].value)
+        self.assertIn("8192", screen.subtitle)

@@ -2,7 +2,7 @@
 
 ZeroCoding is an open source terminal coding assistant built in Python. It is inspired by the general experience of modern coding agents in the terminal, but uses its own identity, interface text, provider layer and ghost ASCII logo.
 
-The MVP focuses on a compact coding-agent loop for local and OpenAI-compatible models. It keeps each conversation in its own session, limits prompt input to 4,096 estimated tokens by default, reserves 1,024 tokens for output, and supports structured tool calls. In the TUI, reading and searching are available to the agent; file writes and shell commands always show a preview and require approval.
+The MVP focuses on a compact coding-agent loop for local and OpenAI-compatible models. It keeps each conversation in its own session, sizes the prompt from the server context window (4,096 estimated tokens when it cannot be detected), reserves 1,024 tokens for output, and supports structured tool calls. In the TUI, reading and searching are available to the agent; file writes and shell commands always show a preview and require approval.
 
 ## Install
 
@@ -163,6 +163,7 @@ You can also use environment variables from `.env.example`.
 - `/plan [on|off]` enables read-only planning. Plan mode exposes only project listing, search and file reading to the agent.
 - `/ultrathink [on|off]` adds output and tool-round budget for the current session.
 - `/effort [low|medium|high]` selects the session budget profile.
+- `/compact` folds older conversation into a short digest to free context. The prompt budget follows the server context window (`n_ctx`, read from llama.cpp `/props`; override with `context_window`), and large old tool outputs are compacted automatically at 70% of it.
 - `/config` shows the active config.
 - `/config base_url http://127.0.0.1:8080/v1` updates the active provider URL.
 - `/config add local llama_cpp http://127.0.0.1:8080/v1 ornith-1.5-9b-q5-k-m` adds a provider.

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core.config import ProviderConfig
 from .core.project_context import ProjectContext
-from .config_menu import confirm_yolo, pick_model, pick_permission, run_settings
+from .config_menu import confirm_yolo, pick_effort, pick_model, pick_permission, run_settings
 from .core.router import build_provider, build_session_provider
 from .core.sessions import Session
 
@@ -17,6 +17,7 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
     interactive = hasattr(tui, "run_screen")
     if interactive and (
         (name == "/config" and not args) or (name == "/provider" and not args_text) or (name == "/model" and not args_text)
+        or (name == "/effort" and not args_text)
     ):
         state = {"provider": None, "session": session}
 
@@ -29,6 +30,8 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
 
         if name == "/model":
             pick_model(tui, config, manager, agent, dispatch)
+        elif name == "/effort":
+            pick_effort(tui, agent, dispatch)
         else:
             run_settings(tui, config, manager, agent, dispatch, tab="Providers" if name == "/provider" else "Config")
         refresh_tui_state(tui, config, agent, session=state["session"])
@@ -71,6 +74,16 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         refresh_tui_state(tui, config, agent, session=session)
         sync_tui_runtime(tui, agent)
         tui.show_success(f"{label} mode {'enabled' if enabled else 'disabled'}.")
+        return False, None, session
+    if name == "/compact":
+        before, after = agent.compact_history()
+        if after >= before:
+            tui.show_info("Nothing to compact yet.")
+        else:
+            save_session_state(session_manager, session, config, agent, project_context)
+            window = agent.window_tokens()
+            used = f" ({after} of {window} tokens)" if window else ""
+            tui.show_success(f"Conversation compacted: {before} → {after} tokens{used}.")
         return False, None, session
     if name == "/effort":
         if not args:

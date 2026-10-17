@@ -78,7 +78,7 @@ def run_settings(tui, config, manager, agent, dispatch, tab: str = "Config") -> 
         elif row == "model":
             pick_model(tui, config, manager, agent, dispatch)
         elif row == "effort":
-            _pick_effort(tui, agent, dispatch)
+            pick_effort(tui, agent, dispatch)
         elif row == "permission" and getattr(agent, "permissions", None) is not None:
             pick_permission(tui, agent.permissions)
         elif row in {"streaming", "mouse", "persist"}:
@@ -99,10 +99,18 @@ def _toggle(tui, config, manager, agent, row) -> None:
     manager.save(config)
 
 
-def _pick_effort(tui, agent, dispatch) -> None:
-    hints = {"low": "fast, short answers", "medium": "default", "high": "slower, more tool rounds"}
-    rows = [Row(level.title(), hints[level], level, checked=level == agent.effort) for level in EFFORTS]
-    done = tui.run_screen(SelectScreen("Effort", rows, index=EFFORTS.index(agent.effort) if agent.effort in EFFORTS else 1))
+def pick_effort(tui, agent, dispatch) -> None:
+    profiles = getattr(agent, "effort_profiles", {})
+
+    def hint(level):
+        profile = profiles.get(level) or {}
+        return f"{profile.get('max_output_tokens', '?')} output tokens · {profile.get('max_tool_rounds', '?')} tool rounds"
+
+    rows = [Row(level.title(), hint(level), level, checked=level == agent.effort) for level in EFFORTS]
+    window = agent.window_tokens() if hasattr(agent, "window_tokens") else None
+    subtitle = "Budget per task." + (f" Context window: {window} tokens." if window else "")
+    done = tui.run_screen(SelectScreen(
+        "Effort", rows, subtitle=subtitle, index=EFFORTS.index(agent.effort) if agent.effort in EFFORTS else 1))
     if not done.cancelled:
         dispatch(f"/effort {EFFORTS[done.value]}")
 

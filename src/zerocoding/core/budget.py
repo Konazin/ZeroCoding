@@ -20,7 +20,7 @@ def count_prompt(count, messages: list[dict], tools: list[dict] | None) -> int:
     return count(messages)
 
 
-def _turn_groups(messages: list[dict]) -> list[list[dict]]:
+def turn_groups(messages: list[dict]) -> list[list[dict]]:
     """Keep each user turn, including its assistant tool calls and results, together."""
     groups: list[list[dict]] = []
     for message in messages:
@@ -37,7 +37,7 @@ def _first_line(message: dict, limit: int) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _digest(dropped: list[list[dict]], max_entries: int = 6, max_chars: int = 700) -> str:
+def digest_turns(dropped: list[list[dict]], max_entries: int = 6, max_chars: int = 700) -> str:
     """Deterministic one-line-per-turn summary of turns removed to fit the budget."""
     lines = []
     for group in dropped[-max_entries:]:
@@ -113,7 +113,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
     if max_tokens < 1:
         raise PromptTooLargeError("Prompt budget must be at least one token.")
 
-    groups = _turn_groups(result)
+    groups = turn_groups(result)
     current_group = max(
         (index for index, group in enumerate(groups)
          if any(message.get("role") == "user" for message in group)),
@@ -160,7 +160,7 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         if not _trim_tool_output(largest):
             break
 
-    note = _digest(dropped) if dropped else ""
+    note = digest_turns(dropped) if dropped else ""
     if note and fitted and fitted[0].get("role") == "system":
         original = fitted[0]["content"]
         fitted[0]["content"] = f"{original}\n\n{note}"

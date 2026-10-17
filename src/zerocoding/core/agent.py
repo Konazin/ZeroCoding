@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import Generator
 
-from .budget import compact_tool_results, count_prompt, fit_messages
+from .budget import compact_tool_results, count_prompt, digest_turns, fit_messages, turn_groups
 from .cancel import TurnCancelled
 from .context import ConversationContext
 from .events import AgentEvent
@@ -154,6 +154,24 @@ class Agent:
         if tool_schemas and messages and messages[0].get("role") == "system":
             messages[0]["content"] += ' When native calls are unavailable, emit one exact <tool_call>{"name":"tool_name","arguments":{}}</tool_call> marker.'
         return self._fit(messages, self.input_budget(), tool_schemas)
+
+    def compact_history(self, keep_messages: int = 4) -> tuple[int, int]:
+        """Fold older history into one deterministic digest; returns (tokens before, tokens after)."""
+        history = self.context.history
+        count = lambda items: count_prompt(self.token_counter, list(items), None)
+        before = count(history)
+        old, recent = history[:-keep_messages] if keep_messages else history, history[-keep_messages:] if keep_messages else []
+        if len(old) < 2:
+            return before, before
+        note = digest_turns(turn_groups(old))
+        if not note:
+            return before, before
+        self.context.history = [
+            {"role": "user", "content": note},
+            {"role": "assistant", "content": "Noted. I will use that summary of the earlier turns."},
+            *recent,
+        ]
+        return before, count(self.context.history)
 
     def _compact_if_needed(self, messages, budget, tool_schemas, on_event):
         """Shrink old tool outputs once the prompt passes COMPACT_AT of the budget, before it overflows."""

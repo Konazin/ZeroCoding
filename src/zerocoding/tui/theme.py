@@ -72,6 +72,7 @@ COMMANDS = [
     ("/plan", "Toggle read-only planning mode"),
     ("/ultrathink", "Toggle deeper analysis budget"),
     ("/effort", "Set low, medium, or high effort"),
+    ("/compact", "Shorten the conversation to free context"),
     ("/skill", "List skills"),
     ("/skill add", "Activate a skill"),
     ("/skill remove", "Deactivate a skill"),
