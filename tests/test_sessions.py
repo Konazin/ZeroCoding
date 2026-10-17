@@ -83,7 +83,8 @@ class TestSessionManager(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            with self.assertRaisesRegex(ValueError, "history"):
+            # Older Pythons hit the JSON recursion limit before validation runs.
+            with self.assertRaisesRegex(ValueError, "history|nested too deeply"):
                 SessionManager(tmp).load("deadbeef")
 
     def test_malformed_session_fields_are_rejected_with_field_specific_errors(self):
