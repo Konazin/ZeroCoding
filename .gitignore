@@ -54,3 +54,6 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Local evidence (screenshots used as references while designing)
+/evidencias/
