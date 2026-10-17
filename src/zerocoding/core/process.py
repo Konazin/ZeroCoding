@@ -85,6 +85,12 @@ def run_capped(argv, *, cwd, env, timeout: float, max_output_chars: int,
             except ProcessLookupError:
                 pass
 
+    def close_output():
+        try:
+            process.stdout.close()
+        except (OSError, ValueError):
+            pass
+
     timed_out = False
     try:
         process.wait(timeout=max(0.01, timeout))
@@ -98,11 +104,13 @@ def run_capped(argv, *, cwd, env, timeout: float, max_output_chars: int,
         reader.join(timeout=1)
         if writer:
             writer.join(timeout=1)
+        close_output()
         raise
 
     reader.join(timeout=1)
     if writer:
         writer.join(timeout=1)
+    close_output()
     with lock:
         collecting = False
         output_bytes = bytes(captured)

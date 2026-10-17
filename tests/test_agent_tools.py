@@ -200,5 +200,78 @@ class TestAgentTools(unittest.TestCase):
         self.assertLessEqual(len(fitted), 2)
 
 
+class TestShellBlockFallback(unittest.TestCase):
+    def convert(self, text):
+        from zerocoding.core.toolcalls import shell_calls_from_text
+        from zerocoding.providers.base import ProviderTurn
+        return shell_calls_from_text(ProviderTurn(content=text))
+
+    def test_bash_block_becomes_run_command_and_leaves_the_prose(self):
+        turn = self.convert("Vou criar a pasta:\n\n```bash\nmkdir calculadora\n```\n")
+        self.assertEqual([(c.name, c.arguments) for c in turn.tool_calls], [("run_command", {"command": "mkdir calculadora"})])
+        self.assertEqual(turn.content, "Vou criar a pasta:")
+
+    def test_multiple_lines_comments_and_prompts(self):
+        turn = self.convert("```sh\n# setup\n$ mkdir a\ntouch a/b.txt\n```")
+        self.assertEqual([c.arguments["command"] for c in turn.tool_calls], ["mkdir a", "touch a/b.txt"])
+
+    def test_blocks_that_need_a_shell_or_are_not_shell_are_left_alone(self):
+        for text in ("```bash\nmkdir a && cd a\n```", "```bash\ncd project\n```", "```bash\nls | wc -l\n```",
+                     "```python\nprint('x')\n```", "```\nmkdir a\n```", "no code here"):
+            self.assertEqual(self.convert(text).tool_calls, [], text)
+
+    def test_number_of_converted_commands_is_capped(self):
+        turn = self.convert("```bash\n" + "\n".join(f"mkdir d{i}" for i in range(10)) + "\n```")
+        self.assertEqual(len(turn.tool_calls), 4)
+
+    def agent(self, texts, approve=True, **kwargs):
+        from zerocoding.core.agent import Agent
+        from zerocoding.core.tools import ToolRegistry
+        from zerocoding.providers.base import ProviderTurn
+
+        class Provider:
+            def __init__(self):
+                self.turns = iter(texts)
+
+            def chat(self, messages, **kw):
+                return ProviderTurn(content=next(self.turns))
+
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        asked = []
+        tools = ToolRegistry(self.directory.name, approve=lambda action, preview: asked.append((action, preview)) or approve)
+        return Agent(Provider(), tools=tools, **kwargs), asked
+
+    def test_printed_command_is_proposed_for_approval_run_and_announced(self):
+        agent, asked = self.agent(["Vou criar:\n```bash\nmkdir calculadora\n```", "Pasta criada."])
+        events = []
+        answer = agent.ask("modularize", use_tools=True, on_event=events.append)
+        self.assertEqual(asked, [("Run command", "mkdir calculadora")])
+        self.assertTrue((Path(self.directory.name) / "calculadora").is_dir())
+        self.assertEqual(answer, "Pasta criada.")
+        preamble = [e for e in events if e.kind == "preamble"]
+        self.assertEqual([e.summary for e in preamble], ["Vou criar:"])
+
+    def test_refused_command_does_not_run(self):
+        agent, asked = self.agent(["```bash\nmkdir calculadora\n```", "Ok, não vou criar."], approve=False)
+        agent.ask("modularize", use_tools=True)
+        self.assertFalse((Path(self.directory.name) / "calculadora").exists())
+
+    def test_disabled_by_config_and_in_plan_mode(self):
+        agent, asked = self.agent(["```bash\nmkdir x\n```"], shell_block_fallback=False)
+        self.assertIn("mkdir x", agent.ask("go", use_tools=True))
+        self.assertEqual(asked, [])
+        agent, asked = self.agent(["```bash\nmkdir x\n```"], plan_mode=True)
+        agent.ask("go", use_tools=True)
+        self.assertEqual(asked, [])
+
+    def test_no_conversion_after_the_model_already_changed_something(self):
+        agent, asked = self.agent(["```bash\nmkdir first\n```", "Done. Run it with:\n```bash\npython main.py\n```"])
+        answer = agent.ask("go", use_tools=True)
+        self.assertEqual([preview for _, preview in asked], ["mkdir first"])
+        self.assertIn("python main.py", answer)
+
+
 if __name__ == "__main__":
     unittest.main()
+

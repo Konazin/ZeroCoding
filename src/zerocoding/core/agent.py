@@ -11,7 +11,7 @@ from .events import AgentEvent
 from .prompt import build_messages
 from .relevance import select_skills, select_tool_schemas
 from .tokens import TokenCounter
-from .toolcalls import emit_event, parse_compact_call, tool_summary, tool_target
+from .toolcalls import CHANGING_TOOLS, emit_event, parse_compact_call, shell_calls_from_text, tool_summary, tool_target
 from .tools import READ_ONLY_TOOL_NAMES
 from ..providers.base import normalize_turn
 
@@ -22,7 +22,7 @@ class Agent:
     def __init__(self, provider, memory=None, skills=None, max_input_tokens=4096,
                  max_output_tokens=1024, max_tool_rounds=6, tools=None,
                  effort_profiles=None, effort="medium", plan_mode=False, ultrathink=False,
-                 dynamic_context=False, streaming_enabled=False):
+                 dynamic_context=False, streaming_enabled=False, shell_block_fallback=True):
         self.provider = provider
         self.token_counter = TokenCounter(provider)
         self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
@@ -32,6 +32,7 @@ class Agent:
         self._stats: dict = self._new_stats()
         self.dynamic_context = bool(dynamic_context)
         self.streaming_enabled = bool(streaming_enabled)
+        self.shell_block_fallback = bool(shell_block_fallback)
         self.memory = memory  # retained for API compatibility; global history is never injected.
         self.skills = skills or []
         self.active_skills = []
@@ -323,8 +324,16 @@ class Agent:
         turn = self._chat_non_empty(messages, tool_schemas, output_tokens, state, on_event)
         rounds = 0
         tool_round_completed = False
+        changed = False  # a write, edit or command already ran this turn
         while True:
             turn = parse_compact_call(turn)
+            if (self.shell_block_fallback and not turn.tool_calls and not changed and tool_schemas
+                    and any(spec.get("function", {}).get("name") == "run_command" for spec in tool_schemas)):
+                converted = shell_calls_from_text(turn)
+                if converted.tool_calls:
+                    if converted.content.strip():
+                        emit_event(on_event, AgentEvent("preamble", summary=converted.content))
+                    turn = converted
             if not turn.tool_calls or not tool_schemas or rounds >= tool_round_limit:
                 response_text = turn.content or (
                     f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue, or raise /effort."
@@ -355,7 +364,10 @@ class Agent:
                 assistant_message["reasoning_content"] = turn.reasoning_content
             messages.append(assistant_message)
             for call, call_id in zip(calls, call_ids):
-                messages.append(self._run_tool_call(call, call_id, on_event, cancel))
+                result_message = self._run_tool_call(call, call_id, on_event, cancel)
+                messages.append(result_message)
+                if call.name in CHANGING_TOOLS and "denied" not in str(result_message.get("content", "")).lower():
+                    changed = True
             rounds += 1
             tool_round_completed = True
             messages = self._fit(messages, self.max_input_tokens, tool_schemas)

@@ -70,6 +70,7 @@ def main(argv=None):
         effort_profiles=config.effort_profiles,
         dynamic_context=config.dynamic_context,
         streaming_enabled=config.streaming_enabled,
+        shell_block_fallback=config.shell_block_fallback,
     )
     console = Console(force_terminal=True, color_system="truecolor")
 

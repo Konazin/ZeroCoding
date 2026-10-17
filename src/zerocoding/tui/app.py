@@ -509,6 +509,9 @@ class ZerocodingTUI:
 
     def handle_agent_event(self, event, animation: ThinkingAnimation | None = None) -> None:
         kind = getattr(event, "kind", "")
+        if kind == "preamble":
+            self._print_preamble(getattr(event, "summary", "").strip())
+            return
         if kind in {"response_delta", "response_end", "response_reset"}:
             self._handle_response_event(kind, event, animation)
             return

@@ -7,6 +7,12 @@ import re
 from .events import AgentEvent
 from ..providers.base import ProviderTurn, ToolCall
 
+SHELL_FENCE = re.compile(r"```[ \t]*(?:bash|sh|shell|zsh|console|terminal)[ \t]*\n(.*?)```", re.IGNORECASE | re.DOTALL)
+# run_command launches an argv without a shell, so these cannot work and are left as plain text.
+UNSUPPORTED_SHELL = re.compile(r"&&|\|\||[|;<>`]|\$\(|\\$")
+MAX_TEXT_COMMANDS = 4
+CHANGING_TOOLS = frozenset({"write_file", "edit_file", "run_command"})
+
 COMPACT_CALL = re.compile(r"<tool_call>\s*(\{.*\})\s*</tool_call>", re.DOTALL)
 
 
@@ -80,3 +86,41 @@ def parse_compact_call(turn: ProviderTurn) -> ProviderTurn:
     except (ValueError, TypeError):
         pass
     return turn
+
+
+def shell_calls_from_text(turn: ProviderTurn, limit: int = MAX_TEXT_COMMANDS) -> ProviderTurn:
+    """Small models often print a command in a ```bash block instead of calling `run_command`.
+
+    Turn the runnable lines of such blocks into `run_command` calls so they go through the normal
+    approval flow. A block with any line that needs a shell (pipes, `&&`, redirects, `cd`) is left
+    untouched as text, and the converted blocks are removed from the visible text.
+    """
+    if turn.tool_calls:
+        return turn
+    commands: list[str] = []
+    content = turn.content
+    for match in list(SHELL_FENCE.finditer(turn.content)):
+        block: list[str] = []
+        for raw in match.group(1).splitlines():
+            line = raw.strip()
+            if line.startswith("$ "):
+                line = line[2:].strip()
+            if not line or line.startswith("#"):
+                continue
+            if UNSUPPORTED_SHELL.search(line) or line.split()[0] == "cd":
+                block = []
+                break
+            block.append(line)
+        if block:
+            commands.extend(block)
+            content = content.replace(match.group(0), "", 1)
+    commands = commands[:limit]
+    if not commands:
+        return turn
+    return ProviderTurn(
+        content=re.sub(r"\n{3,}", "\n\n", content).strip(),
+        tool_calls=[ToolCall("run_command", {"command": command}) for command in commands],
+        usage=turn.usage,
+        thinking_present=turn.thinking_present,
+        reasoning_content=turn.reasoning_content,
+    )
