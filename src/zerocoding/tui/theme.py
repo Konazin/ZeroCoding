@@ -90,6 +90,7 @@ COMMANDS = [
     ("/resume", "Resume a session"),
     ("/session", "Show current session"),
     ("/new", "Start a new session"),
+    ("/permission", "Approval mode: ask, auto or yolo"),
     ("/status", "Show full session status"),
     ("/buddy", "Play a mascot animation"),
 ]

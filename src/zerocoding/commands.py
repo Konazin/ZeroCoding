@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .core.config import ProviderConfig
 from .core.project_context import ProjectContext
-from .config_menu import pick_model, run_settings
+from .config_menu import confirm_yolo, pick_model, pick_permission, run_settings
 from .core.router import build_provider, build_session_provider
 from .core.sessions import Session
 
@@ -33,6 +33,15 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
             run_settings(tui, config, manager, agent, dispatch, tab="Providers" if name == "/provider" else "Config")
         refresh_tui_state(tui, config, agent, session=state["session"])
         return False, state["provider"], state["session"]
+    if name == "/permission":
+        policy = getattr(agent, "permissions", None)
+        if policy is None:
+            tui.show_error("Permission modes are not available in this session.")
+        else:
+            handle_permission(args_text, tui, policy)
+            refresh_tui_state(tui, config, agent, session=session)
+        return False, None, session
+
     if name in {"/exit", "/quit", "/q"}:
         return True, None, session
     if name == "/clear":
@@ -222,6 +231,34 @@ def _warn_if_model_missing(tui, provider, model):
     if available and model not in available:
         shown = ", ".join(available[:8])
         tui.show_warning(f"Model '{model}' is not served there. Available: {shown}. Fix it with /model.")
+
+
+def handle_permission(args_text, tui, policy):
+    """/permission [ask|auto|yolo|packs]. The mode applies to this session only."""
+    from .core.command_packs import PACK_SUMMARY
+    from .core.permissions import MODE_SUMMARY, MODES
+
+    choice = args_text.strip().lower()
+    if choice == "packs":
+        for pack in policy.packs:
+            tui.show_info(f"{pack}: {PACK_SUMMARY.get(pack, '')}")
+        return
+    if not choice:
+        if hasattr(tui, "run_screen"):
+            pick_permission(tui, policy)
+            return
+        tui.show_info(f"Permission mode: {policy.mode}. Use /permission ask|auto|yolo|packs.")
+        for mode in MODES:
+            tui.show_info(f"{'*' if mode == policy.mode else ' '} {mode}: {MODE_SUMMARY[mode]}")
+        return
+    if choice not in MODES:
+        tui.show_error("Usage: /permission [ask|auto|yolo|packs]")
+        return
+    if choice == "yolo" and not confirm_yolo(tui):
+        tui.show_info("YOLO mode not enabled.")
+        return
+    policy.set_mode(choice)
+    tui.show_success(f"Permission mode: {choice}.")
 
 
 def handle_provider(args_text, tui, config, manager, active_provider=None):
@@ -585,6 +622,7 @@ def handle_new(tui, agent, config, project_context, session_manager):
 
 
 def refresh_tui_state(tui, config, agent, session=None):
+    tui.permission_mode = getattr(getattr(agent, "permissions", None), "mode", "ask")
     tui.provider_name = session.provider if session is not None else config.provider
     tui.model = session.model if session is not None else config.model
     tui.mode = session.mode if session is not None else config.mode

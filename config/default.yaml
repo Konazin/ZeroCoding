@@ -39,6 +39,8 @@ max_tool_rounds: 6
 metrics_enabled: true
 # Opt-in: send only the tool schemas and skills relevant to each request.
 dynamic_context: false
+# Command packs that /permission auto approves without asking (fs, read, git, tests). Decided by code, inside the workspace only.
+auto_packs: [fs, read, git]
 shell_block_fallback: true # Small models sometimes print a ```bash block instead of calling run_command; offer it for approval as a command.
 fullscreen: true # Fixed window with a scrollable transcript. false returns to the classic scrollback UI.
 mouse_support: true # Click the small pet for an animation. Costs plain text selection while the prompt is open (Shift+drag still selects in most terminals) and wheel scrolling there; set false to restore both.

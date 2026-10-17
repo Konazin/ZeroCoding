@@ -144,14 +144,14 @@ class TestSettingsFlows(MenuFlowCase):
         return ui
 
     def test_toggle_rows_save_and_apply(self):
-        # Config rows: Provider, Model, Effort, Streaming, Mouse, Save sessions
-        self.run_settings([["down", "down", "down", "enter"], ["down", "down", "down", "down", "enter"]])
+        # Config rows: Provider, Model, Effort, Permission mode, Streaming, Mouse, Save sessions
+        self.run_settings([["down", "down", "down", "down", "enter"]])
         self.assertFalse(self.config.streaming_enabled)
         self.assertFalse(self.agent.streaming_enabled)
         self.assertFalse(self.manager.load().streaming_enabled)
 
     def test_mouse_toggle_updates_the_tui(self):
-        ui = self.run_settings([["down", "down", "down", "down", "enter"]])
+        ui = self.run_settings([["down", "down", "down", "down", "down", "enter"]])
         self.assertFalse(ui.mouse_enabled)
         self.assertFalse(self.manager.load().mouse_support)
 

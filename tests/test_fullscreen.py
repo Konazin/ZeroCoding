@@ -82,12 +82,16 @@ class TestApprovalScreen(unittest.TestCase):
         for key in ("char:x", "down", "tab"):
             self.assertIsNone(ApprovalScreen("Edit file", DIFF).key(key))
 
-    def test_diff_and_command_panels(self):
-        diff_text = "".join(fragment[1] for fragment in ApprovalScreen("Edit file", DIFF).fragments(60))
+    def test_dock_has_the_decision_keys_for_diffs_and_commands(self):
+        diff_text = "".join(fragment[1] for fragment in ApprovalScreen("Edit file", DIFF).dock_fragments(80, False))
         self.assertIn("calc.py", diff_text)
         self.assertIn("Added 1 line, removed 1 line", diff_text)
-        command_text = "".join(fragment[1] for fragment in ApprovalScreen("Run command", "python -m unittest").fragments(60))
-        self.assertIn("$ python -m unittest", command_text)
+        self.assertIn("Approve? Y yes · N / Enter / Esc no", diff_text)
+        self.assertIn("Ctrl+T expand diff", diff_text)
+        self.assertIn("Ctrl+T collapse diff", "".join(f[1] for f in ApprovalScreen("Edit file", DIFF).dock_fragments(80, True)))
+        command_text = "".join(f[1] for f in ApprovalScreen("Run command", "python -m unittest").dock_fragments(80, False))
+        self.assertIn("Run command · python -m unittest", command_text)
+        self.assertNotIn("Ctrl+T", command_text)
 
 
 class FullscreenCase(unittest.TestCase):
@@ -98,6 +102,7 @@ class FullscreenCase(unittest.TestCase):
         session = create_app_session(input=pipe, output=DummyOutput())
         session.__enter__()
         self.addCleanup(session.__exit__, None, None, None)
+        self.pipe = pipe
         self.tui = FullscreenTUI(provider_name="p", model="m", theme="purple", mode="code", session_id="s", skills=[])
         self.tui._size = lambda: (40, 12)  # transcript viewport is 6 rows
 
@@ -145,30 +150,79 @@ class TestFullscreenBehavior(FullscreenCase):
         worker = threading.Thread(target=lambda: outcome.append(self.tui.confirm_action("Edit file", DIFF)))
         worker.start()
         for _ in range(100):
-            if self.tui._modal is not None:
+            if self.tui._approval is not None:
                 break
             time.sleep(0.01)
-        self.tui._feed_modal("char:x")      # ignored
+        self.tui._feed_approval("char:x")      # ignored
         self.assertTrue(worker.is_alive())
-        self.tui._feed_modal("char:y")
+        self.tui._feed_approval("char:y")
         worker.join(2)
         self.assertEqual(outcome, [True])
         text = "\n".join(plain(self.tui.console.render_lines(60)))
         self.assertIn("Added 1 line, removed 1 line", text)
         self.assertIn("return value * 2", text)
 
-    def test_rejection_keeps_the_diff_out_of_the_transcript(self):
+    def test_rejection_is_recorded_after_the_proposal(self):
         worker = threading.Thread(target=lambda: self.tui.confirm_action("Edit file", DIFF))
         worker.start()
         for _ in range(100):
-            if self.tui._modal is not None:
+            if self.tui._approval is not None:
                 break
             time.sleep(0.01)
-        self.tui._feed_modal("enter")
+        self.tui._feed_approval("enter")
         worker.join(2)
         text = "\n".join(plain(self.tui.console.render_lines(60)))
         self.assertIn("Rejected edit file", text)
-        self.assertNotIn("return value * 2", text)
+
+    def test_ctrl_t_expands_collapsed_diffs_already_in_the_transcript(self):
+        diff = "--- /dev/null\n+++ b/big.py\n@@ -0,0 +1,30 @@\n" + "".join(f"+line {i}\n" for i in range(30))
+        self.tui._show_proposal("Write file", diff)
+        collapsed = "\n".join(plain(self.tui.console.render_lines(60)))
+        self.assertIn("line 11", collapsed)
+        self.assertNotIn("line 12", collapsed)
+        self.assertIn("+18 lines (ctrl+t to expand)", collapsed)
+        self.tui.toggle_diff_expansion()
+        expanded = "\n".join(plain(self.tui.console.render_lines(60)))
+        self.assertIn("line 29", expanded)
+        self.assertNotIn("ctrl+t to expand", expanded)
+        self.tui.toggle_diff_expansion()
+        self.assertNotIn("line 29", "\n".join(plain(self.tui.console.render_lines(60))))
+
+    def test_ctrl_t_and_paging_keep_working_while_an_approval_is_pending(self):
+        for index in range(120):  # taller than the dummy terminal, so scrolling has room
+            self.tui.console.print(Text(f"line {index}"))
+        self.tui._approval = (ApprovalScreen("Write file", DIFF), None)
+        runner = threading.Thread(target=self.tui._app.run, daemon=True)
+        runner.start()
+        time.sleep(0.4)
+        self.pipe.send_bytes(b"\x14")        # Ctrl+T
+        self.pipe.send_bytes(b"\x1b[5~")     # PageUp
+        for _ in range(50):
+            if self.tui._diff_expanded and self.tui._scroll > 0:
+                break
+            time.sleep(0.05)
+        self.tui._approval = None
+        self.tui._app.exit()
+        runner.join(2)
+        self.assertTrue(self.tui._diff_expanded)
+        self.assertGreater(self.tui._scroll, 0)
+
+    def test_status_row_shows_the_permission_mode_on_the_left(self):
+        self.tui._size = lambda: (80, 12)
+        self.assertNotIn("mode", "".join(f[1] for f in self.tui._status_fragments()))
+        self.tui.permission_mode = "yolo"
+        fragments = self.tui._status_fragments()
+        self.assertEqual(fragments[0], ("class:perm-yolo", "⏵⏵ yolo mode"))
+        self.tui.permission_mode = "auto"
+        self.assertIn("⏵⏵ auto mode", "".join(f[1] for f in self.tui._status_fragments()))
+
+    def test_auto_approved_actions_are_still_recorded_with_the_diff(self):
+        self.tui.note_auto_approval("Write file", "--- /dev/null\n+++ b/a.py\n@@ -0,0 +1,1 @@\n+x = 1\n", "yolo")
+        self.tui.note_auto_approval("Run command", "mkdir -p a", "auto · fs pack")
+        text = "\n".join(plain(self.tui.console.render_lines(80)))
+        self.assertIn("✓ Write file approved (yolo) · Added 1 line", text)
+        self.assertIn("x = 1", text)
+        self.assertIn("✓ Run command approved (auto · fs pack) · mkdir -p a", text)
 
     def test_buddy_animation_changes_the_header_mascot_in_place(self):
         self.tui.header()
@@ -256,8 +310,8 @@ class TestFullscreenEndToEnd(unittest.TestCase):
                 os.write(fd, b"draft typed while working")
                 pump(0.3)
                 os.write(fd, b"\r")       # must not send while busy
-                pump(8, b"requires approval")
-                self.assertIn(b"requires approval", output)
+                pump(8, b"Approve")
+                self.assertIn(b"Approve", output)  # decision keys docked at the prompt
                 self.assertIn(b"Added 2 lines", output)
                 self.assertIn(b"Still working", output)   # Enter during work did not send the draft
                 os.write(fd, b"y")

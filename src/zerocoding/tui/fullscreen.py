@@ -41,9 +41,10 @@ from .mascot import ANIMATIONS, render, render_ascii
 from .menus import CANCELLED, Done
 from .theme import (
     BG as ZERO_BG, GRAY as ZERO_GRAY, LIGHT as ZERO_LIGHT, PURPLE as ZERO_PURPLE, RED as ZERO_RED,
-    USER_BG as ZERO_USER_BG, YELLOW as ZERO_YELLOW,
+    USER_BG as ZERO_USER_BG, YELLOW as ZERO_YELLOW, GREEN as ZERO_GREEN,
 )
 
+COLLAPSED_DIFF_LINES = 12
 Fragments = list  # list of (style, text[, handler]) tuples
 
 
@@ -59,11 +60,17 @@ class TranscriptConsole:
         self._calls: list[tuple[tuple, str]] = []
         self._on_change = on_change
         self._lock = threading.RLock()
-        self._cache: dict[int, tuple[int, list[Fragments]]] = {}
+        self._cache: dict[int, tuple[tuple, list[Fragments]]] = {}
+        self.epoch = 0  # bump when something that affects rendering (e.g. diff expansion) changes
 
     def print(self, *objects, end: str = "\n", **_kwargs) -> None:
         with self._lock:
             self._calls.append((objects, end))
+        self._on_change()
+
+    def bump(self) -> None:
+        with self._lock:
+            self.epoch += 1
         self._on_change()
 
     def clear(self, *_args, **_kwargs) -> None:
@@ -74,7 +81,7 @@ class TranscriptConsole:
 
     def render_lines(self, width: int) -> list[Fragments]:
         with self._lock:
-            count = len(self._calls)
+            count = (len(self._calls), self.epoch)
             cached = self._cache.get(width)
             if cached and cached[0] == count:
                 return cached[1]
@@ -133,10 +140,10 @@ class FullscreenAnimation:
 
 
 class ApprovalScreen:
-    """Approval panel: styled diff or command, explicit Y to approve, N/Esc/Enter to refuse."""
+    """Approval decision: explicit Y approves; N, Esc and Enter refuse; other keys do nothing."""
 
-    def __init__(self, action: str, preview: str, max_lines: int = 24):
-        self.action, self.preview, self.max_lines = action, preview, max_lines
+    def __init__(self, action: str, preview: str):
+        self.action, self.preview = action, preview
 
     def key(self, name: str) -> Done | None:
         if name in {"char:y", "char:Y"}:
@@ -145,25 +152,22 @@ class ApprovalScreen:
             return Done(False, "n")
         return None  # any other key or typed text neither approves nor refuses
 
-    def fragments(self, width: int) -> Fragments:
-        out: Fragments = [("fg:#FDE68A bold", f"{self.action} requires approval\n")]
+    def title(self) -> str:
         if looks_like_diff(self.preview):
             path, lines = parse_diff(self.preview)
-            out.append(("bold", f"{path}\n" if path else "\n"))
-            out.append(("fg:#9CA3AF", f"{summarize(lines)}\n"))
-            buffer = StringIO()
-            Console(file=buffer, force_terminal=True, color_system="truecolor", width=width, highlight=False).print(
-                DiffView(self.preview, indent=0, max_lines=self.max_lines))
-            for line in ansi_lines(buffer.getvalue())[: self.max_lines + 1]:
-                out.extend(line)
-                out.append(("", "\n"))
-        else:
-            out.append(("fg:#C4B5FD", "$ " + self.preview.strip() + "\n"))
-        out.append(("", "\n"))
-        out.append(("fg:#9CA3AF", "Approve? "))
-        out.append(("bold fg:#86EFAC", "Y"))
-        out.append(("fg:#9CA3AF", " yes · N / Enter / Esc no\n"))
-        return out
+            return f"{self.action} · {path} · {summarize(lines)}" if path else f"{self.action} · {summarize(lines)}"
+        first = self.preview.strip().splitlines()[0] if self.preview.strip() else ""
+        return f"{self.action} · {first}" if first else self.action
+
+    def dock_fragments(self, width: int, expanded: bool) -> Fragments:
+        """Two lines docked above the prompt: always visible, whatever the size of the output."""
+        title = self.title()
+        title = title if len(title) <= width else title[: max(0, width - 1)] + "…"
+        keys = [("fg:#9CA3AF", "Approve? "), ("bold fg:#86EFAC", "Y"), ("fg:#9CA3AF", " yes · "),
+                ("bold fg:#FCA5A5", "N"), ("fg:#9CA3AF", " / Enter / Esc no")]
+        if looks_like_diff(self.preview):
+            keys.append(("fg:#9CA3AF", f" · Ctrl+T {'collapse' if expanded else 'expand'} diff"))
+        return [("fg:#FDE68A bold", title + "\n"), *keys]
 
 
 class _TranscriptControl(FormattedTextControl):
@@ -188,6 +192,8 @@ class FullscreenTUI(ZerocodingTUI):
         self.mouse_enabled = True
         self._inbox: queue.Queue[str] = queue.Queue()
         self._modal: tuple | None = None
+        self._approval: tuple | None = None   # (ApprovalScreen, queue) while a decision is pending
+        self._diff_expanded = False
         self._activity: FullscreenAnimation | None = None
         self._cancel = None
         self._scroll = 0
@@ -232,6 +238,7 @@ class FullscreenTUI(ZerocodingTUI):
             completer=SlashCommandCompleter(self.commands), complete_while_typing=True,
         )
         modal_active = Condition(lambda: self._modal is not None)
+        approving = Condition(lambda: self._approval is not None)
         self._transcript_window = Window(_TranscriptControl(self), wrap_lines=False)
         modal_window = Window(
             FormattedTextControl(self._modal_fragments, show_cursor=False),
@@ -242,6 +249,10 @@ class FullscreenTUI(ZerocodingTUI):
             get_line_prefix=lambda lineno, wrap: [("class:prompt", "› ")] if lineno == 0 and wrap == 0 else "  ",
         )
 
+        self._approval_window = Window(
+            FormattedTextControl(self._approval_fragments, focusable=True, show_cursor=False), height=2, dont_extend_height=True)
+        self._input_window = input_window
+
         def rule():
             return [("class:rule", ("─" if self._unicode else "-") * self._size()[0])]
 
@@ -250,7 +261,8 @@ class FullscreenTUI(ZerocodingTUI):
             ConditionalContainer(modal_window, filter=modal_active),
             Window(FormattedTextControl(self._activity_fragments), height=1),
             Window(FormattedTextControl(rule), height=1),
-            input_window,
+            ConditionalContainer(input_window, filter=~approving),
+            ConditionalContainer(self._approval_window, filter=approving),
             Window(FormattedTextControl(rule), height=1),
             Window(FormattedTextControl(self._status_fragments), height=1),
         ])
@@ -258,19 +270,19 @@ class FullscreenTUI(ZerocodingTUI):
             Float(xcursor=True, ycursor=True, content=CompletionsMenu(max_height=8, scroll_offset=1)),
         ])
         style = Style.from_dict({
-            "prompt": f"{ZERO_PURPLE} bold", "rule": ZERO_GRAY, "pet": ZERO_PURPLE, "flash": ZERO_YELLOW,
+            "prompt": f"{ZERO_PURPLE} bold", "rule": ZERO_GRAY, "pet": ZERO_PURPLE, "flash": ZERO_YELLOW, "perm-auto": f"{ZERO_GREEN} bold", "perm-yolo": f"{ZERO_RED} bold",
             "completion-menu.completion": f"bg:{ZERO_BG} {ZERO_LIGHT}",
             "completion-menu.completion.current": f"bg:{ZERO_USER_BG} {ZERO_LIGHT} bold",
             "completion-menu.meta.completion": f"bg:{ZERO_BG} {ZERO_GRAY}",
         })
         self._app = Application(
-            layout=Layout(root, focused_element=input_window), key_bindings=self._key_bindings(modal_active),
+            layout=Layout(root, focused_element=input_window), key_bindings=self._key_bindings(modal_active, approving),
             style=style, full_screen=True, mouse_support=Condition(lambda: self.mouse_enabled), refresh_interval=0.12,
         )
 
-    def _key_bindings(self, modal_active) -> KeyBindings:
+    def _key_bindings(self, modal_active, approving) -> KeyBindings:
         kb = KeyBindings()
-        idle = ~modal_active
+        idle = ~modal_active & ~approving
 
         @kb.add("enter", filter=idle, eager=True)
         def _submit(event):
@@ -292,13 +304,34 @@ class FullscreenTUI(ZerocodingTUI):
             if not self._buffer.text:
                 self._inbox.put("/exit")
 
-        @kb.add("pageup", filter=idle)
+        @kb.add("pageup", filter=~modal_active)
         def _page_up(event):
             self.scroll(self._page())
 
-        @kb.add("pagedown", filter=idle)
+        @kb.add("pagedown", filter=~modal_active)
         def _page_down(event):
             self.scroll(-self._page())
+
+        @kb.add("c-t")
+        def _toggle_diffs(event):
+            self.toggle_diff_expansion()
+
+        for key, name in (("y", "char:y"), ("Y", "char:Y"), ("n", "char:n"), ("N", "char:N"), ("enter", "enter"),
+                          ("c-c", "escape")):
+            kb.add(key, filter=approving, eager=True)(lambda event, name=name: self._feed_approval(name))
+        kb.add("escape", filter=approving, eager=True)(lambda event: self._feed_approval("escape"))
+
+        @kb.add(Keys.Any, filter=approving, eager=True)
+        def _ignore_while_approving(event):
+            # The catch-all outranks the specific bindings above, so the keys that must keep working
+            # during a decision are routed here. Typing is paused; the draft is kept.
+            key = event.key_sequence[0].key
+            if key == Keys.ControlT:
+                self.toggle_diff_expansion()
+            elif key == Keys.PageUp:
+                self.scroll(self._page())
+            elif key == Keys.PageDown:
+                self.scroll(-self._page())
 
         for key, name in (("up", "up"), ("down", "down"), ("left", "left"), ("right", "right"), ("enter", "enter"),
                           ("tab", "tab"), ("backspace", "backspace"), ("c-h", "backspace"), ("c-u", "ctrl-u"),
@@ -324,6 +357,26 @@ class FullscreenTUI(ZerocodingTUI):
         self._buffer.reset(append_to_history=True)
         self._inbox.put(text)
         return True
+
+    def toggle_diff_expansion(self) -> None:
+        self._diff_expanded = not self._diff_expanded
+        self.console.bump()
+        self._flash = (f"Diffs {'expanded' if self._diff_expanded else 'collapsed'} (Ctrl+T)", time.monotonic() + 2)
+
+    def _diff_limit(self):
+        return None if self._diff_expanded else COLLAPSED_DIFF_LINES
+
+    def _approval_fragments(self) -> Fragments:
+        approval = self._approval
+        return approval[0].dock_fragments(self._size()[0], self._diff_expanded) if approval else []
+
+    def _feed_approval(self, name: str) -> None:
+        approval = self._approval
+        if approval is None:
+            return
+        done = approval[0].key(name)
+        if done is not None:
+            approval[1].put(done)
 
     def _feed_modal(self, name: str) -> None:
         modal = self._modal
@@ -400,9 +453,13 @@ class FullscreenTUI(ZerocodingTUI):
         pets = (PET_WORK if self._unicode else PET_ASCII) if self.busy else (PET_IDLE if self._unicode else PET_ASCII[0],)
         pet = pets[int(time.monotonic() * 4) % len(pets)] if self.busy else pets[0]
         before, glyph, after = self._status_parts(pet)
+        label = self._permission_label()
+        head: Fragments = [("", before)]
+        if label and before.startswith(" " * (len(label) + 1)):
+            head = [(f"class:perm-{self.permission_mode}", label), ("", before[len(label):])]
         if not glyph:
-            return [("", before)]
-        return [("", before), ("class:pet", glyph, self._on_pet_mouse), ("", after)]
+            return head
+        return head + [("class:pet", glyph, self._on_pet_mouse), ("", after)]
 
     # -- mascot ------------------------------------------------------------------------------
 
@@ -460,19 +517,48 @@ class FullscreenTUI(ZerocodingTUI):
             self._modal = None
             self._invalidate()
 
-    def confirm_action(self, action: str, preview: str) -> bool:
-        done = self.run_screen(ApprovalScreen(action, preview, max_lines=max(6, self._size()[1] - 14)))
-        approved = done.value is True
+    def _show_proposal(self, action: str, preview: str) -> None:
+        """Put what is being approved in the transcript, where it can be scrolled and expanded."""
         if looks_like_diff(preview):
-            path, lines = parse_diff(preview)
-            if approved:
-                self.console.print(Text(f"  ⎿  {summarize(lines)}", style=f"dim {ZERO_GRAY}"))
-                self.console.print(DiffView(preview))
-            else:
-                self.console.print(Text(f"  ⎿  Rejected {action.lower()}{' · ' + path if path else ''}", style=f"dim {ZERO_YELLOW}"))
-        elif not approved:
+            _path, lines = parse_diff(preview)
+            self.console.print(Text(f"  ⎿  {summarize(lines)}", style=f"dim {ZERO_GRAY}"))
+            self.console.print(DiffView(preview, max_lines=self._diff_limit, hint="ctrl+t to expand"))
+        elif action == "Run command":
+            self.console.print(Text(f"  $ {preview.strip()}", style=ZERO_PURPLE))
+        else:
+            self.console.print(Text(preview.strip(), style=ZERO_LIGHT))
+
+    def confirm_action(self, action: str, preview: str) -> bool:
+        """Show the proposal in the output and dock the Y/N decision at the prompt."""
+        self._show_proposal(action, preview)
+        screen, results = ApprovalScreen(action, preview), queue.Queue()
+        self._approval = (screen, results)
+        try:
+            self._app.layout.focus(self._approval_window)
+        except Exception:
+            pass
+        self._invalidate()
+        try:
+            done = results.get()
+        finally:
+            self._approval = None
+            try:
+                self._app.layout.focus(self._input_window)
+            except Exception:
+                pass
+            self._invalidate()
+        approved = done.value is True
+        if not approved:
             self.console.print(Text(f"  ⎿  Rejected {action.lower()}", style=f"dim {ZERO_YELLOW}"))
         return approved
+
+    def note_auto_approval(self, action: str, preview: str, note: str) -> None:
+        if looks_like_diff(preview):
+            _path, lines = parse_diff(preview)
+            self.console.print(Text(f"  ✓ {action} approved ({note}) · {summarize(lines)}", style=f"dim {ZERO_GREEN}"))
+            self.console.print(DiffView(preview, max_lines=self._diff_limit, hint="ctrl+t to expand"))
+        else:
+            self.console.print(Text(f"  ✓ {action} approved ({note}) · {preview.strip()[:80]}", style=f"dim {ZERO_GREEN}"))
 
     def _handle_response_event(self, kind, event, animation) -> None:
         """Streamed text lives in a dedicated tail block; the activity line keeps running meanwhile."""

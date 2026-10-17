@@ -1,0 +1,2 @@
+fazer ctrl + t expandir o diff
+adicionar /permission com yolo mode

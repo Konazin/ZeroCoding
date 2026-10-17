@@ -285,6 +285,38 @@ class CliCommandTests(unittest.TestCase):
         self.assertEqual(self.tui.messages[-1][0], "error")
         self.assertIn(self.config.provider, self.config.providers)
 
+    def permission_policy(self):
+        from zerocoding.core.permissions import PermissionPolicy
+        self.agent.permissions = PermissionPolicy(Path.cwd(), "ask")
+        return self.agent.permissions
+
+    def test_permission_command_switches_modes_and_updates_the_status_row(self):
+        policy = self.permission_policy()
+        self.run_command("/permission auto")
+        self.assertEqual((policy.mode, self.tui.permission_mode), ("auto", "auto"))
+        self.run_command("/permission ask")
+        self.assertEqual(policy.mode, "ask")
+        self.run_command("/permission bogus")
+        self.assertEqual(self.tui.messages[-1][0], "error")
+
+    def test_yolo_needs_explicit_confirmation(self):
+        policy = self.permission_policy()
+        self.tui.confirm_result = False
+        self.run_command("/permission yolo")
+        self.assertEqual(policy.mode, "ask")
+        self.assertEqual(self.tui.confirmations[-1][0], "Enable YOLO mode")
+        self.tui.confirm_result = True
+        self.run_command("/permission yolo")
+        self.assertEqual(policy.mode, "yolo")
+
+    def test_permission_packs_lists_the_enabled_packs(self):
+        self.permission_policy()
+        self.run_command("/permission packs")
+        text = self.tui.text()
+        self.assertIn("fs:", text)
+        self.assertIn("git:", text)
+        self.assertNotIn("tests:", text)
+
     def test_buddy_command_plays_an_animation(self):
         self.run_command("/buddy sleep")
         self.assertIn("sleep", self.tui.text())

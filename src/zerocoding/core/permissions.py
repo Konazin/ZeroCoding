@@ -1,0 +1,45 @@
+"""Approval modes for tool actions: ask (default), auto (safe command packs) and yolo (everything).
+
+The mode lives in memory for the current session only. It never overrides the command policy
+(deny list), workspace scoping or Plan mode, which are enforced by the tool executor.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+
+from .command_packs import DEFAULT_PACKS, PACKS, evaluate
+
+MODES = ("ask", "auto", "yolo")
+MODE_SUMMARY = {
+    "ask": "Ask before every write, edit and command",
+    "auto": "Auto-approve safe commands from the packs; ask for everything else",
+    "yolo": "Approve every write, edit and command without asking",
+}
+
+
+@dataclass(frozen=True)
+class Decision:
+    note: str  # shown in the transcript, e.g. "auto · fs pack"
+
+
+class PermissionPolicy:
+    def __init__(self, root, mode: str = "ask", packs=DEFAULT_PACKS):
+        self.root = Path(root)
+        self.mode = mode if mode in MODES else "ask"
+        self.packs = tuple(p for p in packs if p in PACKS) or DEFAULT_PACKS
+
+    def set_mode(self, mode: str) -> None:
+        if mode not in MODES:
+            raise ValueError(f"Unknown permission mode: {mode}")
+        self.mode = mode
+
+    def decide(self, action: str, preview: str) -> Decision | None:
+        """Return a Decision when the action is approved without asking, otherwise None (ask the user)."""
+        if self.mode == "yolo":
+            return Decision("yolo")
+        if self.mode == "auto" and action == "Run command":
+            verdict = evaluate(preview, self.root, self.packs)
+            if verdict.allowed:
+                return Decision(f"auto · {verdict.pack} pack")
+        return None

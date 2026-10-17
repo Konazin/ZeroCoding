@@ -52,7 +52,7 @@ from .theme import (
     YELLOW as ZERO_YELLOW,
 )
 
-from .diffview import DiffView, looks_like_diff
+from .diffview import DiffView, looks_like_diff, parse_diff, summarize
 from .history import ProjectPromptHistory
 from .mascot import ANIMATIONS, render, render_ascii
 from .menus import run_screen
@@ -272,6 +272,7 @@ class ZerocodingTUI:
         self.console = Console(force_terminal=True, color_system="truecolor", highlight=False, force_interactive=True)
         self.commands = COMMANDS
         self.mouse_enabled = False
+        self.permission_mode = "ask"
         self._buddy_clicks = 0
         self._turn_count = 0
         self._start_time = time.time()
@@ -341,6 +342,15 @@ class ZerocodingTUI:
             ghost = GHOST_TINY if self._is_tiny else GHOST_SMALL if self._is_small else GHOST_FULL.rstrip()
         if not self._is_tiny:
             self.console.print(Text(ghost, style=f"bold {ZERO_PURPLE}"))
+
+    def note_auto_approval(self, action: str, preview: str, note: str) -> None:
+        """Record an action that auto/yolo mode approved without asking, including the diff for edits."""
+        if looks_like_diff(preview):
+            path, lines = parse_diff(preview)
+            self.console.print(Text(f"  ✓ {action} approved ({note}) · {summarize(lines)}", style=f"dim {ZERO_GREEN}"))
+            self.console.print(DiffView(preview))
+        else:
+            self.console.print(Text(f"  ✓ {action} approved ({note}) · {ellipsize(preview.strip(), 80)}", style=f"dim {ZERO_GREEN}"))
 
     def set_cancel(self, token) -> None:
         """The fullscreen UI cancels a running task through this token; the classic UI uses Ctrl+C."""
@@ -644,8 +654,15 @@ class ZerocodingTUI:
             return " " * left, pet, " " * (start - left - len(pet)) + effort
         return " " * start + effort, "", ""
 
+    def _permission_label(self) -> str:
+        return {"auto": "⏵⏵ auto mode", "yolo": "⏵⏵ yolo mode"}.get(self.permission_mode, "")
+
     def _status_row(self, pet: str) -> str:
-        return "".join(self._status_parts(pet))
+        before, glyph, after = self._status_parts(pet)
+        label = self._permission_label()
+        if label and before.startswith(" " * (len(label) + 1)):
+            before = label + before[len(label):]
+        return before + glyph + after
 
     def click_buddy(self) -> str:
         """First click shows the work animation; later clicks pick any of the easter eggs."""

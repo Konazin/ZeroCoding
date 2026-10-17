@@ -123,6 +123,7 @@ class Config:
     mouse_support: bool = True
     fullscreen: bool = True
     shell_block_fallback: bool = True
+    auto_packs: list = field(default_factory=lambda: ["fs", "read", "git"])
     session_persistence: bool = True
     metrics_enabled: bool = True
     hooks: list = field(default_factory=list)
@@ -181,6 +182,7 @@ class Config:
             "mouse_support": self.mouse_support,
             "fullscreen": self.fullscreen,
             "shell_block_fallback": self.shell_block_fallback,
+            "auto_packs": list(self.auto_packs),
             "session_persistence": self.session_persistence,
             "metrics_enabled": self.metrics_enabled,
             "hooks": list(self.hooks),
@@ -241,6 +243,7 @@ class ConfigManager:
             mouse_support=self._as_bool(data.get("mouse_support", True)),
             fullscreen=self._as_bool(data.get("fullscreen", True)),
             shell_block_fallback=self._as_bool(data.get("shell_block_fallback", True)),
+            auto_packs=[str(p) for p in (data.get("auto_packs") or ["fs", "read", "git"])],
             session_persistence=self._as_bool(data.get("session_persistence", True)),
             metrics_enabled=self._as_bool(data.get("metrics_enabled", True)),
             hooks=list(data.get("hooks") or []),

@@ -50,6 +50,7 @@ def run_settings(tui, config, manager, agent, dispatch, tab: str = "Config") -> 
             Row("Provider", config.provider, "provider"),
             Row("Model", _current_model(config, agent), "model"),
             Row("Effort", agent.effort, "effort"),
+            Row("Permission mode", getattr(getattr(agent, "permissions", None), "mode", "ask"), "permission"),
             Row("Streaming", str(config.streaming_enabled).lower(), "streaming"),
             Row("Mouse (click the pet)", str(config.mouse_support).lower(), "mouse"),
             Row("Save sessions", str(config.session_persistence).lower(), "persist"),
@@ -78,6 +79,8 @@ def run_settings(tui, config, manager, agent, dispatch, tab: str = "Config") -> 
             pick_model(tui, config, manager, agent, dispatch)
         elif row == "effort":
             _pick_effort(tui, agent, dispatch)
+        elif row == "permission" and getattr(agent, "permissions", None) is not None:
+            pick_permission(tui, agent.permissions)
         elif row in {"streaming", "mouse", "persist"}:
             _toggle(tui, config, manager, agent, row)
 
@@ -239,3 +242,28 @@ def _probe_models(tui, provider_type, url) -> list[str]:
     if not models:
         tui.show_warning(f"{url} answered but listed no models.")
     return models
+
+
+def confirm_yolo(tui) -> bool:
+    return tui.confirm_action(
+        "Enable YOLO mode",
+        "Every write, edit and command is approved without asking until you switch back.\n"
+        "The command policy, workspace limits and Plan mode still apply.",
+    )
+
+
+def pick_permission(tui, policy) -> None:
+    """Session-only approval mode; YOLO needs an explicit confirmation."""
+    from .core.permissions import MODE_SUMMARY, MODES
+    rows = [Row(mode, MODE_SUMMARY[mode], mode, checked=mode == policy.mode) for mode in MODES]
+    done = tui.run_screen(SelectScreen(
+        "Permission mode", rows, index=MODES.index(policy.mode),
+        subtitle="Applies to this session only and resets to ask when you reopen ZeroCoding.",
+    ))
+    if done.cancelled:
+        return
+    mode = MODES[done.value]
+    if mode == "yolo" and policy.mode != "yolo" and not confirm_yolo(tui):
+        return
+    policy.set_mode(mode)
+    tui.show_success(f"Permission mode: {mode}.")

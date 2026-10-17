@@ -60,12 +60,15 @@ def summarize(lines: list[DiffLine]) -> str:
 class DiffView:
     """Rich renderable; rows fill the available width so the red/green bands read as blocks."""
 
-    def __init__(self, diff: str, indent: int = 5, max_lines: int | None = None):
+    def __init__(self, diff: str, indent: int = 5, max_lines=None, hint: str = ""):
+        """`max_lines` is an int, None (all rows) or a callable evaluated at render time, so a toggle such as
+        Ctrl+T takes effect on diffs that are already on screen. `hint` is appended to the "more lines" row."""
         self.path, self.lines = parse_diff(diff)
-        self.indent, self.max_lines = indent, max_lines
+        self.indent, self.max_lines, self.hint = indent, max_lines, hint
 
     def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
-        shown = self.lines if self.max_lines is None else self.lines[: self.max_lines]
+        limit = self.max_lines() if callable(self.max_lines) else self.max_lines
+        shown = self.lines if limit is None else self.lines[:limit]
         digits = max((len(str(line.number)) for line in shown), default=1)
         width = max(20, options.max_width - self.indent)
         for line in shown:
@@ -79,4 +82,5 @@ class DiffView:
             row.append_text(body)
             yield row
         if len(shown) < len(self.lines):
-            yield Text(" " * self.indent + f"… {len(self.lines) - len(shown)} more lines", style=f"dim {CONTEXT_FG}")
+            more = f"… +{len(self.lines) - len(shown)} lines" + (f" ({self.hint})" if self.hint else "")
+            yield Text(" " * self.indent + more, style=f"dim {CONTEXT_FG}")

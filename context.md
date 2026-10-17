@@ -92,6 +92,11 @@ Máquina de referência: Ryzen 5 4600G, 16 GB de RAM e AMD RX 5700 com 8 GB de V
 - Auditoria final corrigiu rejeição de payload malformado antes da substituição, falha de `/new` sem descartar o estado atual, atualização do workspace de ferramentas ao iniciar sessão e gravação dupla na inicialização.
 - Suíte local completa passou: 239 testes e 10 subtestes. A confirmação da instalação não editável pela CI segue pendente; o ambiente local não tem `setuptools` nem `wheel` para validar o artefato aqui.
 
+### Pesquisa de effort (2026-10-17)
+
+- `docs/RESEARCH-effort.md`: o Ornith pensa em todo turno (template termina em `<think>`); o `effort` atual (só `max_tokens` e rodadas) faz o Low devolver resposta vazia. O llama.cpp b11681 aceita por requisição `reasoning_budget_tokens`, `reasoning_effort` e `chat_template_kwargs`. Redesenho do effort **proposto, não implementado**: aguardando aprovação.
+- Aprovações: `/permission` (ask/auto/yolo, só na sessão) com packs de comandos avaliados por código em `core/command_packs.py`; Ctrl+T expande diffs; Y/N preso ao prompt.
+
 ### M5 — avaliação (executada em 2026-10-16 só para o Ornith)
 
 - `scripts/m5_eval.py` (7 casos × 3 repetições, workspace temporário, aprovação programática): 21/21 concluídos, 35 chamadas de ferramenta com 2 erros, ~22 tokens/s, RSS ~5,0 GB, VRAM da GPU 7,6 de 8,57 GB. Relatório em `docs/model-evaluation.md`, dados em `docs/m5-ornith-1.5-9b-q5_k_m-results.json`.

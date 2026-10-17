@@ -20,6 +20,7 @@ from .memory.sqlite import SQLiteMemory
 from .skills.loader import load_skills
 from .tui.app import ZerocodingTUI
 from .core.cancel import CancelToken
+from .core.permissions import PermissionPolicy
 
 
 def main(argv=None):
@@ -131,7 +132,14 @@ def main(argv=None):
     )
     tui.mouse_enabled = config.mouse_support
 
+    permissions = PermissionPolicy(Path.cwd(), "ask", config.auto_packs)
+    agent.permissions = permissions
+
     def approve_action(action, preview):
+        decision = permissions.decide(action, preview)
+        if decision is not None:  # auto or yolo: approved by code, still shown in the transcript
+            tui.note_auto_approval(action, preview, decision.note)
+            return True
         animation = active_animation[0]
         if animation:
             animation.pause()
