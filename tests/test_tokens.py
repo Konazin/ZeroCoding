@@ -272,3 +272,25 @@ class TestHistoryDigest(unittest.TestCase):
 
         self.assertEqual(len(fitted), 4)
         self.assertEqual(fitted[0]["content"], "sys")
+
+
+class TestLongHistory(unittest.TestCase):
+    def test_long_history_is_fitted_with_few_exact_counts(self):
+        calls = []
+
+        def count(items):
+            calls.append(1)
+            return sum(len(str(i.get("content", ""))) // 4 + 4 for i in items)
+
+        messages = [{"role": "system", "content": "sys"}]
+        for n in range(150):
+            messages.append({"role": "user", "content": f"question {n} " + "x" * 400})
+            messages.append({"role": "assistant", "content": f"answer {n}"})
+        messages.append({"role": "user", "content": "current"})
+
+        fitted = fit_messages(messages, 1000, count=count)
+
+        self.assertEqual(fitted[-1]["content"], "current")
+        self.assertLessEqual(count(fitted), 1000)
+        self.assertIn("Earlier turns", fitted[0]["content"])
+        self.assertLess(len(calls), 40)

@@ -4,6 +4,9 @@ from __future__ import annotations
 from .tokens import estimate_tokens
 
 
+DIGEST_RESERVE = 200  # tokens
+
+
 class PromptTooLargeError(ValueError):
     """Raised when the system instructions and current request cannot fit intact."""
 
@@ -94,7 +97,23 @@ def fit_messages(messages: list[dict], max_tokens: int, count=estimate_tokens,
         return [message for group in groups for message in group]
 
     dropped: list[list[dict]] = []
-    while _count_prompt(count, flattened(), tools) > max_tokens:
+    # Leave room for the digest of dropped turns when the budget is large enough to spare it.
+    drop_limit = max_tokens - DIGEST_RESERVE if max_tokens >= 4 * DIGEST_RESERVE else max_tokens
+    # Cheap pre-pass: long histories would otherwise cost one exact count per dropped turn.
+    cheap = [sum(len(str(m.get("content") or "")) // 4 + 4 for m in group) for group in groups]
+    while sum(cheap) > 2 * max_tokens:
+        removable = next(
+            (index for index, group in enumerate(groups)
+             if index < current_group and not any(message.get("role") == "system" for message in group)),
+            None,
+        )
+        if removable is None:
+            break
+        dropped.append(groups.pop(removable))
+        cheap.pop(removable)
+        current_group -= 1
+
+    while _count_prompt(count, flattened(), tools) > drop_limit:
         removable = next(
             (index for index, group in enumerate(groups)
              if index < current_group and not any(message.get("role") == "system" for message in group)),
