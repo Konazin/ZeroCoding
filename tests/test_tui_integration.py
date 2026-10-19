@@ -114,7 +114,7 @@ class TestTuiInputPrompt(unittest.TestCase):
         output = bytearray()
         sent = False
         try:
-            deadline = time.monotonic() + 8
+            deadline = time.monotonic() + 20  # CI runners are slow; prompt_toolkit waits on a cursor-position reply
             while time.monotonic() < deadline and process.poll() is None:
                 ready, _, _ = select.select([master], [], [], 0.1)
                 if ready:
@@ -127,7 +127,7 @@ class TestTuiInputPrompt(unittest.TestCase):
                     sent = True
             if process.poll() is None:
                 process.kill()
-                self.fail(f"PTY prompt did not finish within 8 seconds (sent={sent}): {output.decode(errors='replace')[-1000:]}")
+                self.fail(f"PTY prompt did not finish within 20 seconds (sent={sent}): {output.decode(errors='replace')[-1000:]}")
             while True:
                 try:
                     ready, _, _ = select.select([master], [], [], 0)

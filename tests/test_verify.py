@@ -147,7 +147,9 @@ class TestVerifyLoop(ProjectCase):
 class TestVerifierApproval(ProjectCase):
     def detected_verifier(self, approve):
         registry = ToolRegistry(self.root, approve=lambda a, p: (self.asked.append((a, p)) or approve))
-        return Verifier(self.root, VerifyConfig()), registry
+        verifier = Verifier(self.root, VerifyConfig())
+        verifier._pytest_available = lambda _registry: False  # the machine running the tests may or may not have pytest
+        return verifier, registry
 
     def test_a_configured_command_is_trusted_and_never_asks(self):
         agent = self.agent([write("calc.py", FIXED), ProviderTurn(content="ok")])
