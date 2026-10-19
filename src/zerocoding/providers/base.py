@@ -1,3 +1,4 @@
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Generator
@@ -73,6 +74,25 @@ class BaseProvider(ABC):
     STREAMING = False
     REASONING_CONTROL = "none"
 
+    WINDOW_RETRY_SECONDS = 60  # how long a failed probe is remembered, so an unreachable server is not re-probed every call
+
+    def context_window(self) -> int | None:
+        """Total context tokens the backend serves, or None. A success is cached for good, a failure briefly."""
+        cached = getattr(self, "_window_cache", None)
+        now = time.monotonic()
+        if cached is not None and (cached[0] is not None or now - cached[1] < self.WINDOW_RETRY_SECONDS):
+            return cached[0]
+        try:
+            value = self._probe_context_window()
+        except Exception:
+            value = None
+        value = value if isinstance(value, int) and value > 0 else None
+        self._window_cache = (value, now)
+        return value
+
+    def _probe_context_window(self) -> int | None:
+        return None
+
     def capabilities(self, detect_window: bool = True) -> ProviderCapabilities:
         window = None
         if detect_window:  # may make a network call; `zc doctor` probes the server itself and passes False
@@ -106,10 +126,6 @@ class BaseProvider(ABC):
 
     def list_models(self) -> list[str]:
         return []
-
-    def context_window(self) -> int | None:
-        """Total context tokens the backend serves, or None when it cannot be detected."""
-        return None
 
     def native_effort_kwargs(self, level: str) -> dict | None:
         """Return request fields only when this provider explicitly supports effort."""

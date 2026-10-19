@@ -98,3 +98,54 @@ class TestEmptyReplyExplainsItself(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestContextWindowProbes(unittest.TestCase):
+    def test_llama_cpp_reads_props(self):
+        with FakeBackend("llama_cpp", n_ctx=6144) as backend:
+            self.assertEqual(LlamaCppProvider("", backend.base_url, "fake").context_window(), 6144)
+
+    def test_generic_servers_fall_back_to_the_models_entry_then_lmstudio(self):
+        with FakeBackend("openai", model_max=32768) as backend:
+            self.assertEqual(OpenAICompatibleProvider("", backend.base_url, "fake").context_window(), 32768)
+        with FakeBackend("openai", lmstudio_loaded=12000) as backend:
+            self.assertEqual(OpenAICompatibleProvider("", backend.base_url, "fake").context_window(), 12000)
+
+    def test_unknown_window_is_none_and_a_failed_probe_is_not_repeated_every_call(self):
+        with FakeBackend("openai") as backend:
+            provider = OpenAICompatibleProvider("", backend.base_url, "fake")
+            self.assertIsNone(provider.context_window())
+            first = len(backend.requests)
+            self.assertIsNone(provider.context_window())
+            self.assertIsNone(provider.context_window())
+
+            self.assertEqual(len(backend.requests), first)
+
+    def test_a_successful_probe_is_cached_for_good(self):
+        with FakeBackend("llama_cpp", n_ctx=4096) as backend:
+            provider = LlamaCppProvider("", backend.base_url, "fake")
+            provider.context_window()
+            seen = len(backend.requests)
+            provider.context_window()
+
+            self.assertEqual(len(backend.requests), seen)
+
+    def test_native_ollama_uses_the_model_maximum_capped_at_8192(self):
+        for model_max, expected in ((32768, 8192), (4096, 4096), (None, None)):
+            with FakeBackend("ollama", model_max=model_max) as backend:
+                self.assertEqual(OllamaProvider(backend.base_url, "fake").context_window(), expected, model_max)
+
+    def test_an_unreachable_server_gives_none_quickly(self):
+        import time
+        provider = OpenAICompatibleProvider("", "http://127.0.0.1:9/v1", "m")
+        started = time.monotonic()
+
+        self.assertIsNone(provider.context_window())
+        self.assertLess(time.monotonic() - started, 5)
+
+    def test_the_agent_sizes_its_prompt_from_the_probed_window(self):
+        with FakeBackend("ollama", model_max=32768) as backend:
+            agent = Agent(OllamaProvider(backend.base_url, "fake"), max_output_tokens=1024)
+
+            self.assertEqual(agent.window_tokens(), 8192)
+            self.assertEqual(agent.input_budget(1024), 8192 - 1024 - 128)

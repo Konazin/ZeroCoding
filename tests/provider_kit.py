@@ -11,13 +11,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
 class FakeBackend:
-    def __init__(self, kind: str, *, n_ctx: int | None = 8192, props: bool = True, model_max: int | None = None):
+    def __init__(self, kind: str, *, n_ctx: int | None = 8192, props: bool = True, model_max: int | None = None,
+                 lmstudio_loaded: int | None = None):
         self.kind = kind  # "llama_cpp" | "openai" | "ollama"
-        self.n_ctx, self.props, self.model_max = n_ctx, props, model_max
+        self.n_ctx, self.props, self.model_max, self.lmstudio_loaded = n_ctx, props, model_max, lmstudio_loaded
         self.script: list[dict] = []
         self.requests: list[tuple[str, dict]] = []
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), self._handler())
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread = threading.Thread(target=lambda: self.server.serve_forever(poll_interval=0.02), daemon=True)
 
     # ---------------------------------------------------------------- lifecycle
     def __enter__(self):
@@ -112,6 +113,8 @@ class FakeBackend:
                     if backend.kind == "openai" and backend.model_max:
                         entry["max_model_len"] = backend.model_max
                     return self._send(200, {"data": [entry]})
+                if self.path == "/api/v0/models/fake" and backend.lmstudio_loaded:
+                    return self._send(200, {"id": "fake", "loaded_context_length": backend.lmstudio_loaded})
                 if self.path == "/api/tags" and backend.kind == "ollama":
                     return self._send(200, {"models": [{"name": "fake"}]})
                 if self.path == "/api/ps" and backend.kind == "ollama":

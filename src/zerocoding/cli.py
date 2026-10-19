@@ -161,6 +161,10 @@ def main(argv=None):
         tui.show_welcome()
         for warning in startup_warnings(extensions):
             tui.show_warning(warning)
+        if not agent.window_tokens():
+            tui.show_warning(
+                f"Could not detect the context window of {config.provider}. Using {config.max_input_tokens} prompt tokens; "
+                "set context_window in ~/.zerocoding/config.yaml to use more.")
 
         while True:
             prompt = tui.input_prompt()

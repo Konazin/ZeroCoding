@@ -123,13 +123,52 @@ class OpenAICompatibleProvider(BaseProvider):
         except urllib.error.URLError as exc:
             raise RuntimeError(f"OpenAI-compatible connection failed: {exc.reason}") from exc
 
-    def _get(self, endpoint):
+    def _root_url(self) -> str:
+        return self.api_url[:-3] if self.api_url.endswith("/v1") else self.api_url
+
+    def _probe_context_window(self) -> int | None:
+        """Try, in order: llama.cpp /props, the /v1/models entry (vLLM and others), LM Studio's REST API."""
+        root = self._root_url().rstrip("/")
+        for probe in (lambda: self._window_from_props(root), self._window_from_models, lambda: self._window_from_lmstudio(root)):
+            try:
+                value = probe()
+            except Exception:
+                value = None
+            if isinstance(value, int) and value > 0:
+                return value
+        return None
+
+    def _window_from_props(self, root: str) -> int | None:
+        props = self._get(root + "/props", timeout=3)
+        settings = props.get("default_generation_settings") if isinstance(props, dict) else None
+        return settings.get("n_ctx") if isinstance(settings, dict) else None
+
+    def _window_from_models(self) -> int | None:
+        data = self._get(urljoin(self.api_url + "/", "models"), timeout=3)
+        entries = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(entries, list) or not entries:
+            return None
+        entry = next((e for e in entries if isinstance(e, dict) and e.get("id") == self.model), entries[0])
+        for key in ("max_model_len", "context_length", "context_window", "max_context_length"):
+            if isinstance(entry.get(key), int):
+                return entry[key]
+        return None
+
+    def _window_from_lmstudio(self, root: str) -> int | None:
+        entry = self._get(f"{root}/api/v0/models/{self.model}", timeout=3)
+        if isinstance(entry, dict):
+            for key in ("loaded_context_length", "max_context_length"):
+                if isinstance(entry.get(key), int):
+                    return entry[key]
+        return None
+
+    def _get(self, endpoint, timeout=10):
         headers = {}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         request = urllib.request.Request(endpoint, headers=headers, method="GET")
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             message = exc.read().decode("utf-8", errors="ignore")

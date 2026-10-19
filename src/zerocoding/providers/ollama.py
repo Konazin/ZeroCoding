@@ -23,6 +23,15 @@ class OllamaProvider(BaseProvider):
         self.timeout = timeout
         self.max_retries = 2
 
+    DEFAULT_NUM_CTX_CAP = 8192  # the native API honours the num_ctx we send, so the window is our choice
+
+    def _probe_context_window(self) -> int | None:
+        """min(model maximum from /api/show, 8192). `context_window` in the config overrides this."""
+        shown = self._post(urljoin(self.url + "/", "api/show"), {"model": self.model, "name": self.model})
+        info = shown.get("model_info") if isinstance(shown, dict) else None
+        limits = [v for k, v in (info or {}).items() if k.endswith(".context_length") and isinstance(v, int)]
+        return min(max(limits), self.DEFAULT_NUM_CTX_CAP) if limits else None
+
     def tool_result_message(self, call_id: str, name: str, content: str) -> dict:
         return {"role": "tool", "content": content}
 
