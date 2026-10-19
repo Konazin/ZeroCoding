@@ -345,6 +345,9 @@ class Agent:
         """Answer one request. ``cancel`` (CancelToken) is checked between provider calls and tool calls;
         a cancelled or failed turn leaves the session history untouched."""
         self._stats = self._new_stats()
+        journal = getattr(self.tools, "journal", None)
+        if journal is not None:
+            journal.begin_turn(text)
         started = time.monotonic()
         outcome = "error"
         try:

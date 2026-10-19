@@ -27,6 +27,7 @@ class ToolRegistry:
         self.root = Path(root).resolve()
         self.approve = approve
         self.policy = policy or CommandPolicy()
+        self.journal = None  # core.journal.FileJournal, attached per session by the CLI
         self._external: dict = {}  # name -> ExternalTool (duck-typed: .spec .server .tool .read_only .handler)
         self._specs = [
             self._spec("list_files", "List project files", {"path": {"type": "string"}, "limit": {"type": "integer"}}),
@@ -161,6 +162,16 @@ class ToolRegistry:
             except FileNotFoundError:
                 pass
 
+    def _journal(self, path: Path, snapshot, new_text: str) -> None:
+        """Record the original of a file just written so the turn can be undone (best effort)."""
+        if self.journal is None:
+            return
+        try:
+            self.journal.record(path.relative_to(self.root).as_posix(),
+                                snapshot[1] if snapshot is not None else None, new_text.encode("utf-8"))
+        except Exception:
+            return  # the write already happened and was approved; a journal failure must not hide that
+
     def execute(self, name: str, args: dict, *, plan_mode: bool = False) -> str:
         return self._execute(name, args, event_callback=None, plan_mode=plan_mode)
 
@@ -290,6 +301,7 @@ class ToolRegistry:
             if not self.approve or not self.approve("Write file", preview):
                 return "Write denied by user. No file was changed."
             self._atomic_write(original_value, path, new, snapshot)
+            self._journal(path, snapshot, new)
             return f"Wrote {path.relative_to(self.root)}."
         if name == "edit_file":
             original_value = args["path"]
@@ -319,6 +331,7 @@ class ToolRegistry:
             if not self.approve or not self.approve("Edit file", diff):
                 return "Edit denied by user. No file was changed."
             self._atomic_write(original_value, path, updated, snapshot)
+            self._journal(path, snapshot, updated)
             return f"Edited {relative}."
         if name == "run_command":
             command = str(args["command"])

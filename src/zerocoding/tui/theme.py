@@ -72,6 +72,8 @@ COMMANDS = [
     ("/plan", "Toggle read-only planning mode"),
     ("/ultrathink", "Toggle deeper analysis budget"),
     ("/effort", "Set low, medium, or high effort"),
+    ("/undo", "Undo the files the agent wrote in the last turn"),
+    ("/undo list", "List turns that can be undone"),
     ("/compact", "Shorten the conversation to free context"),
     ("/skill", "List skills"),
     ("/skill add", "Activate a skill"),

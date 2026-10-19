@@ -15,7 +15,7 @@ from .core.project_context import ProjectContext
 from .core.router import build_provider
 from .core.sessions import Session, SessionManager
 from .core.tools import ToolRegistry
-from .commands import handle_command, refresh_tui_state, save_session_state, sync_tui_runtime
+from .commands import attach_journal, handle_command, refresh_tui_state, save_session_state, sync_tui_runtime
 from .memory.sqlite import SQLiteMemory
 from .skills.loader import load_skills
 from .tui.app import ZerocodingTUI
@@ -151,6 +151,7 @@ def main(argv=None):
                 animation.resume()
 
     agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
+    attach_journal(agent.tools, session, session_manager)
     extensions = build_extensions(config, agent, Path.cwd(), skills, metrics=metrics)
     def interactive_loop():
         nonlocal session

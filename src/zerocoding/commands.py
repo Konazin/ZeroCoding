@@ -75,6 +75,9 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         sync_tui_runtime(tui, agent)
         tui.show_success(f"{label} mode {'enabled' if enabled else 'disabled'}.")
         return False, None, session
+    if name == "/undo":
+        handle_undo(args_text, tui, agent)
+        return False, None, session
     if name == "/compact":
         before, after = agent.compact_history()
         if after >= before:
@@ -194,6 +197,51 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
 
     tui.show_error(f"Comando desconhecido: {command}")
     return False, None, session
+
+
+def attach_journal(tools, session, session_manager) -> None:
+    """Give the tool registry the journal of this session (kept on disk only when sessions persist)."""
+    if tools is None:
+        return
+    from .core.journal import journal_for
+    persist = bool(getattr(session_manager, "persist", True))
+    tools.journal = journal_for(session.id, tools.root, persist=persist)
+
+
+def handle_undo(args_text, tui, agent):
+    """/undo [list|<turn>]: restore the files the agent wrote in a turn, after showing the diff."""
+    journal = getattr(agent.tools, "journal", None)
+    if journal is None:
+        tui.show_error("Undo is not available in this session.")
+        return
+    argument = args_text.strip().lower()
+    if argument == "list":
+        turns = journal.turns()
+        if not turns:
+            tui.show_info("Nothing to undo yet.")
+        for turn in turns[:10]:
+            tui.show_info(f"turn {turn.id} · {len(turn.entries)} file(s) · {turn.label}")
+        return
+    if argument and not argument.isdigit():
+        tui.show_error("Usage: /undo [list|turn-number]")
+        return
+    turn = journal.get(int(argument)) if argument else journal.latest()
+    if turn is None:
+        tui.show_info("Nothing to undo yet." if not argument else f"No journaled turn {argument}. Use /undo list.")
+        return
+    plan = journal.plan_undo(turn)
+    if plan.conflicts:
+        tui.show_error("Not undone: these files changed after the agent wrote them: " + ", ".join(plan.conflicts)
+                       + ". Review them yourself, then retry.")
+        return
+    if not tui.confirm_action("Undo changes", plan.preview):
+        return
+    try:
+        restored = journal.apply(plan)
+    except (OSError, ValueError) as exc:
+        tui.show_error(f"Undo failed: {exc}")
+        return
+    tui.show_success(f"Undid {restored} file(s) from turn {turn.id}. Changes made by commands are not undone.")
 
 
 def handle_skill(name, args_text, tui, agent, skills):
@@ -585,6 +633,7 @@ def handle_resume(args_text, tui, agent, config, manager, project_context, sessi
     try:
         provider = build_session_provider(config, session.provider, session.model)
         tools = agent.tools.clone_for(session.path) if agent.tools is not None else None
+        attach_journal(tools, session, session_manager)
         restored_context = ProjectContext(
             project_context.root,
             max_file_chars=project_context.max_file_chars,
@@ -624,6 +673,7 @@ def handle_new(tui, agent, config, project_context, session_manager):
     session.effort = "medium"
     provider = build_provider(config)
     tools = agent.tools.clone_for(Path.cwd()) if agent.tools is not None else None
+    attach_journal(tools, session, session_manager)
     session_manager.save(session)
 
     agent.context.history = []
