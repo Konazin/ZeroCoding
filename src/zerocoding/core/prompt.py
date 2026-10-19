@@ -1,11 +1,16 @@
 
+DEFAULT_SYSTEM_PROMPT = (
+    "You are ZeroCoding, a concise coding assistant. Use project tools to inspect files. "
+    "Propose changes clearly; file writes and commands require user approval."
+)
+
 # Sanity bound only; the token budget in fit_messages decides what actually stays.
 MAX_HISTORY_MESSAGES = 200
 
 
 def build_messages(user_text: str, system_prompt: str | None = None, history: list | None = None, skills: list | None = None):
     messages = []
-    base_prompt = system_prompt or "You are ZeroCoding, a concise coding assistant. Use project tools to inspect files. Propose changes clearly; file writes and commands require user approval."
+    base_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
     messages.append({"role": "system", "content": base_prompt})
     if skills:
         skill_text = "\n\n".join(

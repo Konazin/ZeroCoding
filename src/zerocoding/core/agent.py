@@ -9,7 +9,7 @@ from .budget import compact_tool_results, count_prompt, digest_turns, fit_messag
 from .cancel import TurnCancelled
 from .context import ConversationContext
 from .events import AgentEvent
-from .prompt import build_messages
+from .prompt import DEFAULT_SYSTEM_PROMPT, build_messages
 from .relevance import select_skills, select_tool_schemas
 from .tokens import TokenCounter
 from .toolcalls import CHANGING_TOOLS, emit_event, parse_compact_call, shell_calls_from_text, tool_summary, tool_target, tool_was_denied
@@ -34,6 +34,7 @@ class Agent:
         self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
         self.last_turn: dict = {}
         self.extensions = None  # core.extensions.Extensions, set by the CLI
+        self.instructions = None  # core.instructions.Instructions | None, loaded from the workspace by the CLI
         self.verifier = None  # core.verify.Verifier | None: re-runs the project's checks after the agent edits files
         self.hooks = None  # core.hooks.HookRunner | None
         self._stats: dict = self._new_stats()
@@ -145,12 +146,10 @@ class Agent:
             instructions.append(
                 "Analyze the task carefully and check the result for important edge cases before answering. Keep the response concise and do not reveal private reasoning steps."
             )
+        if self.instructions is not None:
+            system_prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT) + "\n\n" + self.instructions.prompt_block()
         if instructions:
-            base_prompt = system_prompt or (
-                "You are ZeroCoding, a concise coding assistant. Use project tools to inspect files. "
-                "Propose changes clearly; file writes and commands require user approval."
-            )
-            system_prompt = base_prompt + "\n\n" + "\n".join(instructions)
+            system_prompt = (system_prompt or DEFAULT_SYSTEM_PROMPT) + "\n\n" + "\n".join(instructions)
         skills = select_skills(text, self.active_skills) if self.dynamic_context else self.active_skills
         messages = build_messages(text, system_prompt, history=self.context.history, skills=skills)
         if tool_schemas and messages and messages[0].get("role") == "system":

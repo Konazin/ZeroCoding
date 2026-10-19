@@ -121,3 +121,9 @@ verify:
   commands: []
   max_attempts: 2   # fix rounds after a failing run (so up to 3 runs per request)
   timeout: 120
+
+# A short file of project conventions in the workspace root (first found: ZEROCODING.md, AGENTS.md, CLAUDE.md) is added to
+# the system prompt, capped at max_chars. It cannot change approvals. No file means no prompt change. /instructions shows it.
+instructions:
+  enabled: true
+  max_chars: 2000

@@ -21,6 +21,7 @@ from .skills.loader import load_skills
 from .tui.app import ZerocodingTUI
 from .core.cancel import CancelToken
 from .core.permissions import PermissionPolicy
+from .core.instructions import load_instructions
 from .core.verify import Verifier
 
 
@@ -154,6 +155,7 @@ def main(argv=None):
     agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
     attach_journal(agent.tools, session, session_manager)
     agent.verifier = Verifier(Path.cwd(), config.verify) if config.verify.enabled else None
+    agent.instructions = load_instructions(Path.cwd(), config.instructions)
     extensions = build_extensions(config, agent, Path.cwd(), skills, metrics=metrics)
     def interactive_loop():
         nonlocal session
@@ -163,6 +165,9 @@ def main(argv=None):
         tui.show_welcome()
         for warning in startup_warnings(extensions):
             tui.show_warning(warning)
+        if agent.instructions is not None:
+            note = " (truncated)" if agent.instructions.truncated else ""
+            tui.show_info(f"Project instructions: {agent.instructions.source}, {len(agent.instructions.text)} characters{note}. /instructions shows them.")
         if not agent.window_tokens():
             tui.show_warning(
                 f"Could not detect the context window of {config.provider}. Using {config.max_input_tokens} prompt tokens; "

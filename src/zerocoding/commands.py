@@ -75,6 +75,9 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         sync_tui_runtime(tui, agent)
         tui.show_success(f"{label} mode {'enabled' if enabled else 'disabled'}.")
         return False, None, session
+    if name == "/instructions":
+        handle_instructions(args_text, tui, agent, config)
+        return False, None, session
     if name == "/verify":
         handle_verify(args_text, tui, agent)
         return False, None, session
@@ -200,6 +203,32 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
 
     tui.show_error(f"Comando desconhecido: {command}")
     return False, None, session
+
+
+def handle_instructions(args_text, tui, agent, config):
+    """/instructions [reload|off]: the project conventions file that is added to the system prompt."""
+    from .core.instructions import load_instructions
+    argument = args_text.strip().lower()
+    if argument == "off":
+        agent.instructions = None
+        tui.show_success("Project instructions off for this session. /instructions reload brings them back.")
+        return
+    if argument == "reload":
+        agent.instructions = load_instructions(Path.cwd(), config.instructions)
+        if agent.instructions is None:
+            tui.show_info("No project instructions file found (looked for " + ", ".join(config.instructions.files) + ").")
+            return
+    elif argument:
+        tui.show_error("Usage: /instructions [reload|off]")
+        return
+    current = agent.instructions
+    if current is None:
+        tui.show_info("No project instructions loaded. Add ZEROCODING.md, AGENTS.md or CLAUDE.md to the project root.")
+        return
+    cut = f" · truncated from {current.total_chars}" if current.truncated else ""
+    tui.show_info(f"{current.source} · {len(current.text)} characters{cut} · counted in every prompt")
+    for line in current.text.splitlines()[:12]:
+        tui.show_info("  " + line[:100])
 
 
 def handle_verify(args_text, tui, agent):

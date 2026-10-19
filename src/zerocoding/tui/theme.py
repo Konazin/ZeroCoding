@@ -72,6 +72,7 @@ COMMANDS = [
     ("/plan", "Toggle read-only planning mode"),
     ("/ultrathink", "Toggle deeper analysis budget"),
     ("/effort", "Set low, medium, or high effort"),
+    ("/instructions", "Show the project instructions file in the prompt"),
     ("/verify", "Show or change the check run after the agent edits files"),
     ("/undo", "Undo the files the agent wrote in the last turn"),
     ("/undo list", "List turns that can be undone"),

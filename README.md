@@ -207,6 +207,10 @@ After the agent edits files, ZeroCoding runs the project's own checks and shows 
 - **When it does not run:** no edits this turn, denied edits, Plan mode, or `verify.enabled: false`. Edits made through `run_command` or `git_commit` do not count.
 - **`/verify`** shows the state; `/verify off|on` toggles it for the session and `/verify set <command>` picks the command. `m7_bench.py --verify` runs the benchmark with the loop on.
 
+## Project instructions (M10)
+
+A short file of conventions in the workspace root is added to the system prompt: the first found of `ZEROCODING.md`, `AGENTS.md`, `CLAUDE.md`, capped at `instructions.max_chars` (2,000, about 500 tokens, counted in every prompt). Good for the test command, style rules and where things live. It steers the model but not the approvals: writes, commands and commits still ask, so a file from a cloned repository cannot act on its own. With no such file the prompt is unchanged. The TUI says what it loaded; `/instructions` shows it, `/instructions reload` rereads it and `/instructions off` drops it for the session. Symbolic links and files outside the workspace root are ignored.
+
 ## Extensions (all opt-in)
 
 Configured in `~/.zerocoding/config.yaml` (commented examples in `config/default.yaml`). Details and cost limits: [docs/ROADMAP-m6.md](docs/ROADMAP-m6.md).

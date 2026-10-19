@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .instructions import InstructionsConfig
 from .verify import VerifyConfig
 from .command_policy import CommandPolicy
 from .dotenv import load_env
@@ -145,6 +146,7 @@ class Config:
     fullscreen: bool = True
     shell_block_fallback: bool = True
     verify: VerifyConfig = field(default_factory=VerifyConfig)
+    instructions: InstructionsConfig = field(default_factory=InstructionsConfig)
     auto_packs: list = field(default_factory=lambda: ["fs", "read", "git"])
     session_persistence: bool = True
     metrics_enabled: bool = True
@@ -206,6 +208,7 @@ class Config:
             "fullscreen": self.fullscreen,
             "shell_block_fallback": self.shell_block_fallback,
             "verify": self.verify.to_dict(),
+            "instructions": self.instructions.to_dict(),
             "auto_packs": list(self.auto_packs),
             "session_persistence": self.session_persistence,
             "metrics_enabled": self.metrics_enabled,
@@ -279,6 +282,7 @@ class ConfigManager:
             command_policy=CommandPolicy.from_dict(data.get("command_policy")),
             effort_profiles=effort_profiles,
             verify=VerifyConfig.from_dict(data.get("verify")),
+            instructions=InstructionsConfig.from_dict(data.get("instructions")),
         )
 
     @staticmethod
