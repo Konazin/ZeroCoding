@@ -433,6 +433,28 @@ def server_info(base_url: str) -> dict:
         return {"error": str(exc)}
 
 
+def _provider_factory(provider_type: str, thinking: str):
+    """None keeps the default recording llama.cpp provider; other types give the same suites to any backend."""
+    from zerocoding.core.config import normalize_thinking
+    setting = normalize_thinking(thinking)
+    if provider_type == "llama_cpp" and setting == "auto":
+        return None
+
+    def build(base_url, model, timeout):
+        if provider_type == "ollama":
+            from zerocoding.providers.ollama import OllamaProvider
+            provider = OllamaProvider(base_url, model, timeout=timeout)
+        elif provider_type == "openai_compatible":
+            from zerocoding.providers.openai_compatible import OpenAICompatibleProvider
+            provider = OpenAICompatibleProvider("", base_url, model, timeout=timeout)
+        else:
+            provider = RecordingProvider("", base_url, model, timeout=timeout)
+        provider.thinking = setting
+        return provider
+
+    return build
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--label", required=True, help="identificador do modelo/configuração medido")
@@ -446,9 +468,13 @@ def main(argv=None):
                         help="small = the 15 M7 tasks (saturated); hard = multi-file tasks from scripts/bench_hard_cases.py")
     parser.add_argument("--case", help="execute somente uma tarefa do catálogo escolhido")
     parser.add_argument("--streaming", action="store_true", help="opt in to SSE and record measured TTFT")
+    parser.add_argument("--provider-type", choices=["llama_cpp", "openai_compatible", "ollama"], default="llama_cpp",
+                        help="backend wire format; ollama expects the native base URL (no /v1)")
+    parser.add_argument("--thinking", default="auto", help="auto, on, off or budget:N, applied to the provider")
     args = parser.parse_args(argv)
     if args.repetitions < 1:
         parser.error("--repetitions must be at least 1")
+    factory = _provider_factory(args.provider_type, args.thinking)
     pid = _server_pid()
     idle = {"rss_mb": round(_rss_mb(pid)), "vram_mb": round(_vram_mb())}
     trials = []
@@ -459,7 +485,8 @@ def main(argv=None):
     for repetition in range(1, args.repetitions + 1):
         for case in selected_cases:
             trial = run_trial(case, args.base_url, args.model, pid, args.timeout,
-                              repetition=repetition, seed=args.seed, streaming=args.streaming)
+                              repetition=repetition, seed=args.seed, streaming=args.streaming,
+                              provider_factory=factory)
             trials.append(trial)
             print(f"[{repetition}/{args.repetitions}] {case.id:20} {'PASS' if trial['passed'] else 'FAIL'} "
                   f"{trial['duration_s']:6.1f}s in={trial['prompt_tokens']:5} out={trial['completion_tokens']:4} "
@@ -473,6 +500,8 @@ def main(argv=None):
         "repetitions": args.repetitions,
         "seed_base": args.seed,
         "streaming": args.streaming,
+        "provider_type": args.provider_type,
+        "thinking": args.thinking,
         "suite": args.suite,
         "cases": [case.id for case in selected_cases],
         "idle_memory": idle,

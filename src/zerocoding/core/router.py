@@ -10,18 +10,21 @@ from .config import Config
 def build_provider(config: Config):
     provider = config.active_provider
     if provider.type == "ollama":
-        return OllamaProvider(url=provider.base_url, model=provider.model)
-    if provider.type == "llama_cpp":
-        return LlamaCppProvider(
+        built = OllamaProvider(url=provider.base_url, model=provider.model)
+    elif provider.type == "llama_cpp":
+        built = LlamaCppProvider(
             api_key=provider.resolved_api_key(),
             api_url=provider.base_url,
             model=provider.model,
         )
-    return OpenAICompatibleProvider(
-        api_key=provider.resolved_api_key(),
-        api_url=provider.base_url,
-        model=provider.model,
-    )
+    else:
+        built = OpenAICompatibleProvider(
+            api_key=provider.resolved_api_key(),
+            api_url=provider.base_url,
+            model=provider.model,
+        )
+    built.thinking = getattr(provider, "thinking", "auto")
+    return built
 
 
 def build_session_provider(config: Config, provider_name: str, model: str):

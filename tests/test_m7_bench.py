@@ -139,3 +139,17 @@ class TestM7BenchmarkHarness(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestProviderSelection(unittest.TestCase):
+    def test_default_keeps_the_recording_llama_provider_and_other_types_get_a_factory(self):
+        from scripts.m7_bench import _provider_factory
+        from zerocoding.providers.ollama import OllamaProvider
+        from zerocoding.providers.openai_compatible import OpenAICompatibleProvider
+
+        self.assertIsNone(_provider_factory("llama_cpp", "auto"))
+        self.assertIsInstance(_provider_factory("ollama", "auto")("http://x", "m", 5), OllamaProvider)
+        generic = _provider_factory("openai_compatible", "off")("http://x/v1", "m", 5)
+        self.assertIsInstance(generic, OpenAICompatibleProvider)
+        self.assertEqual(generic.thinking, "off")
+        self.assertEqual(_provider_factory("llama_cpp", "budget:128")("http://x/v1", "m", 5).thinking, "budget:128")

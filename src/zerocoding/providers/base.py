@@ -69,6 +69,7 @@ def normalize_turn(response) -> ProviderTurn:
 
 
 class BaseProvider(ABC):
+    thinking = "auto"  # auto | on | off | budget:N, set from providers.<name>.thinking
     EXACT_TOKEN_COUNT = False
     NATIVE_TOOLS = True
     STREAMING = False
@@ -89,6 +90,19 @@ class BaseProvider(ABC):
         value = value if isinstance(value, int) and value > 0 else None
         self._window_cache = (value, now)
         return value
+
+    def thinking_budget(self) -> int | None:
+        return int(self.thinking[7:]) if str(self.thinking).startswith("budget:") else None
+
+    def thinking_support_problem(self) -> str:
+        """Why the configured `thinking` cannot be honoured by this backend, or '' when it can."""
+        if self.thinking == "auto":
+            return ""
+        if self.REASONING_CONTROL == "none":
+            return "this provider type has no reasoning control; the setting is ignored"
+        if self.thinking_budget() is not None and self.REASONING_CONTROL != "budget":
+            return "this provider can only switch reasoning on or off; budget:N is treated as on"
+        return ""
 
     def _probe_context_window(self) -> int | None:
         return None

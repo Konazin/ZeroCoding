@@ -206,6 +206,12 @@ def run_doctor(config, config_manager, workspace: str | Path | None = None,
             from ..core.router import build_provider
             capabilities = build_provider(config).capabilities(detect_window=False)
             checks.append(Check("Provider capabilities", "ok", capabilities.summary()))
+            built = build_provider(config)
+            problem = built.thinking_support_problem()
+            if built.thinking != "auto":
+                checks.append(Check("Thinking", "warn" if problem else "ok",
+                                    f"thinking: {built.thinking}" + (f" — {problem}." if problem else ""),
+                                    "Use a provider type that controls reasoning, or set thinking: auto." if problem else ""))
             if provider_type != "ollama" and ":11434" in str(provider.base_url):
                 checks.append(Check("Ollama endpoint", "warn",
                                     "Ollama's /v1 endpoint ignores the context size ZeroCoding requests.",

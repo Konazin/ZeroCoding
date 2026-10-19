@@ -17,6 +17,18 @@ DEFAULT_PROVIDER = "llama_cpp_local"
 DEFAULT_USER_CONFIG = Path("~/.zerocoding/config.yaml").expanduser()
 
 
+def normalize_thinking(value) -> str:
+    """auto | on | off | budget:N (N reasoning tokens, 16 to 8192). Anything else falls back to auto."""
+    if isinstance(value, bool):  # YAML turns an unquoted `off` / `on` into False / True
+        return "on" if value else "off"
+    text = str(value if value is not None else "auto").strip().lower()
+    if text in {"auto", "on", "off"}:
+        return text
+    if text.startswith("budget:") and text[7:].isdigit() and 16 <= int(text[7:]) <= 8192:
+        return text
+    return "auto"
+
+
 @dataclass
 class ProviderConfig:
     name: str
@@ -25,6 +37,7 @@ class ProviderConfig:
     model: str = "deepseek-coder-v2"
     api_key: str = ""
     api_key_env: str = ""
+    thinking: str = "auto"  # how much the model may reason; the provider translates it per backend
 
     @classmethod
     def from_dict(cls, name: str, values: dict[str, Any]):
@@ -35,6 +48,7 @@ class ProviderConfig:
             model=str(values.get("model", "deepseek-coder-v2")),
             api_key=str(values.get("api_key", "")),
             api_key_env=str(values.get("api_key_env", "")),
+            thinking=normalize_thinking(values.get("thinking", "auto")),
         )
 
     def resolved_api_key(self) -> str:
@@ -52,6 +66,8 @@ class ProviderConfig:
         }
         if self.api_key_env:
             data["api_key_env"] = self.api_key_env
+        if self.thinking != "auto":
+            data["thinking"] = self.thinking
         if self.api_key:
             data["api_key"] = self.api_key
         return data

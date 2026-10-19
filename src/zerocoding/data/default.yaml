@@ -6,6 +6,12 @@ providers:
     type: llama_cpp
     base_url: "http://127.0.0.1:8080/v1"
     model: "ornith-1.5-9b-q5-k-m"
+    # thinking: "auto"   # auto = the model decides (today's behaviour) | "on" | "off" | "budget:512" (reasoning tokens).
+    #                    # Quote it: YAML reads an unquoted off as false. llama_cpp supports all; ollama (native type)
+    #                    # on/off only; openai_compatible ignores it. The first request to a reasoning model is the
+    #                    # slow one: "off" can cut it by several times, at some cost in answer quality (unmeasured).
+  # An Ollama server should use the native API, which honours the context size ZeroCoding asks for:
+  #   ollama_local: {type: ollama, base_url: "http://127.0.0.1:11434", model: "qwen3.5:4b"}
 
 modes:
   code:

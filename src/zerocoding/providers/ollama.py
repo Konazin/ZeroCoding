@@ -32,6 +32,16 @@ class OllamaProvider(BaseProvider):
         limits = [v for k, v in (info or {}).items() if k.endswith(".context_length") and isinstance(v, int)]
         return min(max(limits), self.DEFAULT_NUM_CTX_CAP) if limits else None
 
+    def _think(self, kwargs):
+        """Native `think` boolean: an explicit caller value wins, then the provider's `thinking` setting."""
+        if kwargs.get("think") is not None:
+            return kwargs["think"]
+        if self.thinking == "off":
+            return False
+        if self.thinking == "on" or self.thinking_budget() is not None:
+            return True
+        return None
+
     def tool_result_message(self, call_id: str, name: str, content: str) -> dict:
         return {"role": "tool", "content": content}
 
@@ -109,8 +119,9 @@ class OllamaProvider(BaseProvider):
                 **kwargs.get("options", {}),
             },
         }
-        if kwargs.get("think") is not None:
-            payload["think"] = kwargs["think"]
+        think = self._think(kwargs)
+        if think is not None:
+            payload["think"] = think
         if not payload["tools"]:
             payload.pop("tools")
         response = self._post(endpoint, payload, stream=False)
@@ -164,8 +175,9 @@ class OllamaProvider(BaseProvider):
                 **kwargs.get("options", {}),
             },
         }
-        if kwargs.get("think") is not None:
-            payload["think"] = kwargs["think"]
+        think = self._think(kwargs)
+        if think is not None:
+            payload["think"] = think
 
         response = self._post(endpoint, payload, stream=True)
 
