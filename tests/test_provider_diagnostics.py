@@ -18,7 +18,7 @@ class TestCapabilities(unittest.TestCase):
         ollama = OllamaProvider("http://127.0.0.1:1", "m").capabilities(detect_window=False)
 
         self.assertEqual((llama.exact_token_count, llama.streaming, llama.reasoning_control), (True, True, "budget"))
-        self.assertEqual((generic.exact_token_count, generic.streaming, generic.reasoning_control), (False, True, "none"))
+        self.assertEqual((generic.exact_token_count, generic.streaming, generic.reasoning_control), (False, True, "toggle"))
         self.assertEqual((ollama.exact_token_count, ollama.streaming, ollama.reasoning_control), (False, False, "toggle"))
 
     def test_summary_is_readable_and_marks_unknown_windows(self):
@@ -149,3 +149,64 @@ class TestContextWindowProbes(unittest.TestCase):
 
             self.assertEqual(agent.window_tokens(), 8192)
             self.assertEqual(agent.input_budget(1024), 8192 - 1024 - 128)
+
+
+class TestAnswerStuckInTheReasoningField(unittest.TestCase):
+    """Seen live: Qwen 3.5 on Ollama's /v1 put the whole final answer in `reasoning` and left `content` empty."""
+
+    def test_the_reasoning_key_ollama_uses_is_read_like_reasoning_content(self):
+        with FakeBackend("openai") as backend:
+            backend.script = [{"content": "", "reasoning": "thinking out loud", "reasoning_key": "reasoning"}]
+            turn = OpenAICompatibleProvider("", backend.base_url, "fake").chat(MESSAGES)
+
+        self.assertTrue(turn.thinking_present)
+        self.assertEqual(turn.reasoning_content, "thinking out loud")
+        self.assertEqual(turn.content, "")
+
+    def test_an_empty_reply_is_retried_once_with_reasoning_switched_off(self):
+        with FakeBackend("openai") as backend:
+            backend.script = [{"content": "", "reasoning": "I fixed it", "reasoning_key": "reasoning"},
+                              {"content": "I fixed the bug in calc.py."}]
+            agent = Agent(OpenAICompatibleProvider("", backend.base_url, "fake"), streaming_enabled=False)
+
+            answer = agent.ask("fix it")
+            bodies = backend.bodies("/v1/chat/completions")
+
+        self.assertEqual(answer, "I fixed the bug in calc.py.")
+        self.assertNotIn("reasoning_effort", bodies[0])
+        self.assertEqual(bodies[1]["reasoning_effort"], "none")
+
+    def test_the_retry_after_a_tool_result_also_drops_reasoning_and_then_goes_back_to_normal(self):
+        import tempfile
+        from pathlib import Path
+        from zerocoding.core.tools import ToolRegistry
+
+        with tempfile.TemporaryDirectory() as tmp, FakeBackend("openai") as backend:
+            (Path(tmp) / "a.py").write_text("x = 1\n")
+            backend.script = [{"tool_calls": [("read_file", {"path": "a.py"})]},
+                              {"content": "", "reasoning": "answer in the wrong field", "reasoning_key": "reasoning"},
+                              {"content": "a.py sets x to 1."}]
+            agent = Agent(OpenAICompatibleProvider("", backend.base_url, "fake"),
+                          tools=ToolRegistry(tmp, approve=lambda *_: False), streaming_enabled=False)
+
+            answer = agent.ask("what is in a.py?", use_tools=True)
+            bodies = backend.bodies("/v1/chat/completions")
+
+        self.assertEqual(answer, "a.py sets x to 1.")
+        self.assertEqual([b.get("reasoning_effort") for b in bodies], [None, None, "none"])
+
+    def test_when_the_retry_is_also_empty_the_error_names_the_reasoning_field(self):
+        with FakeBackend("openai") as backend:
+            stuck = {"content": "", "reasoning": "all the text is here", "reasoning_key": "reasoning"}
+            backend.script = [stuck, stuck]
+            agent = Agent(OpenAICompatibleProvider("", backend.base_url, "fake"), streaming_enabled=False)
+
+            with self.assertRaises(RuntimeError) as caught:
+                agent.ask("fix it")
+
+        self.assertIn("private reasoning field", str(caught.exception))
+
+    def test_backends_without_reasoning_control_are_not_retried_pointlessly(self):
+        agent = Agent(Scripted([ProviderTurn(content=""), ProviderTurn(content="")]))
+
+        self.assertFalse(agent._can_retry_without_thinking())

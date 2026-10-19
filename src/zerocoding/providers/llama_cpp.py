@@ -27,12 +27,13 @@ class LlamaCppProvider(OpenAICompatibleProvider):
 
     def _request_parameters(self, kwargs) -> dict:
         # An explicit `thinking` setting wins over the effort level: both would steer the same template switch.
-        if self.thinking == "off":
+        setting = self._thinking(kwargs)
+        if setting == "off":
             return {"chat_template_kwargs": {"enable_thinking": False}}
-        if self.thinking == "on":
+        if setting == "on":
             return {"chat_template_kwargs": {"enable_thinking": True}}
-        if self.thinking_budget() is not None:
-            return {"reasoning_budget_tokens": self.thinking_budget()}
+        if self.thinking_budget(setting) is not None:
+            return {"reasoning_budget_tokens": self.thinking_budget(setting)}
         effort = kwargs.get("reasoning_effort")
         if effort in self.EFFORT_LEVELS:
             return {"reasoning_effort": effort}

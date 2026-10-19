@@ -47,7 +47,7 @@ class FakeBackend:
     def _openai_message(self, turn: dict) -> dict:
         message = {"role": "assistant", "content": turn.get("content", "")}
         if turn.get("reasoning"):
-            message["reasoning_content"] = turn["reasoning"]
+            message[turn.get("reasoning_key", "reasoning_content")] = turn["reasoning"]
         if turn.get("tool_calls"):
             message["tool_calls"] = [{"id": f"call_{i}", "type": "function",
                                       "function": {"name": name, "arguments": json.dumps(args)}}

@@ -91,8 +91,13 @@ class BaseProvider(ABC):
         self._window_cache = (value, now)
         return value
 
-    def thinking_budget(self) -> int | None:
-        return int(self.thinking[7:]) if str(self.thinking).startswith("budget:") else None
+    def _thinking(self, kwargs) -> str:
+        """The setting for this request: a per-request override (the agent's empty-reply retry) beats the config."""
+        return str(kwargs.get("thinking_override") or self.thinking)
+
+    def thinking_budget(self, setting: str | None = None) -> int | None:
+        setting = str(setting or self.thinking)
+        return int(setting[7:]) if setting.startswith("budget:") else None
 
     def thinking_support_problem(self) -> str:
         """Why the configured `thinking` cannot be honoured by this backend, or '' when it can."""

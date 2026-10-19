@@ -241,6 +241,8 @@ class Agent:
 
     def _chat_once(self, messages, tool_schemas, output_tokens, state):
         kwargs = {"num_ctx": self.input_budget(output_tokens) + output_tokens, **self._kwargs(output_tokens)}
+        if state.get("thinking_off"):
+            kwargs["thinking_override"] = "off"  # the empty-reply retry: ask again without reasoning
         effort_level = "high" if self.ultrathink else self.effort
         native_effort = getattr(self.provider, "native_effort_kwargs", lambda _level: None)(effort_level)
         if native_effort:
@@ -302,8 +304,13 @@ class Agent:
 
     def _chat_non_empty(self, *args):
         """Ask once more if the first turn is empty; raise a clear error if it stays empty."""
-        for _attempt in range(2):
-            turn = self._chat(*args)
+        for attempt in range(2):
+            if attempt == 1 and self._can_retry_without_thinking():
+                args[3]["thinking_off"] = True
+            try:
+                turn = self._chat(*args)
+            finally:
+                args[3].pop("thinking_off", None)
             if turn.tool_calls or turn.content.strip():
                 return turn
         raise RuntimeError(
@@ -311,9 +318,17 @@ class Agent:
             + " Check the chat template and reasoning settings, then try again."
         )
 
+    def _can_retry_without_thinking(self) -> bool:
+        """True when the backend can switch reasoning off per request (an answer stuck in the reasoning field is common)."""
+        return getattr(self.provider, "REASONING_CONTROL", "none") != "none"
+
     def _stop_cause(self) -> str:
         """Say why the last turn stopped when the backend told us (the usual culprit is reasoning eating the limit)."""
         info = getattr(self, "_last_stop", None) or {}
+        if info.get("finish_reason") == "stop" and info.get("reasoning_chars"):
+            return ("The model finished but left the reply empty and put its text in the private reasoning field "
+                    "(seen with Qwen on Ollama's /v1). Retrying without reasoning did not help; set "
+                    "providers.<name>.thinking: off.")
         if info.get("finish_reason") == "length":
             used = info.get("reasoning_tokens") or 0
             reasoning = f"{used} tokens" if used else (f"~{info.get('reasoning_chars', 0)} characters" if info.get("reasoning_chars") else "")
@@ -418,6 +433,7 @@ class Agent:
         rounds = 0
         tool_round_completed = False
         retried_compact = False
+        retried_thinking = False
         last_signature, repeats = None, 0
         changed = False  # a write, edit or command already ran this turn
         edited_since_verify = False
@@ -456,6 +472,16 @@ class Agent:
                     f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue."
                     if turn.tool_calls else ""
                 )
+                if (tool_round_completed and not response_text.strip() and not retried_thinking
+                        and self._can_retry_without_thinking()):
+                    # Often the whole answer went into the reasoning field: ask once more with reasoning off.
+                    retried_thinking = True
+                    state["thinking_off"] = True
+                    try:
+                        turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
+                    finally:
+                        state.pop("thinking_off", None)
+                    continue
                 if tool_round_completed and not response_text.strip() and not retried_compact:
                     # An empty reply after a tool result often means the prompt filled the window:
                     # shrink every tool output once and ask again before giving up.

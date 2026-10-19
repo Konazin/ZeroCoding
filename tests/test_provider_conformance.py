@@ -129,14 +129,21 @@ class TestThinkingTranslation(unittest.TestCase):
         self.assertIs(self.sent("ollama", "budget:300")["think"], True)
         self.assertNotIn("think", self.sent("ollama", "auto"))
 
-    def test_generic_providers_ignore_it_and_say_so(self):
-        body = self.sent("openai", "off")
-
-        self.assertNotIn("chat_template_kwargs", body)
-        self.assertNotIn("think", body)
+    def test_generic_providers_switch_reasoning_off_with_the_portable_effort_field(self):
+        self.assertEqual(self.sent("openai", "off")["reasoning_effort"], "none")
+        self.assertEqual(self.sent("openai", "on")["reasoning_effort"], "medium")
+        self.assertNotIn("reasoning_effort", self.sent("openai", "auto"))
+        self.assertNotIn("think", self.sent("openai", "off"))
         provider = OpenAICompatibleProvider("", "http://x/v1", "m")
-        provider.thinking = "off"
-        self.assertIn("no reasoning control", provider.thinking_support_problem())
+        provider.thinking = "budget:100"
+        self.assertIn("on or off", provider.thinking_support_problem())
+
+    def test_a_per_request_override_beats_the_configured_setting(self):
+        with FakeBackend("openai") as backend:
+            provider = OpenAICompatibleProvider("", backend.base_url, "fake")
+            provider.thinking = "on"
+            provider.chat(MESSAGES, thinking_override="off")
+        self.assertEqual(backend.bodies("/v1/chat/completions")[0]["reasoning_effort"], "none")
 
     def test_limits_of_each_backend_are_reported(self):
         ollama = OllamaProvider("http://x", "m")

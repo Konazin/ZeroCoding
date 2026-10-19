@@ -76,6 +76,8 @@ def _reasoning_tokens(usage) -> int:
 
 class OpenAICompatibleProvider(BaseProvider):
     STREAMING = True
+    # `reasoning_effort: "none"` is the portable off switch (Ollama's /v1 honours it and ignores `think`).
+    REASONING_CONTROL = "toggle"
 
     def __init__(self, api_key: str, api_url: str, model: str, timeout: int = 30):
         self.api_key = api_key
@@ -208,7 +210,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         args = {}
                 calls.append(ToolCall(fn.get("name", ""), args if isinstance(args, dict) else {}, item.get("id", "")))
             content, inline_reasoning = _strip_inline_thinking(str(message.get("content", "") or ""))
-            reasoning_content = str(message.get("reasoning_content", "") or "")
+            reasoning_content = str(message.get("reasoning_content") or message.get("reasoning") or "")
             if inline_reasoning:
                 reasoning_content += inline_reasoning
             usage = response.get("usage", {}) or {}
@@ -288,7 +290,7 @@ class OpenAICompatibleProvider(BaseProvider):
                         content_parts.append(public)
                         if on_delta:
                             on_delta(public)
-                reasoning = delta.get("reasoning_content")
+                reasoning = delta.get("reasoning_content") or delta.get("reasoning")
                 if isinstance(reasoning, str) and reasoning:
                     reasoning_parts.append(reasoning)
                 for item in delta.get("tool_calls") or []:
@@ -340,6 +342,11 @@ class OpenAICompatibleProvider(BaseProvider):
 
     def _request_parameters(self, kwargs) -> dict:
         """Provider-specific fields for compatible chat-completion APIs."""
+        setting = self._thinking(kwargs)
+        if setting == "off":
+            return {"reasoning_effort": "none"}
+        if setting == "on":
+            return {"reasoning_effort": "medium"}
         return {}
 
     def healthcheck(self) -> bool:

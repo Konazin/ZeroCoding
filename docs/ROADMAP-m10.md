@@ -18,6 +18,10 @@ Por quê: o Qwen 4B corrigiu bugs sem rodar os testes e errou (`h_root_cause_dep
 - **`max_attempts` conta rodadas de correção**: até três execuções por pedido com o padrão 2; nenhuma chamada ao modelo é gasta depois da última falha.
 - **Headless não tem humano**: as permissões vêm só de flags, o padrão é leitura.
 
+## Achado ao vivo (Qwen 3.5 4B no Ollama `/v1`, 2026-10-19)
+
+Rodando `zc run --write --commands auto` numa tarefa pequena (corrigir `x * 3` para `x * 2`, com testes), o agente editou e a verificação passou, mas **3 de 4 execuções terminavam em erro** ("empty response after a tool result"). O diagnóstico do M9 mostrou `finish_reason='stop'` e o conteúdo bruto mostrou o motivo: o Ollama `/v1` devolve a resposta final no campo `reasoning` e deixa `content` vazio. Este é o erro recorrente que apareceu na TUI. Correção: ler `reasoning` como raciocínio e repetir a chamada uma vez com raciocínio desligado (`reasoning_effort: none`; o `/v1` ignora `think: false`, o que foi medido). Depois: **5 de 5** execuções concluídas e verificadas (amostra pequena, um modelo, uma tarefa).
+
 ## Gates abertos (precisam de modelo)
 
 1. `m7_bench.py --suite hard --verify` contra a mesma suíte sem `--verify`: o ganho nas tarefas de causa raiz e de dois bugs é a prova de que o laço vale o tempo extra.

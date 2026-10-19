@@ -36,9 +36,10 @@ class OllamaProvider(BaseProvider):
         """Native `think` boolean: an explicit caller value wins, then the provider's `thinking` setting."""
         if kwargs.get("think") is not None:
             return kwargs["think"]
-        if self.thinking == "off":
+        setting = self._thinking(kwargs)
+        if setting == "off":
             return False
-        if self.thinking == "on" or self.thinking_budget() is not None:
+        if setting == "on" or self.thinking_budget(setting) is not None:
             return True
         return None
 
