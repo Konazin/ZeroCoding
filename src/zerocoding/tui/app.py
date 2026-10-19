@@ -547,6 +547,14 @@ class ZerocodingTUI:
             self.console.print(Text(f"  ⎿  {summary or 'Denied · no action taken'}", style=f"dim {ZERO_YELLOW}"))
         elif kind == "tool_error":
             self.console.print(Text(f"  ⎿  {summary or 'Tool error'}", style=f"dim {ZERO_RED}"))
+        elif kind == "verify_started":
+            self.console.print(Text(f"● Verify {target}".rstrip(), style=ZERO_PURPLE_LIGHT))
+        elif kind == "verify_passed":
+            self.console.print(Text(f"  ⎿  {summary or 'passed'}", style=f"dim {ZERO_GREEN}"))
+        elif kind == "verify_failed":
+            self.console.print(Text(f"  ⎿  {summary or 'failed'} · output sent back to the model", style=f"dim {ZERO_RED}"))
+        elif kind == "verify_skipped":
+            self.console.print(Text("  ⎿  Verification skipped", style=f"dim {ZERO_YELLOW}"))
         elif kind == "compacted":
             self.console.print(Text(f"  ⎿  Context compacted · {summary}", style=f"dim {ZERO_GRAY}"))
         if animation is None:
@@ -569,6 +577,9 @@ class ZerocodingTUI:
             return
         if kind == "approval_requested":
             animation.set_message("Waiting for approval")
+            return
+        if kind == "verify_started":
+            animation.set_message(f"Verifying {target}".strip())
             return
         if kind == "tool_completed":
             animation.set_message(summary or "Step complete")

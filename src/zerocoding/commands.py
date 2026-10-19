@@ -75,6 +75,9 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
         sync_tui_runtime(tui, agent)
         tui.show_success(f"{label} mode {'enabled' if enabled else 'disabled'}.")
         return False, None, session
+    if name == "/verify":
+        handle_verify(args_text, tui, agent)
+        return False, None, session
     if name == "/undo":
         handle_undo(args_text, tui, agent)
         return False, None, session
@@ -197,6 +200,30 @@ def handle_command(command, tui, agent, config, manager, skills, project_context
 
     tui.show_error(f"Comando desconhecido: {command}")
     return False, None, session
+
+
+def handle_verify(args_text, tui, agent):
+    """/verify [on|off|set <command>]: the check the agent re-runs after editing files, for this session."""
+    verifier = getattr(agent, "verifier", None)
+    argument = args_text.strip()
+    if verifier is None:
+        tui.show_info("Verification is disabled in the config (verify.enabled: false).")
+        return
+    if not argument:
+        tui.show_info(f"Verification: {verifier.status(agent.tools)} · up to {verifier.config.max_attempts} re-run(s) per request")
+        return
+    word, _, rest = argument.partition(" ")
+    if word == "on" and not rest:
+        verifier.reset(enabled=True)
+        tui.show_success("Verification on. A detected command is asked about once.")
+    elif word == "off" and not rest:
+        verifier.reset(enabled=False)
+        tui.show_success("Verification off for this session.")
+    elif word == "set" and rest.strip():
+        verifier.reset(enabled=True, command=rest.strip())
+        tui.show_success(f"Verification command set (trusted for this session): {rest.strip()}")
+    else:
+        tui.show_error("Usage: /verify [on|off|set <command>]")
 
 
 def attach_journal(tools, session, session_manager) -> None:

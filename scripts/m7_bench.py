@@ -12,6 +12,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -26,6 +27,7 @@ from typing import Callable
 from zerocoding.core.agent import Agent
 from zerocoding.core.command_policy import CommandPolicy
 from zerocoding.core.tools import ToolRegistry
+from zerocoding.core.verify import Verifier, VerifyConfig
 from zerocoding.providers.base import ProviderTurn
 from zerocoding.providers.llama_cpp import LlamaCppProvider
 
@@ -286,7 +288,7 @@ class MemorySampler:
 
 def run_trial(case: BenchCase, base_url: str, model: str, pid: int | None, timeout: int,
               repetition: int = 1, seed: int = 7001, provider_factory=None,
-              sampler_factory=MemorySampler, streaming: bool = False) -> dict:
+              sampler_factory=MemorySampler, streaming: bool = False, verify: bool = False) -> dict:
     """Execute one isolated case; provider_factory/sampler_factory allow server-free tests."""
     with tempfile.TemporaryDirectory(prefix=f"zc_m7_{case.id}_") as temporary:
         root = Path(temporary)
@@ -325,6 +327,10 @@ def run_trial(case: BenchCase, base_url: str, model: str, pid: int | None, timeo
             ),
         )
         agent = Agent(provider, tools=registry, plan_mode=case.plan, streaming_enabled=streaming)
+        if verify and case.allowed_command:
+            python = "python" if shutil.which("python") else "python3"
+            command = case.allowed_command.replace("python3 ", "python ", 1).replace("python ", f"{python} ", 1)
+            agent.verifier = Verifier(root, VerifyConfig(True, (command,), 2, 60))
         events = []
         error = None
         answer = ""
@@ -474,6 +480,8 @@ def main(argv=None):
     parser.add_argument("--streaming", action="store_true", help="opt in to SSE and record measured TTFT")
     parser.add_argument("--provider-type", choices=["llama_cpp", "openai_compatible", "ollama"], default="llama_cpp",
                         help="backend wire format; ollama expects the native base URL (no /v1)")
+    parser.add_argument("--verify", action="store_true",
+                        help="enable the verification loop (re-run the project's tests after edits) on cases that define a test command")
     parser.add_argument("--thinking", default="auto", help="auto, on, off or budget:N, applied to the provider")
     args = parser.parse_args(argv)
     if args.repetitions < 1:
@@ -490,7 +498,7 @@ def main(argv=None):
         for case in selected_cases:
             trial = run_trial(case, args.base_url, args.model, pid, args.timeout,
                               repetition=repetition, seed=args.seed, streaming=args.streaming,
-                              provider_factory=factory)
+                              provider_factory=factory, verify=args.verify)
             trials.append(trial)
             print(f"[{repetition}/{args.repetitions}] {case.id:20} {'PASS' if trial['passed'] else 'FAIL'} "
                   f"{trial['duration_s']:6.1f}s in={trial['prompt_tokens']:5} out={trial['completion_tokens']:4} "
@@ -506,6 +514,7 @@ def main(argv=None):
         "streaming": args.streaming,
         "provider_type": args.provider_type,
         "thinking": args.thinking,
+        "verify": args.verify,
         "suite": args.suite,
         "cases": [case.id for case in selected_cases],
         "idle_memory": idle,

@@ -193,3 +193,31 @@ class TestGitCasesRunThroughTheHarness(unittest.TestCase):
 
         self.assertTrue(trial["passed"], trial)
         self.assertEqual(trial["tool_calls"], 1)
+
+
+class TestVerifyOption(unittest.TestCase):
+    def test_the_verification_loop_runs_inside_a_benchmark_trial(self):
+        from scripts.m7_bench import hard_cases
+
+        case = next(c for c in hard_cases() if c.id == "h_root_cause_dependency")
+        fixed_tax = "RATE = 8  # percent\n\n\ndef apply_tax(amount):\n    return round(amount * (1 + RATE / 100), 2)\n"
+
+        class Scripted:
+            responses = []
+
+            def __init__(self):
+                self.turns = [
+                    ProviderTurn(tool_calls=[ToolCall("write_file", {"path": "tax.py", "content": "RATE = 0.08\n\n\ndef apply_tax(amount):\n    return amount * RATE\n"}, "a")]),
+                    ProviderTurn(content="fixed"),
+                    ProviderTurn(tool_calls=[ToolCall("write_file", {"path": "tax.py", "content": fixed_tax}, "b")]),
+                    ProviderTurn(content="really fixed"),
+                ]
+
+            def chat(self, messages, **kwargs):
+                return self.turns.pop(0)
+
+        trial = run_trial(case, "http://unused", "m", None, 5, provider_factory=lambda *a: Scripted(),
+                          sampler_factory=FakeSampler, verify=True)
+
+        self.assertTrue(trial["passed"], trial)
+        self.assertEqual(trial["llm_calls"], 4)

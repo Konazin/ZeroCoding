@@ -198,6 +198,15 @@ The interactive TUI clears the visible terminal on startup. Its prompt is framed
 - **Use Ollama through `type: ollama`** (native API). Its `/v1` endpoint ignores the context size ZeroCoding requests, and `zc doctor` warns about it.
 - **`providers.<name>.thinking`**: `auto` (default, the model decides), `on`, `off` or `budget:N`. llama.cpp supports all four, native Ollama on/off, generic OpenAI-compatible servers ignore it. Quote it in YAML (`"off"`): an unquoted `off` is read as false (ZeroCoding accepts that too). When a reply comes back empty, the error now says whether the output limit was spent on reasoning.
 
+## Verification loop (M10)
+
+After the agent edits files, ZeroCoding runs the project's own checks and shows failures to the model so it can fix its own mistake, instead of trusting "done". The code decides when to verify, not the model.
+
+- **What runs:** `verify.commands` from your config (trusted like a hook), or a detected command: `python -m pytest -q -x` (pytest tests or config), `python -m unittest discover` (other Python tests), `npm test --silent`, `cargo test -q` or `go test ./...`. A detected command is shown for approval the first time (through the normal approval rules, so `/permission auto` with the `tests` pack runs it silently); refusing switches verification off for the session.
+- **How it loops:** a failing run sends the trimmed output (head and tail, 3,000 characters) back; the agent gets up to `verify.max_attempts` (2) fix rounds, so at most three runs per request. If it still fails, the answer ends with a "Not verified" warning. A command that cannot run (blocked by the command policy, not installed) is reported, not retried.
+- **When it does not run:** no edits this turn, denied edits, Plan mode, or `verify.enabled: false`. Edits made through `run_command` or `git_commit` do not count.
+- **`/verify`** shows the state; `/verify off|on` toggles it for the session and `/verify set <command>` picks the command. `m7_bench.py --verify` runs the benchmark with the loop on.
+
 ## Extensions (all opt-in)
 
 Configured in `~/.zerocoding/config.yaml` (commented examples in `config/default.yaml`). Details and cost limits: [docs/ROADMAP-m6.md](docs/ROADMAP-m6.md).

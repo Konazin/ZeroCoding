@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased (M10: verification loop)
+
+- After the agent edits files, the project's own checks run and failures go back to the model (up to 2 fix rounds); `/verify` controls it per session. Detected commands are approved once; configured ones are trusted.
+- `m7_bench.py --verify`. Not yet measured against a model.
+
 ## Unreleased (M9: git, undo and modular providers)
 
 - Git tools, only inside a repository: `git` (status, diff, log; read-only, allowed in Plan mode, hardened against repository-controlled code) and `git_commit` (explicit paths, approved message, hooks run, never auto-approved).

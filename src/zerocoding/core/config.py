@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .verify import VerifyConfig
 from .command_policy import CommandPolicy
 from .dotenv import load_env
 
@@ -143,6 +144,7 @@ class Config:
     mouse_support: bool = True
     fullscreen: bool = True
     shell_block_fallback: bool = True
+    verify: VerifyConfig = field(default_factory=VerifyConfig)
     auto_packs: list = field(default_factory=lambda: ["fs", "read", "git"])
     session_persistence: bool = True
     metrics_enabled: bool = True
@@ -203,6 +205,7 @@ class Config:
             "mouse_support": self.mouse_support,
             "fullscreen": self.fullscreen,
             "shell_block_fallback": self.shell_block_fallback,
+            "verify": self.verify.to_dict(),
             "auto_packs": list(self.auto_packs),
             "session_persistence": self.session_persistence,
             "metrics_enabled": self.metrics_enabled,
@@ -275,6 +278,7 @@ class ConfigManager:
             plugins_enabled=[str(n) for n in ((data.get("plugins") or {}).get("enabled") or [])],
             command_policy=CommandPolicy.from_dict(data.get("command_policy")),
             effort_profiles=effort_profiles,
+            verify=VerifyConfig.from_dict(data.get("verify")),
         )
 
     @staticmethod

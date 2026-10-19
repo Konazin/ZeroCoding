@@ -112,3 +112,12 @@ subagents:
 plugins:
   path: "~/.zerocoding/plugins"
   enabled: []
+
+# Run the project's own checks after the agent edits files and show failures to the model (up to max_attempts re-runs
+# per request, after the first run). `commands` is trusted like a hook; when empty, a command is detected (pytest/unittest, npm test,
+# cargo test, go test) and shown for approval the first time. /verify controls it per session.
+verify:
+  enabled: true
+  commands: []
+  max_attempts: 2   # fix rounds after a failing run (so up to 3 runs per request)
+  timeout: 120

@@ -162,6 +162,18 @@ class ToolRegistry:
             except FileNotFoundError:
                 pass
 
+    def run_verification(self, command: str, timeout: int):
+        """Run a verification command under the command policy. Approval is the Verifier's job, not this method's."""
+        try:
+            argv = shlex.split(command)
+        except ValueError as exc:
+            raise ValueError(f"could not parse the command: {exc}") from None
+        reason = self.policy.check(argv, self.root)
+        if reason:
+            raise ValueError(f"blocked by policy: {reason}")
+        return run_capped(argv, cwd=self.root, env=self.policy.environment(), timeout=timeout,
+                          max_output_chars=self.policy.max_output_chars)
+
     def _journal(self, path: Path, snapshot, new_text: str) -> None:
         """Record the original of a file just written so the turn can be undone (best effort)."""
         if self.journal is None:

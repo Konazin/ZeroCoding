@@ -21,6 +21,7 @@ from .skills.loader import load_skills
 from .tui.app import ZerocodingTUI
 from .core.cancel import CancelToken
 from .core.permissions import PermissionPolicy
+from .core.verify import Verifier
 
 
 def main(argv=None):
@@ -152,6 +153,7 @@ def main(argv=None):
 
     agent.tools = ToolRegistry(Path.cwd(), approve=approve_action, policy=config.command_policy)
     attach_journal(agent.tools, session, session_manager)
+    agent.verifier = Verifier(Path.cwd(), config.verify) if config.verify.enabled else None
     extensions = build_extensions(config, agent, Path.cwd(), skills, metrics=metrics)
     def interactive_loop():
         nonlocal session

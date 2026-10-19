@@ -34,6 +34,7 @@ class Agent:
         self.metrics_sink = None  # optional callable(dict): receives one stats dict per turn
         self.last_turn: dict = {}
         self.extensions = None  # core.extensions.Extensions, set by the CLI
+        self.verifier = None  # core.verify.Verifier | None: re-runs the project's checks after the agent edits files
         self.hooks = None  # core.hooks.HookRunner | None
         self._stats: dict = self._new_stats()
         self.dynamic_context = bool(dynamic_context)
@@ -173,6 +174,24 @@ class Agent:
             *recent,
         ]
         return before, count(self.context.history)
+
+    def _verify(self, on_event, cancel):
+        """Run the verifier once, with events for the UI. Returns a VerifyResult, or None when it was skipped."""
+        if cancel:
+            cancel.check()
+        commands = self.verifier.commands(self.tools) if self.tools is not None else []
+        command = commands[0] if commands else ""
+        emit_event(on_event, AgentEvent("verify_started", "verify", command))
+        outcome = self.verifier.run(self.tools)
+        if outcome is None:
+            emit_event(on_event, AgentEvent("verify_skipped", "verify", command, "not run"))
+            return None
+        self._stats["verify_runs"] = self._stats.get("verify_runs", 0) + 1
+        if not outcome.ok:
+            self._stats["verify_failures"] = self._stats.get("verify_failures", 0) + 1
+        emit_event(on_event, AgentEvent("verify_passed" if outcome.ok else "verify_failed", "verify", command,
+                                        outcome.summary, outcome.seconds))
+        return outcome
 
     def _compact_if_needed(self, messages, budget, tool_schemas, on_event):
         """Shrink old tool outputs once the prompt passes COMPACT_AT of the budget, before it overflows."""
@@ -401,6 +420,9 @@ class Agent:
         retried_compact = False
         last_signature, repeats = None, 0
         changed = False  # a write, edit or command already ran this turn
+        edited_since_verify = False
+        verify_attempts = 0
+        last_verify = None
         while True:
             turn = parse_compact_call(turn)
             if (self.shell_block_fallback and not turn.tool_calls and not changed and tool_schemas
@@ -410,6 +432,24 @@ class Agent:
                     if converted.content.strip():
                         emit_event(on_event, AgentEvent("preamble", summary=converted.content))
                     turn = converted
+            if (not turn.tool_calls and tool_schemas and self.verifier is not None and self.verifier.enabled and edited_since_verify
+                    and verify_attempts <= self.verifier.config.max_attempts and rounds < tool_round_limit):
+                edited_since_verify = False
+                outcome = self._verify(on_event, cancel)
+                if outcome is not None:
+                    verify_attempts += 1
+                    last_verify = outcome
+                    # Only a failing check is worth another model call, and only while fix rounds remain.
+                    if not outcome.ok and not outcome.problem and verify_attempts <= self.verifier.config.max_attempts:
+                        messages.append({"role": "assistant", "content": turn.content or "(finished the edits)"})
+                        messages.append({"role": "user", "content": outcome.feedback()})
+                        budget = self.input_budget(output_tokens)
+                        messages = self._compact_if_needed(messages, budget, tool_schemas, on_event)
+                        messages = self._fit(messages, budget, tool_schemas)
+                        turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
+                        rounds += 1
+                        tool_round_completed = True
+                        continue
             if not turn.tool_calls or not tool_schemas or rounds >= tool_round_limit:
                 response_text = turn.content or (
                     f"Tool round limit reached ({tool_round_limit} rounds). Ask me to continue."
@@ -462,12 +502,17 @@ class Agent:
                 messages.append(result_message)
                 if call.name in CHANGING_TOOLS and not tool_was_denied(call.name, result_message.get("content", "")):
                     changed = True
+                    if call.name in {"write_file", "edit_file"}:
+                        edited_since_verify = True
             rounds += 1
             tool_round_completed = True
             budget = self.input_budget(output_tokens)
             messages = self._compact_if_needed(messages, budget, tool_schemas, on_event)
             messages = self._fit(messages, budget, tool_schemas)
             turn = self._chat(messages, tool_schemas, output_tokens, state, on_event)
+        if last_verify is not None and not last_verify.ok:
+            response_text = (f"{response_text}\n\n⚠ Not verified: `{last_verify.command}` "
+                             f"{last_verify.summary}. Review the changes before relying on them.").strip()
         self.context.add_message("user", text)
         self.context.add_message("assistant", response_text)
         return response_text

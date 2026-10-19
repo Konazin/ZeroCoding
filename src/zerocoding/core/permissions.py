@@ -36,6 +36,8 @@ class PermissionPolicy:
 
     def decide(self, action: str, preview: str) -> Decision | None:
         """Return a Decision when the action is approved without asking, otherwise None (ask the user)."""
+        if action == "Run verification":
+            action = "Run command"  # same rules as any command: packs in auto, workspace and network checks in yolo
         if action == "Git commit":
             return None  # the repository's hooks run on commit, so a person always confirms it
         if self.mode == "yolo":
