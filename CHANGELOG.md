@@ -4,6 +4,7 @@
 
 - After the agent edits files, the project's own checks run and failures go back to the model (up to 2 fix rounds); `/verify` controls it per session. Detected commands are approved once; configured ones are trusted.
 - `m7_bench.py --verify`. Not yet measured against a model.
+- `zc run -m "task"`: headless mode with read-only default, `--write`, `--commands auto`, `--json` and exit codes (2 = not verified).
 - Project instructions file (`ZEROCODING.md`, `AGENTS.md` or `CLAUDE.md` in the workspace root) added to the system prompt, capped at 2,000 characters; `/instructions`.
 
 ## Unreleased (M9: git, undo and modular providers)

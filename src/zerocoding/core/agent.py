@@ -35,6 +35,7 @@ class Agent:
         self.last_turn: dict = {}
         self.extensions = None  # core.extensions.Extensions, set by the CLI
         self.instructions = None  # core.instructions.Instructions | None, loaded from the workspace by the CLI
+        self.last_verification = None  # the last VerifyResult of the most recent request, for headless exit codes
         self.verifier = None  # core.verify.Verifier | None: re-runs the project's checks after the agent edits files
         self.hooks = None  # core.hooks.HookRunner | None
         self._stats: dict = self._new_stats()
@@ -422,6 +423,7 @@ class Agent:
         edited_since_verify = False
         verify_attempts = 0
         last_verify = None
+        self.last_verification = None
         while True:
             turn = parse_compact_call(turn)
             if (self.shell_block_fallback and not turn.tool_calls and not changed and tool_schemas
@@ -437,7 +439,7 @@ class Agent:
                 outcome = self._verify(on_event, cancel)
                 if outcome is not None:
                     verify_attempts += 1
-                    last_verify = outcome
+                    last_verify = self.last_verification = outcome
                     # Only a failing check is worth another model call, and only while fix rounds remain.
                     if not outcome.ok and not outcome.problem and verify_attempts <= self.verifier.config.max_attempts:
                         messages.append({"role": "assistant", "content": turn.content or "(finished the edits)"})

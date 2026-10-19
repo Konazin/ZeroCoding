@@ -29,9 +29,16 @@ def main(argv=None):
     load_env()
 
     parser = argparse.ArgumentParser(prog="zerocoding")
-    parser.add_argument("command", nargs="?", choices={"doctor"}, help="Run environment diagnostics")
+    parser.add_argument("command", nargs="?", choices={"doctor", "run"}, help="doctor: environment diagnostics; run: non-interactive task from -m")
     parser.add_argument("-m", "--message", help="Prompt to send")
     parser.add_argument("--provider", help="Configured provider to use")
+    parser.add_argument("--write", action="store_true", help="run: approve file writes and edits (default: read-only)")
+    parser.add_argument("--commands", choices=["none", "auto"], default="none",
+                        help="run: approve commands from the safe packs (auto) or none")
+    parser.add_argument("--json", action="store_true", help="run: print one JSON object instead of text")
+    parser.add_argument("--quiet", action="store_true", help="run: no progress lines on stderr")
+    parser.add_argument("--max-rounds", type=int, help="run: tool-round cap for this task")
+    parser.add_argument("--no-verify", action="store_true", help="run: skip the verification loop")
     parser.add_argument("--no-session-save", action="store_true", help="Do not save this interactive session")
     parser.add_argument("--list-skills", action="store_true")
     parser.add_argument("--clear-memory", action="store_true")
@@ -85,6 +92,18 @@ def main(argv=None):
             for skill in skills:
                 console.print(f"  {skill.name}: {skill.description}")
         return 0
+
+    if args.command == "run":
+        if not args.message:
+            print("Error: zc run needs the task: zc run -m \"what to do\"", file=sys.stderr)
+            return 2
+        from .core.headless import HeadlessOptions, run_headless
+        root = Path.cwd()
+        agent.tools = ToolRegistry(root, approve=None, policy=config.command_policy)
+        agent.instructions = load_instructions(root, config.instructions)
+        agent.verifier = Verifier(root, config.verify) if config.verify.enabled and not args.no_verify else None
+        return run_headless(agent, args.message, root, HeadlessOptions(
+            write=args.write, commands=args.commands, as_json=args.json, quiet=args.quiet, max_rounds=args.max_rounds))
 
     if args.message:
         try:
