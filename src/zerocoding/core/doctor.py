@@ -201,6 +201,18 @@ def run_doctor(config, config_manager, workspace: str | Path | None = None,
             checks.append(Check("Provider health", "fail", str(exc)[:240],
                                 "Check provider type, URL, credentials and service status."))
 
+    if provider_type in known_types:
+        try:
+            from ..core.router import build_provider
+            capabilities = build_provider(config).capabilities(detect_window=False)
+            checks.append(Check("Provider capabilities", "ok", capabilities.summary()))
+            if provider_type != "ollama" and ":11434" in str(provider.base_url):
+                checks.append(Check("Ollama endpoint", "warn",
+                                    "Ollama's /v1 endpoint ignores the context size ZeroCoding requests.",
+                                    "Set providers.<name>.type to ollama (native API) or set context_window explicitly."))
+        except Exception as exc:
+            checks.append(Check("Provider capabilities", "warn", str(exc)[:240]))
+
     mcp_config = dict(config.mcp or {})
     mcp = McpManager(mcp_config, root, config.command_policy)
     if not mcp.configured:

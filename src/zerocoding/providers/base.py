@@ -17,6 +17,24 @@ class ProviderTurn:
     usage: dict = field(default_factory=dict)
     thinking_present: bool = False
     reasoning_content: str = ""
+    finish_reason: str = ""  # "stop", "length", "tool_calls"... as the backend reports it; "" when unknown
+    reasoning_tokens: int = 0  # tokens the backend says went to private reasoning; 0 when not reported
+
+
+@dataclass(frozen=True)
+class ProviderCapabilities:
+    """What a backend can do, declared by the provider so the agent never has to guess."""
+    context_window: int | None = None  # total tokens served; None when it cannot be detected
+    exact_token_count: bool = False  # server-side tokenization of the real chat template
+    native_tools: bool = True
+    streaming: bool = False
+    reasoning_control: str = "none"  # none | toggle (on/off) | budget (on/off and a token cap)
+
+    def summary(self) -> str:
+        window = f"{self.context_window} tokens" if self.context_window else "unknown"
+        return (f"context window {window}; token count {'exact' if self.exact_token_count else 'estimated'}; "
+                f"tools {'native' if self.native_tools else 'text fallback'}; streaming {'yes' if self.streaming else 'no'}; "
+                f"reasoning control {self.reasoning_control}")
 
 
 def normalize_turn(response) -> ProviderTurn:
@@ -39,6 +57,8 @@ def normalize_turn(response) -> ProviderTurn:
         calls.append(ToolCall(str(function.get("name", "")), args if isinstance(args, dict) else {}, str(item.get("id", ""))))
     reasoning_content = str(response.get("reasoning_content", "") or "")
     return ProviderTurn(
+        finish_reason=str(response.get("finish_reason", "") or ""),
+        reasoning_tokens=int(response.get("reasoning_tokens", 0) or 0),
         content=str(response.get("content", "") or ""),
         tool_calls=calls,
         usage=response.get("usage", {}) or {},
@@ -48,6 +68,21 @@ def normalize_turn(response) -> ProviderTurn:
 
 
 class BaseProvider(ABC):
+    EXACT_TOKEN_COUNT = False
+    NATIVE_TOOLS = True
+    STREAMING = False
+    REASONING_CONTROL = "none"
+
+    def capabilities(self, detect_window: bool = True) -> ProviderCapabilities:
+        window = None
+        if detect_window:  # may make a network call; `zc doctor` probes the server itself and passes False
+            try:
+                window = self.context_window()
+            except Exception:
+                window = None
+        return ProviderCapabilities(window, self.EXACT_TOKEN_COUNT, self.NATIVE_TOOLS, self.STREAMING,
+                                    self.REASONING_CONTROL)
+
     @abstractmethod
     def generate(self, prompt: str, **kwargs) -> str:
         raise NotImplementedError

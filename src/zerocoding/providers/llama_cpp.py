@@ -5,6 +5,8 @@ class LlamaCppProvider(OpenAICompatibleProvider):
     """OpenAI-compatible client for llama.cpp's local HTTP server."""
 
     EFFORT_LEVELS = {"low", "medium", "high"}
+    EXACT_TOKEN_COUNT = True
+    REASONING_CONTROL = "budget"  # chat_template_kwargs.enable_thinking and reasoning_budget_tokens, per request
 
     def __init__(self, api_key: str, api_url: str, model: str, timeout: int = 300):
         super().__init__(api_key=api_key, api_url=api_url, model=model, timeout=timeout)

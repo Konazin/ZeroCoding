@@ -68,7 +68,15 @@ class _InlineThinkingFilter:
         return ("", pending) if self.private else (pending, "")
 
 
+def _reasoning_tokens(usage) -> int:
+    details = usage.get("completion_tokens_details") if isinstance(usage, dict) else None
+    value = details.get("reasoning_tokens") if isinstance(details, dict) else 0
+    return int(value) if isinstance(value, (int, float)) else 0
+
+
 class OpenAICompatibleProvider(BaseProvider):
+    STREAMING = True
+
     def __init__(self, api_key: str, api_url: str, model: str, timeout: int = 30):
         self.api_key = api_key
         self.api_url = api_url.rstrip("/")
@@ -164,12 +172,15 @@ class OpenAICompatibleProvider(BaseProvider):
             reasoning_content = str(message.get("reasoning_content", "") or "")
             if inline_reasoning:
                 reasoning_content += inline_reasoning
+            usage = response.get("usage", {}) or {}
             return ProviderTurn(
                 content=content,
                 tool_calls=calls,
-                usage=response.get("usage", {}),
+                usage=usage,
                 thinking_present=bool(reasoning_content),
                 reasoning_content=reasoning_content,
+                finish_reason=str(choice.get("finish_reason") or ""),
+                reasoning_tokens=_reasoning_tokens(usage),
             )
         return choice.get("text", "")
 
@@ -206,6 +217,7 @@ class OpenAICompatibleProvider(BaseProvider):
         thinking_filter = _InlineThinkingFilter()
         tool_parts: dict[int, dict[str, str]] = {}
         usage = {}
+        finish_reason = ""
         try:
             for raw_line in response:
                 if cancel:
@@ -225,6 +237,8 @@ class OpenAICompatibleProvider(BaseProvider):
                 choices = chunk.get("choices") or []
                 if not choices:
                     continue
+                if choices[0].get("finish_reason"):
+                    finish_reason = str(choices[0]["finish_reason"])
                 delta = choices[0].get("delta") or {}
                 content = delta.get("content")
                 if isinstance(content, str) and content:
@@ -281,6 +295,8 @@ class OpenAICompatibleProvider(BaseProvider):
             usage=usage,
             thinking_present=bool(reasoning_content),
             reasoning_content=reasoning_content,
+            finish_reason=finish_reason,
+            reasoning_tokens=_reasoning_tokens(usage),
         )
 
     def _request_parameters(self, kwargs) -> dict:

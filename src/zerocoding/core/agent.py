@@ -211,6 +211,10 @@ class Agent:
         emit_event(on_event, AgentEvent("thinking"))
         turn = self._chat_once(messages, tool_schemas, output_tokens, state)
         usage = turn.usage or {}
+        self._last_stop = {"finish_reason": turn.finish_reason, "reasoning_chars": len(turn.reasoning_content or ""),
+                           "reasoning_tokens": turn.reasoning_tokens, "output_tokens": output_tokens}
+        if turn.finish_reason == "length":
+            self._stats["length_stops"] += 1
         self._stats["llm_calls"] += 1
         self._stats["prompt_tokens"] += int(usage.get("prompt_tokens", 0) or 0)
         self._stats["completion_tokens"] += int(usage.get("completion_tokens", 0) or 0)
@@ -284,8 +288,22 @@ class Agent:
             if turn.tool_calls or turn.content.strip():
                 return turn
         raise RuntimeError(
-            "The model returned an empty response twice. Check the llama.cpp chat template and reasoning settings, then try again."
+            "The model returned an empty response twice. " + self._stop_cause()
+            + " Check the chat template and reasoning settings, then try again."
         )
+
+    def _stop_cause(self) -> str:
+        """Say why the last turn stopped when the backend told us (the usual culprit is reasoning eating the limit)."""
+        info = getattr(self, "_last_stop", None) or {}
+        if info.get("finish_reason") == "length":
+            used = info.get("reasoning_tokens") or 0
+            reasoning = f"{used} tokens" if used else (f"~{info.get('reasoning_chars', 0)} characters" if info.get("reasoning_chars") else "")
+            spent = f" ({reasoning} of private reasoning)" if reasoning else ""
+            return (f"It stopped at the output limit of {info.get('output_tokens')} tokens before answering{spent}. "
+                    "Raise /effort, or turn thinking off for this provider (providers.<name>.thinking: off).")
+        if info.get("finish_reason"):
+            return f"The backend reported finish_reason={info['finish_reason']!r}."
+        return "The backend did not say why it stopped."
 
     def _run_tool_call(self, call, call_id, on_event, cancel=None) -> dict:
         """Execute one tool call (Plan-mode guarded), emit events and return the tool message."""
@@ -339,7 +357,7 @@ class Agent:
     @staticmethod
     def _new_stats() -> dict:
         return {"llm_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "tool_calls": 0, "tool_rounds": 0,
-                "tool_errors": 0, "tool_denied": 0, "trimmed_messages": 0, "ttft_ms": None}
+                "tool_errors": 0, "tool_denied": 0, "trimmed_messages": 0, "length_stops": 0, "ttft_ms": None}
 
     def ask(self, text, system_prompt=None, use_tools=False, on_event=None, cancel=None):
         """Answer one request. ``cancel`` (CancelToken) is checked between provider calls and tool calls;
@@ -409,7 +427,8 @@ class Agent:
                         continue
                 if tool_round_completed and not response_text.strip():
                     raise RuntimeError(
-                        "The model returned an empty response after a tool result. Check the llama.cpp chat template and reasoning settings."
+                        "The model returned an empty response after a tool result. " + self._stop_cause()
+                        + " Check the chat template and reasoning settings."
                     )
                 break
             calls = [call for call in turn.tool_calls if call.name]

@@ -16,6 +16,7 @@ from .base import ProviderTurn, ToolCall
 
 
 class OllamaProvider(BaseProvider):
+    REASONING_CONTROL = "toggle"  # the native `think` boolean
     def __init__(self, url: str, model: str, timeout: int = 300):
         self.url = url.rstrip("/")
         self.model = model
@@ -136,6 +137,7 @@ class OllamaProvider(BaseProvider):
                 tool_calls=calls,
                 usage=usage,
                 thinking_present=bool(message.get("thinking")),
+                finish_reason=done_reason if isinstance(done_reason, str) else "",
             )
         return response.get("response", "")
 
