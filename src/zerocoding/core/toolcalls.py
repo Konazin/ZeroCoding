@@ -12,7 +12,7 @@ SHELL_FENCE = re.compile(r"```[ \t]*(?:bash|sh|shell|zsh|console|terminal)[ \t]*
 # run_command launches an argv without a shell, so these cannot work and are left as plain text.
 UNSUPPORTED_SHELL = re.compile(r"&&|\|\||[|;<>`]|\$\(|\\$")
 MAX_TEXT_COMMANDS = 4
-CHANGING_TOOLS = frozenset({"write_file", "edit_file", "run_command"})
+CHANGING_TOOLS = frozenset({"write_file", "edit_file", "run_command", "git_commit"})
 
 COMPACT_CALL = re.compile(r"<tool_call>\s*(\{.*\})\s*</tool_call>", re.DOTALL)
 
@@ -29,6 +29,11 @@ def emit_event(callback, event: AgentEvent) -> None:
 
 def tool_target(name: str, arguments: dict) -> str:
     value = arguments.get("path") or arguments.get("pattern") or arguments.get("command") or ""
+    if name == "git":
+        value = f"{arguments.get('action', '')} {value}".strip()
+    elif name == "git_commit":
+        paths = arguments.get("paths")
+        value = ", ".join(str(p) for p in paths) if isinstance(paths, list) else ""
     target = " ".join(str(value).split())
     return target if len(target) <= 96 else target[:93] + "…"
 
@@ -56,6 +61,10 @@ def tool_summary(name: str, result: str) -> str:
         exit_code = next((line.split(":", 1)[1].strip() for line in lines if line.lower().startswith("exit code:")), "unknown")
         output_lines = max(0, len(lines) - 1)
         return f"exit {exit_code} · {output_lines} output lines"
+    if name == "git":
+        return f"git · {len(lines)} lines" if not value.startswith("git ") else "git failed"
+    if name == "git_commit":
+        return "Committed" if value.startswith("Committed") else "Commit failed"
     if name == "edit_file":
         return "File edited" if value.lower().startswith("edited ") else "Completed"
     if name == "write_file":

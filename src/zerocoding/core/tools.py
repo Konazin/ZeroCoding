@@ -11,13 +11,14 @@ import tempfile
 from pathlib import Path
 from typing import Callable
 
+from . import git_tools
 from .command_policy import CommandPolicy
 from .events import AgentEvent
 from .process import run_capped
 
 
 IGNORED = {".git", ".zerocoding", "node_modules", "venv", ".venv", "__pycache__", "target", "dist", "build"}
-READ_ONLY_TOOL_NAMES = frozenset({"list_files", "search_files", "read_file"})
+READ_ONLY_TOOL_NAMES = frozenset({"list_files", "search_files", "read_file", "git"})
 
 
 class ToolRegistry:
@@ -35,6 +36,17 @@ class ToolRegistry:
             self._spec("edit_file", "Propose replacing one exact piece of text in an existing file; old_text must match exactly once. User approval is required before writing", {"path": {"type": "string"}, "old_text": {"type": "string"}, "new_text": {"type": "string"}}, ["path", "old_text", "new_text"]),
             self._spec("run_command", "Run a command in the project; user approval is required first", {"command": {"type": "string"}}, ["command"]),
         ]
+        # Git tools exist only inside a repository, so projects without git pay no prompt tokens for them.
+        self.git_enabled = git_tools.is_git_repo(self.root, self.policy)
+        if self.git_enabled:
+            self._specs += [
+                self._spec("git", "Inspect the git repository (read-only): status, diff or log",
+                           {"action": {"type": "string", "enum": list(git_tools.READ_ACTIONS)}, "path": {"type": "string"},
+                            "staged": {"type": "boolean"}, "limit": {"type": "integer"}}, ["action"]),
+                self._spec("git_commit", "Commit the listed files with a message; user approval is required first",
+                           {"message": {"type": "string"}, "paths": {"type": "array", "items": {"type": "string"}}},
+                           ["message", "paths"]),
+            ]
 
     @staticmethod
     def _spec(name, description, properties, required=None):
@@ -252,6 +264,14 @@ class ToolRegistry:
             start = self._int(args, "start_line", 1, 1, 10**9)
             end = min(len(lines), self._int(args, "end_line", start + 300, 1, 10**9))
             return "\n".join(f"{idx}: {line}" for idx, line in enumerate(lines[start - 1:end], start))[:12000]
+        if name == "git":
+            return git_tools.read(self.root, self.policy, args, self._path)
+        if name == "git_commit":
+            paths, message, preview = git_tools.prepare_commit(self.root, self.policy, args, self._path)
+            self._emit(event_callback, AgentEvent("approval_requested", name, ", ".join(paths)[:96], "Commit preview ready"))
+            if not self.approve or not self.approve("Git commit", preview):
+                return "Commit denied by user. Nothing was committed."
+            return git_tools.commit(self.root, self.policy, paths, message)
         if name == "write_file":
             original_value = args["path"]
             path = self._path(original_value)

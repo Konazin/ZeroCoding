@@ -5,11 +5,11 @@ import re
 
 from .tools import READ_ONLY_TOOL_NAMES
 
-WRITE_TOOL_NAMES = frozenset({"write_file", "edit_file"})
+WRITE_TOOL_NAMES = frozenset({"write_file", "edit_file", "git_commit"})
 WRITE_HINTS = {
     "write", "edit", "create", "add", "modify", "change", "update", "fix", "implement",
     "refactor", "rename", "delete", "remove", "replace", "patch", "save", "generate",
-    "escreva", "edite", "crie", "adicione", "modifique", "altere", "mude", "atualize",
+    "commit", "commite", "commitar", "escreva", "edite", "crie", "adicione", "modifique", "altere", "mude", "atualize",
     "corrija", "implemente", "refatore", "renomeie", "apague", "remova", "substitua", "salve", "gere",
 }
 COMMAND_HINTS = {

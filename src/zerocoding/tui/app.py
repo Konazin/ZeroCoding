@@ -537,6 +537,8 @@ class ZerocodingTUI:
                 "write_file": "Write",
                 "edit_file": "Edit",
                 "run_command": "Command",
+                "git": "Git",
+                "git_commit": "Commit",
             }.get(name, name)
             self.console.print(Text(f"● {label} {target}".rstrip(), style=ZERO_PURPLE_LIGHT))
         elif kind == "tool_completed":
@@ -560,6 +562,8 @@ class ZerocodingTUI:
                 "write_file": "Preparing a file change",
                 "edit_file": "Preparing a file edit",
                 "run_command": "Preparing a command",
+                "git": "Checking git",
+                "git_commit": "Preparing a commit",
             }.get(name, f"Using {name}")
             animation.set_message(f"{action} {target}".strip())
             return

@@ -201,3 +201,43 @@ def leaves_workspace(command: str, root: Path) -> bool:
         if not _inside(value, root):  # a relative name that resolves outside, e.g. through a symlink
             return True
     return False
+
+
+# Commands that reach the network, install code or rewrite history. They are asked even in yolo mode:
+# the workspace check cannot tell that `git push` or `pip install` affects things outside the project.
+NETWORK_EXECUTABLES = frozenset({"curl", "wget", "ssh", "scp", "sftp", "rsync", "nc", "ncat", "telnet", "ftp", "gh"})
+INSTALLERS = frozenset({"pip", "pip3", "pipx", "npx", "conda", "apt", "apt-get", "brew", "dnf", "yum", "pacman", "snap", "flatpak"})
+# Tools that also run project code (`npm test`, `cargo build`): only their fetch/install subcommands are asked.
+MANAGER_SUBCOMMANDS = {
+    name: frozenset({"install", "i", "add", "update", "upgrade", "publish", "remove", "uninstall", "get", "ci", "login",
+                     "fetch", "dlx", "create", "init", "yank", "owner", "mod"})
+    for name in ("npm", "yarn", "pnpm", "cargo", "gem", "bundle", "go", "poetry")
+}
+GIT_ALWAYS_ASK = frozenset({"push", "pull", "fetch", "clone", "remote", "submodule", "reset", "clean", "rebase",
+                            "filter-branch", "gc", "prune", "reflog"})
+
+
+def needs_explicit_approval(command: str) -> bool:
+    """True for network, install and history-rewriting commands (and anything that cannot be parsed)."""
+    try:
+        argv = shlex.split(command.strip())
+    except ValueError:
+        return True
+    if not argv:
+        return False
+    name = Path(argv[0]).name
+    if name in NETWORK_EXECUTABLES or name in INSTALLERS:
+        return True
+    if name in MANAGER_SUBCOMMANDS:
+        return any(a in MANAGER_SUBCOMMANDS[name] for a in argv[1:3])
+    if name == "uv" and any(a in {"pip", "add", "sync", "tool", "install", "publish"} for a in argv[1:3]):
+        return True
+    if name in {"python", "python3"} and "-m" in argv:
+        module = argv[argv.index("-m") + 1] if argv.index("-m") + 1 < len(argv) else ""
+        return module in {"pip", "ensurepip", "venv"}
+    if name == "git":
+        rest = [a for a in argv[1:] if not a.startswith("-")]
+        # `git -c key=val sub`: the value after -c is not a subcommand
+        subcommand = next((a for a in argv[1:] if not a.startswith("-") and "=" not in a), "")
+        return subcommand in GIT_ALWAYS_ASK or (bool(rest) and rest[0] in GIT_ALWAYS_ASK)
+    return False

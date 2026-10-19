@@ -102,7 +102,7 @@ class TestYoloStaysInsideTheWorkspace(unittest.TestCase):
         self.policy = PermissionPolicy(self.root, "yolo")
 
     def test_commands_inside_the_project_are_approved(self):
-        for command in ("rm a.py", "python main.py", "pip install x", "git commit -m 'fix: ../x is fine in a message'",
+        for command in ("rm a.py", "python main.py", "git commit -m 'fix: ../x is fine in a message'",
                         "mkdir -p a/b", "sed -i s/a/b/ src/f.py", "npm test"):
             self.assertIsNotNone(self.policy.decide("Run command", command), command)
 
@@ -119,3 +119,27 @@ class TestYoloStaysInsideTheWorkspace(unittest.TestCase):
     def test_writes_and_edits_stay_approved(self):
         self.assertIsNotNone(self.policy.decide("Write file", "diff"))
         self.assertIsNotNone(self.policy.decide("Edit file", "diff"))
+
+
+class TestYoloStillAsksForRiskyCommands(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.policy = PermissionPolicy(self.directory.name, "yolo")
+
+    def test_network_installs_and_history_rewrites_are_asked(self):
+        for command in ("git push origin main", "git push --force", "git pull", "git fetch", "git clone https://x/y",
+                        "git remote add o x", "git reset --hard HEAD~1", "git clean -fd", "git rebase main",
+                        "git -c user.name=x push", "curl https://example.com", "wget http://x", "ssh host", "gh pr create",
+                        "pip install requests", "pip3 install x", "python -m pip install x", "python3 -m venv .v",
+                        "npm install", "uv pip install x", "uv add x", "cargo add x", "apt install x"):
+            self.assertIsNone(self.policy.decide("Run command", command), command)
+
+    def test_routine_project_commands_are_still_approved(self):
+        for command in ("git status", "git add a.py", "git commit -m x", "git checkout -b topic", "git diff", "git stash",
+                        "python -m pytest", "python main.py", "rm a.py", "mkdir -p x/y", "npm test", "ls -la"):
+            self.assertIsNotNone(self.policy.decide("Run command", command), command)
+
+    def test_commits_are_asked_in_every_mode(self):
+        for mode in ("ask", "auto", "yolo"):
+            self.assertIsNone(PermissionPolicy(self.directory.name, mode).decide("Git commit", "preview"), mode)
