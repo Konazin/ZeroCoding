@@ -40,6 +40,7 @@ class BenchCase:
     plan: bool = False
     writable_paths: tuple[str, ...] = ()
     allowed_command: str = ""
+    allow_git_commit: bool = False
 
     def prompt(self, seed: int) -> str:
         return self.prompts[seed % len(self.prompts)]
@@ -214,7 +215,8 @@ def hard_cases() -> list[BenchCase]:
     return [BenchCase(spec["id"], spec["prompts"], spec["prepare"], spec["verify"],
                       writable_paths=spec.get("writable_paths", ()),
                       # a user would approve running the project's tests while working on these tasks
-                      allowed_command=spec.get("allowed_command") or "python -m unittest discover -s tests")
+                      allowed_command=spec.get("allowed_command") or "python -m unittest discover -s tests",
+                      allow_git_commit=spec.get("allow_git_commit", False))
             for spec in hard_case_specs()]
 
 
@@ -298,6 +300,8 @@ def run_trial(case: BenchCase, base_url: str, model: str, pid: int | None, timeo
             approval_log.append({"action": action, "preview": preview.strip()[:300]})
             if not case.approve:
                 return False
+            if action == "Git commit":
+                return case.allow_git_commit
             if action == "Run command":
                 return bool(case.allowed_command and _same_command(preview, case.allowed_command))
             if action not in {"Write file", "Edit file"}:

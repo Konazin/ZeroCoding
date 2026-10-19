@@ -325,6 +325,84 @@ def _verify_run_and_fix(context: dict) -> bool:
     return _digest(root, ["tests/test_stats.py"]) == expected_tests and tests_pass(root)
 
 
+# ---------------------------------------------------------------- cases 9-11: git (M9)
+GIT_ENV = {"PATH": os.environ.get("PATH", ""), "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=root, env=GIT_ENV, capture_output=True, text=True, check=True)
+    return result.stdout
+
+
+def _init_repo(root: Path) -> None:
+    _git(root, "init", "-q", "-b", "main")
+    _git(root, "config", "user.name", "Bench")
+    _git(root, "config", "user.email", "bench@example.com")
+
+
+def _commit_all(root: Path, message: str) -> None:
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", message)
+
+
+def _prep_git_status(root: Path) -> None:
+    _init_repo(root)
+    _write(root, {"app.py": "print('app')\n", "util.py": "def f():\n    return 1\n", "notes.md": "# notes\n", "config.ini": "a=1\n"})
+    _commit_all(root, "initial files")
+    (root / "util.py").write_text("def f():\n    return 2\n")  # modified, unstaged
+    (root / "config.ini").write_text("a=2\n")  # modified and staged
+    _git(root, "add", "config.ini")
+    (root / "todo.txt").write_text("later\n")  # untracked
+
+
+def _verify_git_status(context: dict) -> bool:
+    answer = context["answer"].lower()
+    return all(name in answer for name in ("util.py", "config.ini", "todo.txt")) and "notes.md" not in answer and "app.py" not in answer
+
+
+def _prep_git_commit(root: Path) -> None:
+    _init_repo(root)
+    _write(root, {"service.py": "def run():\n    return 'v1'\n", "README.md": "# project\n"})
+    _commit_all(root, "initial")
+    (root / "service.py").write_text("def run():\n    return 'v2'\n")
+    (root / "README.md").write_text("# project\n\nWork in progress.\n")
+
+
+def _ref_git_commit(root: Path) -> None:
+    _git(root, "add", "service.py")
+    _git(root, "commit", "-q", "-m", "service: return v2 from run")
+
+
+def _verify_git_commit(context: dict) -> bool:
+    root = context["root"]
+    try:
+        count = int(_git(root, "rev-list", "--count", "HEAD").strip())
+        changed = _git(root, "show", "--name-only", "--format=%s", "HEAD").split("\n")
+        subject, files = changed[0].strip(), [line for line in changed[1:] if line.strip()]
+        dirty = _git(root, "status", "--porcelain").split()
+    except subprocess.CalledProcessError:
+        return False
+    return count == 2 and files == ["service.py"] and len(subject) >= 8 and "README.md" in dirty
+
+
+def _prep_git_history(root: Path) -> None:
+    _init_repo(root)
+    _write(root, {"net.py": "def fetch():\n    return get()\n", "cli.py": "print('cli')\n"})
+    _commit_all(root, "initial network module")
+    (root / "cli.py").write_text("print('cli v2')\n")
+    _commit_all(root, "tweak cli banner")
+    (root / "net.py").write_text("def fetch():\n    for attempt in range(3):\n        return get()\n")
+    _commit_all(root, "add retry loop to fetch")
+    (root / "cli.py").write_text("print('cli v3')\n")
+    _commit_all(root, "update cli again")
+
+
+def _verify_git_history(context: dict) -> bool:
+    answer = context["answer"].lower()
+    return "retry" in answer and "net.py" in answer and "tweak cli banner" not in answer
+
+
+
 # ----------------------------------------------------------------------------- catalog
 def hard_case_specs() -> list[dict]:
     """Plain data so scripts/m7_bench.py can wrap each entry in a BenchCase."""
@@ -366,4 +444,16 @@ def hard_case_specs() -> list[dict]:
                       "Execute os testes (python -m unittest discover -s tests), entenda o que falha e conserte stats.py sem mexer nos testes."),
              prepare=_prep_run_and_fix, verify=_verify_run_and_fix, writable_paths=("stats.py",),
              allowed_command=TEST_COMMAND, reference=_ref_run_and_fix),
+        dict(id="h_git_status_question",
+             prompts=("Quais arquivos têm mudanças que ainda não foram commitadas? Inclua os novos, os modificados e os já adicionados ao stage.",
+                      "Liste os arquivos com alterações pendentes neste repositório (modificados, em stage e não rastreados)."),
+             prepare=_prep_git_status, verify=_verify_git_status, reference=None),
+        dict(id="h_git_commit_one_file",
+             prompts=("Faça um commit só da mudança em service.py, com uma mensagem descritiva. Não inclua mais nada.",
+                      "Commite apenas service.py (deixe o README.md como está, sem commit) com uma boa mensagem."),
+             prepare=_prep_git_commit, verify=_verify_git_commit, allow_git_commit=True, reference=_ref_git_commit),
+        dict(id="h_git_find_change",
+             prompts=("Em qual commit foi adicionada a lógica de retentativa em net.py? Diga a mensagem do commit.",
+                      "Olhando o histórico do git, qual commit introduziu o laço de retry em net.py? Cite a mensagem."),
+             prepare=_prep_git_history, verify=_verify_git_history, reference=None),
     ]

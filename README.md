@@ -113,8 +113,8 @@ provider: llama_cpp_local
 mode: code
 max_input_tokens: 4096
 max_output_tokens: 1024
-max_tool_rounds: 6
-streaming_enabled: false
+max_tool_rounds: 40   # safety cap per task, not a target
+streaming_enabled: true
 
 providers:
   llama_cpp_local:
@@ -133,7 +133,7 @@ The built-in `code`, `fast`, `reason` and `smart` modes use the same Ornith mode
 
 The llama.cpp server context (`-c`) must be at least the combined input and output budgets; the documented default is 5,120 tokens, so the launch example uses 8,192. When available, ZeroCoding counts the active chat template and tool schemas with llama.cpp `/apply-template` and `/tokenize`. Older conversation turns are dropped first when the input budget is exceeded. Legacy SQLite memory is preserved but is not appended to prompts, so unrelated sessions cannot inflate context.
 
-Streaming is opt-in with `streaming_enabled: true`. The buffered response remains the default until the M7 task benchmark confirms comparable quality.
+Streaming is on by default (`streaming_enabled: false` buffers whole replies).
 
 You can also use environment variables from `.env.example`.
 
@@ -156,13 +156,14 @@ You can also use environment variables from `.env.example`.
 - `/config` opens a tabbed settings panel (Status, Config with search, Providers) like Claude Code's. `/provider` opens it on the Providers tab and `/model` opens the model picker (Enter sets the default, `s` uses it for this session only, ←/→ adjusts effort). Adding a provider is a short wizard: type from a list, name in a text box, address from presets or a custom box, and the model chosen from what the server actually serves (typed by hand only when it lists none). The typed commands keep working.
 - The interactive UI is a fixed full-screen window (`fullscreen: true`, default): the transcript scrolls with PageUp/PageDown or the mouse wheel, the input box stays visible while the agent works (you can type, but sending waits until the task ends), Ctrl+C cancels the running task, and approvals show a Claude Code style diff (line numbers, red/green rows) that you accept with `Y`. Click the mascot at the top, or the small pet on the status row, to make it move. `fullscreen: false` returns to the classic scrollback UI.
 - Small models sometimes print a command in a ```bash block instead of calling the tool. With `shell_block_fallback: true` (default) the runnable lines of such a block are offered as `run_command` calls and go through the usual approval. Blocks that need a shell (pipes, `&&`, redirects, `cd`) stay as text, and nothing is converted in Plan mode or after the model already changed something in that task.
-- `/permission` chooses how actions are approved, for the current session only: `ask` (default), `auto` (commands from the `auto_packs` such as `mkdir`, `ls`, `cat`, `grep`, `git status` are approved by code when every path is inside the workspace; writes and edits still ask) and `yolo` (writes, edits and commands are approved after one confirmation, except commands with an argument that may leave the project — absolute paths, `~`, `..`, variables, symlinks out — which still ask; the command policy, workspace limits and Plan mode still apply). The mode shows on the left of the status row, and auto-approved actions stay in the transcript. `/permission packs` lists them. Ctrl+T expands or collapses diffs, including the ones already on screen; the Y/N decision is docked at the prompt so it never hides behind long output.
+- `/permission` chooses how actions are approved, for the current session only: `ask` (default), `auto` (commands from the `auto_packs` such as `mkdir`, `ls`, `cat`, `grep`, `git status` are approved by code when every path is inside the workspace; writes and edits still ask) and `yolo` (writes, edits and commands are approved after one confirmation, except commands with an argument that may leave the project — absolute paths, `~`, `..`, variables, symlinks out — which still ask, as do network, install and history-rewriting commands and every git commit; the command policy, workspace limits and Plan mode still apply). The mode shows on the left of the status row, and auto-approved actions stay in the transcript. `/permission packs` lists them. Ctrl+T expands or collapses diffs, including the ones already on screen; the Y/N decision is docked at the prompt so it never hides behind long output.
 - `/buddy [work|look|dance|sleep|cheer|shock]` plays a mascot animation. With `mouse_support: true` (default) you can also click the small pet on the status row: the first click plays `work`, later ones pick an easter egg. The mouse costs plain text selection and wheel scrolling while the prompt is open (Shift+drag and Shift+wheel still work in most terminals); turn it off in `/config` → Mouse or with `mouse_support: false`.
 - `/model` or `/model list` lists models when the provider supports it.
 - `/model use ornith-1.5-9b-q5-k-m` switches model for the current session.
-- `/plan [on|off]` enables read-only planning. Plan mode exposes only project listing, search and file reading to the agent.
+- `/plan [on|off]` enables read-only planning. Plan mode exposes only project listing, search, file reading and read-only git to the agent.
 - `/ultrathink [on|off]` adds output and tool-round budget for the current session.
-- `/effort [low|medium|high]` selects the session budget profile.
+- `/effort` opens a picker (or `/effort low|medium|high`): effort sets the output-token budget; tool rounds are a separate safety cap (`max_tool_rounds`, 40) and the loop also stops when the model repeats the same call four times.
+- `/undo` restores the files the agent wrote in the last turn after showing the diff and asking; `/undo list` shows the turns and `/undo <n>` picks one. It refuses if a file changed after the agent wrote it, and changes made by commands are not undone.
 - `/compact` folds older conversation into a short digest to free context. The prompt budget follows the server context window (`n_ctx`, read from llama.cpp `/props`; override with `context_window`), and large old tool outputs are compacted automatically at 70% of it.
 - `/config` shows the active config.
 - `/config base_url http://127.0.0.1:8080/v1` updates the active provider URL.
@@ -187,6 +188,15 @@ You can also use environment variables from `.env.example`.
 - `/exit` exits.
 
 The interactive TUI clears the visible terminal on startup. Its prompt is framed by full-width rules, starts at one row and grows to six; it shows only Effort below the prompt, while `/status` lists the full session state. `Enter` submits; `Ctrl+J` inserts a newline. During a turn, the ghost animates beside a short status; the complete response is displayed when the turn finishes. Approval previews show the complete diff or command. Press `Y` to approve, `N` or `Esc` to deny; `Enter` or any other text denies. `Ctrl+C` cancels the running turn (nothing from it is saved to the session). One-shot `-m` requests do not receive tools and cannot execute changes.
+
+## Git, undo and providers (M9)
+
+- **Git tools** appear only inside a git repository. `git` (status, diff, log) is read-only and available in Plan mode; `git_commit` stages and commits exactly the listed files after you approve the message and the file list, never in auto or yolo, because the repository's own commit hooks run. Neither can push, reset, clean or switch branches. Reads run with fsmonitor, pagers, textconv and external diff drivers switched off, so repository config cannot run code during an inspection.
+- **Network and installs always ask**, even in yolo: `git push/pull/fetch/clone/remote/reset/clean/rebase`, `curl`, `wget`, `ssh`, `pip`, `npm install` and similar.
+- **Undo** (`/undo`) keeps the original of every file `write_file` and `edit_file` changed, per turn, in `~/.zerocoding/journal/<session>/` (private, last 20 turns; memory only when sessions are not persisted).
+- **Providers declare their capabilities** (`zc doctor` prints them): context window, exact token count, tools, streaming and reasoning control. The window is probed from llama.cpp `/props`, the `/v1/models` entry (vLLM and others), LM Studio's REST API or native Ollama (`min(model maximum, 8192)`); `context_window` in the config overrides it, and the TUI warns when nothing can be detected.
+- **Use Ollama through `type: ollama`** (native API). Its `/v1` endpoint ignores the context size ZeroCoding requests, and `zc doctor` warns about it.
+- **`providers.<name>.thinking`**: `auto` (default, the model decides), `on`, `off` or `budget:N`. llama.cpp supports all four, native Ollama on/off, generic OpenAI-compatible servers ignore it. Quote it in YAML (`"off"`): an unquoted `off` is read as false (ZeroCoding accepts that too). When a reply comes back empty, the error now says whether the output limit was spent on reasoning.
 
 ## Extensions (all opt-in)
 

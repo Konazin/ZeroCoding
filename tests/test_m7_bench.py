@@ -153,3 +153,43 @@ class TestProviderSelection(unittest.TestCase):
         self.assertIsInstance(generic, OpenAICompatibleProvider)
         self.assertEqual(generic.thinking, "off")
         self.assertEqual(_provider_factory("llama_cpp", "budget:128")("http://x/v1", "m", 5).thinking, "budget:128")
+
+
+class TestGitCasesRunThroughTheHarness(unittest.TestCase):
+    """The git tools must work inside the benchmark's minimal environment (no HOME, no global git config)."""
+
+    def run_scripted(self, case_id, turns):
+        from scripts.m7_bench import hard_cases
+
+        case = next(c for c in hard_cases() if c.id == case_id)
+
+        class Scripted:
+            responses = []
+
+            def __init__(self):
+                self.turns = list(turns)
+
+            def chat(self, messages, **kwargs):
+                return self.turns.pop(0)
+
+        return run_trial(case, "http://unused", "m", None, 5, provider_factory=lambda *a: Scripted(),
+                         sampler_factory=FakeSampler)
+
+    def test_a_scripted_agent_commits_one_file_through_the_approval_path(self):
+        trial = self.run_scripted("h_git_commit_one_file", [
+            ProviderTurn(tool_calls=[ToolCall("git_commit", {"message": "service: return v2 from run",
+                                                              "paths": ["service.py"]}, "c1")]),
+            ProviderTurn(content="committed"),
+        ])
+
+        self.assertTrue(trial["passed"], trial)
+        self.assertEqual(trial["approvals"], 1)
+
+    def test_a_scripted_agent_answers_the_status_question_from_the_git_tool(self):
+        trial = self.run_scripted("h_git_status_question", [
+            ProviderTurn(tool_calls=[ToolCall("git", {"action": "status"}, "c1")]),
+            ProviderTurn(content="util.py, config.ini and todo.txt have pending changes."),
+        ])
+
+        self.assertTrue(trial["passed"], trial)
+        self.assertEqual(trial["tool_calls"], 1)

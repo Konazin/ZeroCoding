@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased (M9: git, undo and modular providers)
+
+- Git tools, only inside a repository: `git` (status, diff, log; read-only, allowed in Plan mode, hardened against repository-controlled code) and `git_commit` (explicit paths, approved message, hooks run, never auto-approved).
+- `/undo`: per-turn journal of files written by `write_file` and `edit_file`; conflict-safe, private, works without git.
+- yolo and auto still ask for network, install and history-rewriting commands (`git push`, `curl`, `pip install`, ...) and for every commit.
+- Providers declare capabilities (`zc doctor` shows them), report `finish_reason` and reasoning tokens, and empty replies explain their cause.
+- Context-window probes for generic OpenAI-compatible servers, LM Studio and native Ollama; a startup warning when the window cannot be detected.
+- `providers.<name>.thinking: auto | on | off | budget:N`.
+- Test kit with fake llama.cpp, OpenAI-compatible and Ollama servers; `m7_bench.py --provider-type/--thinking`; hard suite grows to 11 tasks (three on git).
+- Not yet measured against a model: benchmark gates for the M9 closing (see `docs/ROADMAP-m9.md`), so the version stays 0.2.0.
+
 ## 0.2.0 — 2026-10-17 (fecha o M7)
 
 - Novo mascote Patinhas: anda no lugar enquanto o agente trabalha; o texto que precede uma chamada de ferramenta permanece na tela.
